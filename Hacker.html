@@ -17,81 +17,94 @@
     }
     html,body{height:100%;margin:0;font-family: "Orbitron", "Courier New", monospace;background:var(--bg);color:var(--green);-webkit-font-smoothing:antialiased;overflow-x:hidden}
     a{color:var(--green);text-decoration:none}
-    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;padding:18px;box-sizing:border-box;}
-
+    /* layout wrap */
+    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;padding:14px;box-sizing:border-box}
     /* topbar */
     .topbar{width:100%;max-width:1100px;display:flex;justify-content:space-between;align-items:center;gap:12px;z-index:40;flex-wrap:wrap}
     .brand{display:flex;align-items:center;gap:12px;color:var(--green);flex-wrap:wrap}
     .brand img{height:42px;border-radius:6px;box-shadow:0 0 12px rgba(0,255,102,0.06)}
-    .controls{display:flex;gap:8px;align-items:center}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
     .btn{background:linear-gradient(180deg, rgba(0,255,102,0.06), rgba(0,0,0,0.12));border:1px solid rgba(0,255,102,0.12);color:var(--green);padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
     .btn.ghost{background:transparent;border:1px dashed rgba(0,255,102,0.12)}
     .btn:active{transform:translateY(1px)}
-
-    /* main */
+    /* main grid (desktop) */
     .main{width:100%;max-width:1100px;display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start;z-index:30}
-
     /* terminal */
-    .terminal{background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));border:1px solid rgba(0,255,102,0.08);box-shadow:0 12px 40px rgba(0,255,102,0.04);padding:16px;border-radius:10px;min-height:420px;display:flex;flex-direction:column;gap:10px;overflow:hidden;position:relative}
+    .terminal{background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));border:1px solid rgba(0,255,102,0.08);box-shadow:0 12px 40px rgba(0,255,102,0.04);padding:16px;border-radius:10px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:visible}
     .term-output{background:rgba(0,0,0,0.6);padding:12px;border-radius:8px;flex:1;overflow:auto;color:var(--muted);line-height:1.45;font-size:0.95rem;box-shadow:inset 0 0 30px rgba(0,0,0,0.3);max-height:60vh}
-    .term-line{margin:6px 0}
+    .term-line{margin:6px 0;white-space:pre-wrap}
     .prompt{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .prompt .prefix{min-width:100px;color:var(--green);font-weight:700}
+    .prefix{min-width:120px;color:var(--green);font-weight:700;letter-spacing:0.6px}
     .cmd-input{flex:1;background:transparent;border:none;outline:none;color:var(--green);font-family:inherit;font-size:1rem;min-width:150px}
     .hint{font-size:0.85rem;color:rgba(0,255,102,0.25);margin-top:6px}
 
+    /* chips (command shortcuts) - placed right below terminal */
+    .chipbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:center;
+      margin-top:6px;
+    }
+    .chip{
+      background:rgba(0,0,0,0.6);
+      border:1px solid rgba(0,255,102,0.14);
+      padding:8px 12px;
+      border-radius:12px;
+      color:var(--green);
+      cursor:pointer;
+      font-weight:700;
+      box-shadow:0 6px 18px rgba(0,255,102,0.02);
+      transition:transform 0.12s;
+      user-select:none;
+    }
+    .chip:active{transform:translateY(1px)}
+
     /* right panel */
-    .panel{background:linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));padding:14px;border-radius:10px;border:1px solid rgba(0,255,102,0.06);box-shadow:0 8px 30px rgba(0,255,102,0.03);min-height:420px}
+    .panel{background:linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));padding:14px;border-radius:10px;border:1px solid rgba(0,255,102,0.06);box-shadow:0 8px 30px rgba(0,255,102,0.03);min-height:420px;overflow:auto}
     .panel h3{color:var(--green);margin-bottom:8px}
     .panel .item{background:var(--glass);padding:10px;border-radius:8px;margin-bottom:10px}
     .kbd{background:#072007;padding:6px 8px;border-radius:6px;color:var(--green);font-weight:700;font-size:0.85rem}
 
-    /* canvas matrix */
-    canvas#matrix{position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;mix-blend-mode:screen;transition:0.3s}
-
-    /* secret flash overlay */
-    .ifro-flash{
-      pointer-events:none;
-      position:fixed;inset:0;background:linear-gradient(180deg, rgba(0,255,102,0.15), rgba(0,255,102,0.06));
-      opacity:0;z-index:60;mix-blend-mode:overlay;transition:opacity 0.35s ease;
-      box-shadow:0 0 120px rgba(0,255,102,0.25) inset;
-    }
+    /* flash overlay and ifro active */
+    .ifro-flash{pointer-events:none;position:fixed;inset:0;background:linear-gradient(180deg, rgba(0,255,102,0.14), rgba(0,255,102,0.06));opacity:0;z-index:60;mix-blend-mode:overlay;transition:opacity 0.35s ease;box-shadow:0 0 120px rgba(0,255,102,0.25) inset}
     .ifro-flash.show{opacity:1;animation:flashPulse 1s ease-out}
-    @keyframes flashPulse{
-      0%{opacity:0;transform:scale(0.98)}
-      50%{opacity:1;transform:scale(1)}
-      100%{opacity:0;transform:scale(1.02)}
-    }
-
-    /* intensified matrix (activated) */
-    body.ifro-active canvas#matrix{filter:brightness(1.4) contrast(1.1) blur(0);opacity:0.95}
+    @keyframes flashPulse{0%{opacity:0;transform:scale(0.98)}50%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.02)}}
     body.ifro-active .terminal{box-shadow:var(--ifro-glow);border-color:rgba(0,255,102,0.2)}
     body.ifro-active .panel{box-shadow:var(--ifro-glow);border-color:rgba(0,255,102,0.14)}
 
-    /* responsive */
+    /* matrix canvas */
+    canvas#matrix{position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;mix-blend-mode:screen;transition:filter 0.25s}
+
+    /* responsive adjustments for mobile (scrollable layout) */
     @media (max-width:980px){
       .main{grid-template-columns:1fr}
-      .panel{order:2}
+      .panel{order:2;margin-top:10px}
+      .term-output{max-height:55vh}
     }
     @media (max-width:720px){
       .topbar{padding:6px}
+      .brand img{height:36px}
+      .prefix{min-width:auto}
+      .cmd-input{width:100%}
       .controls{justify-content:center}
+      .panel{min-height:200px}
+      .term-output{max-height:45vh}
+      .chip{padding:7px 10px;font-size:0.92rem;border-radius:10px}
     }
   </style>
 </head>
 <body>
   <canvas id="matrix"></canvas>
-
-  <!-- secret flash overlay -->
   <div id="ifroFlash" class="ifro-flash" aria-hidden="true"></div>
 
   <div class="wrap" role="main">
     <div class="topbar">
       <div class="brand">
-        <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="IFRO" style="height:42px;border-radius:6px">
+        <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="IFRO">
         <div>
           <div style="font-weight:900">Modo Hacker — Turma 1°A</div>
-          <div style="font-size:0.85rem;color:rgba(255,255,255,0.6)">Painel seguro para demonstração (somente local)</div>
+          <div style="font-size:0.85rem;color:rgba(255,255,255,0.6)">Painel seguro para demonstração (apenas local)</div>
         </div>
       </div>
 
@@ -104,25 +117,39 @@
     </div>
 
     <div class="main">
-      <div class="terminal" role="region" aria-label="terminal">
-        <div class="term-output" id="termOutput" tabindex="0"></div>
+      <!-- Terminal area -->
+      <div class="terminal" role="region" aria-label="Terminal interativo">
+        <div class="term-output" id="termOutput" tabindex="0">
+          <!-- initial messages injected by JS -->
+        </div>
 
         <div class="prompt">
           <div class="prefix">user@turma1a:~$</div>
-          <input id="cmdInput" class="cmd-input" placeholder="Digite um comando e pressione Enter (help)" aria-label="Comando">
+          <input id="cmdInput" class="cmd-input" placeholder="Digite um comando e pressione Enter (help)" aria-label="Campo de comando">
         </div>
 
-        <div class="hint">Comandos: <span class="kbd">help</span>, <span class="kbd">clear</span>, <span class="kbd">about</span>, <span class="kbd">open</span>, <span class="kbd">music</span>, <span class="kbd">ifro</span>, <span class="kbd">download</span></div>
+        <div class="chipbar" id="chipbar" aria-hidden="false">
+          <!-- quick command chips -->
+          <div class="chip" data-cmd="help">help</div>
+          <div class="chip" data-cmd="clear">clear</div>
+          <div class="chip" data-cmd="about">about</div>
+          <div class="chip" data-cmd="open index.html">open</div>
+          <div class="chip" data-cmd="music on">music</div>
+          <div class="chip" data-cmd="ifro">ifro</div>
+          <div class="chip" data-cmd="download">download</div>
+        </div>
       </div>
 
+      <!-- Info panel -->
       <aside class="panel" aria-label="Informações">
         <h3>Informações & Comandos</h3>
-        <div class="item"><strong>Ajuda rápida:</strong>
-          <ul style="margin:10px 0 0 18px;color:rgba(255,255,255,0.8);font-size:0.92rem">
+        <div class="item">
+          <strong>Ajuda rápida:</strong>
+          <ul style="margin:10px 0 0 18px;color:rgba(255,255,255,0.9);font-size:0.92rem">
             <li><code>help</code> — lista comandos</li>
             <li><code>clear</code> — limpa terminal</li>
             <li><code>about</code> — sobre</li>
-            <li><code>open <url></code> — abre página</li>
+            <li><code>open &lt;url&gt;</code> — abre página (ex: open index.html)</li>
             <li><code>music on/off</code> — tocar/pausar</li>
             <li><code>ifro</code> — modo secreto</li>
             <li><code>download</code> — baixa log</li>
@@ -142,19 +169,19 @@
     </div>
 
     <div style="width:100%;max-width:1100px;text-align:center;color:rgba(255,255,255,0.6);font-size:0.9rem">
-      <div style="margin-top:8px">Dica: digite <span class="kbd">help</span> no terminal para começar.</div>
+      <div style="margin-top:8px">Dica: clique em um chip ou digite <span class="kbd">help</span> no terminal para começar.</div>
     </div>
   </div>
 
-  <!-- audio (type + secret) -->
+  <!-- audio -->
   <audio id="typeSound" preload="auto" src="https://assets.mixkit.co/sfx/preview/mixkit-typewriter-soft-click-1124.mp3"></audio>
   <audio id="secretSound" preload="auto" src="https://assets.mixkit.co/sfx/preview/mixkit-fast-laser-impact-1684.mp3"></audio>
 
-  <!-- Howler for optional lofi (kept minimal for mobile) -->
+  <!-- Howler (for lofi) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
 
   <script>
-  // ====== DOM refs ======
+  // DOM
   const termOutput = document.getElementById('termOutput');
   const cmdInput = document.getElementById('cmdInput');
   const openSiteBtn = document.getElementById('openSite');
@@ -165,6 +192,7 @@
   const ifroFlash = document.getElementById('ifroFlash');
   const typeSound = document.getElementById('typeSound');
   const secretSound = document.getElementById('secretSound');
+  const chipbar = document.getElementById('chipbar');
 
   // State
   const state = { musicPlaying:false, log:[], matrixSpeed:40 };
@@ -175,7 +203,7 @@
     loop: true, volume: 0.25
   });
 
-  // UTIL: write line
+  // util write
   function writeLine(text, cls=''){
     const p = document.createElement('div');
     p.className = 'term-line ' + cls;
@@ -185,11 +213,11 @@
     state.log.push(text);
   }
 
-  // Intro
+  // initial
   writeLine('> Inicializando IFRO SYSTEM...');
   setTimeout(()=> writeLine('> Sistema pronto. Digite "help" para ver comandos.'), 600);
 
-  // Command handler
+  // commands
   function runCommand(raw){
     if(!raw) return;
     writeLine('> ' + raw);
@@ -211,45 +239,55 @@
       case 'open':
         if(args.length===0){ writeLine('Uso: open <arquivo ou URL>'); break; }
         const target = args[0];
-        try{ window.open(target, '_blank'); writeLine('Abrindo: ' + target); }catch(e){ writeLine('Erro ao abrir: '+e.message); }
+        try{ window.open(target, '_blank'); writeLine('Abrindo: ' + target); } catch(e){ writeLine('Erro ao abrir: '+e.message); }
         break;
       case 'music':
-        if(!args[0]){ writeLine('Use: music on | music off'); break; }
-        if(args[0]==='on' || args[0]==='play'){ music.play(); state.musicPlaying=true; updateMusicStatus(); writeLine('Música iniciada.'); }
-        else { music.pause(); state.musicPlaying=false; updateMusicStatus(); writeLine('Música pausada.'); }
+        if(args[0] === 'on' || args[0] === 'play'){ music.play(); state.musicPlaying=true; updateMusicStatus(); writeLine('Música iniciada.'); }
+        else if(args[0] === 'off' || args[0] === 'pause' || args[0] === 'stop'){ music.pause(); state.musicPlaying=false; updateMusicStatus(); writeLine('Música pausada.'); }
+        else writeLine('Use: music on | music off');
         break;
       case 'ifro':
         activateIFRO();
         break;
       case 'download':
-        downloadLog(); writeLine('Download do log iniciado.'); break;
+        downloadLog(); writeLine('Download do log iniciado.');
+        break;
       case 'echo':
-        writeLine(args.join(' ')); break;
+        writeLine(args.join(' '));
+        break;
       default:
         writeLine('Comando não encontrado. Use "help".');
     }
   }
 
-  // Input handlers
+  // input handlers + type sound
   cmdInput.addEventListener('keydown', (e)=>{
-    // play type sound for visible keys (exclude control keys)
-    if(e.key.length === 1) { try{ typeSound.currentTime = 0; typeSound.play(); } catch(_){} }
-    if(e.key === 'Enter'){
-      const v = cmdInput.value;
-      runCommand(v);
-      cmdInput.value = '';
-    } else if(e.key === 'Escape'){ cmdInput.blur(); }
+    if(e.key.length === 1){ try{ typeSound.currentTime = 0; typeSound.play(); } catch(_){} }
+    if(e.key === 'Enter'){ const v = cmdInput.value.trim(); if(v){ runCommand(v); cmdInput.value=''; } }
+    if(e.key === 'Escape'){ cmdInput.blur(); }
   });
 
-  // Buttons
-  openSiteBtn.addEventListener('click', ()=>{ window.open('index.html','_blank'); writeLine('Abrindo index.html...'); });
-  toggleMusicBtn.addEventListener('click', ()=>{ if(state.musicPlaying){ music.pause(); state.musicPlaying=false; writeLine('Música pausada.'); } else { music.play(); state.musicPlaying=true; writeLine('Música iniciada.'); } updateMusicStatus(); });
-  downloadLogBtn.addEventListener('click', ()=>{ downloadLog(); writeLine('Download do log iniciado.'); });
-  closeBtn.addEventListener('click', ()=>{ window.location.href = 'index.html'; });
+  // chips click
+  chipbar.addEventListener('click', (ev)=>{
+    const chip = ev.target.closest('.chip');
+    if(!chip) return;
+    const c = chip.dataset.cmd;
+    // put in input and run
+    cmdInput.value = c;
+    cmdInput.focus();
+    // small timeout to allow play sound then enter
+    setTimeout(()=>{ runCommand(c); cmdInput.value=''; }, 120);
+  });
+
+  // buttons
+  openSiteBtn.addEventListener('click', ()=>{ window.open('index.html','_blank'); writeLine('> Abrindo index.html...'); });
+  toggleMusicBtn.addEventListener('click', ()=>{ if(state.musicPlaying){ music.pause(); state.musicPlaying=false; writeLine('> Música pausada.'); } else { music.play(); state.musicPlaying=true; writeLine('> Música iniciada.'); } updateMusicStatus(); });
+  downloadLogBtn.addEventListener('click', ()=>{ downloadLog(); writeLine('> Download do log iniciado.'); });
+  closeBtn.addEventListener('click', ()=>{ window.location.href='index.html'; });
 
   function updateMusicStatus(){ statusMusic.textContent = 'Música: ' + (state.musicPlaying ? 'tocando' : 'parada'); }
 
-  // Download log
+  // download log
   function downloadLog(){
     const data = state.log.join('\n');
     const blob = new Blob([data], {type:'text/plain;charset=utf-8'});
@@ -258,48 +296,37 @@
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
 
-  // SECRET: IFRO activation
+  // IFRO secret activation
   function activateIFRO(){
-    // flash overlay + sound + intensified matrix + message
-    secretSound.currentTime = 0;
-    secretSound.play().catch(()=>{ /* ignore autoplay block */ });
-
+    try{ secretSound.currentTime = 0; secretSound.play(); } catch(_) {}
     ifroFlash.classList.add('show');
     document.body.classList.add('ifro-active');
     writeLine('>>> Modo IFRO ativado! Nível de brilho aumentado.');
-    // remove flash after short time
-    setTimeout(()=>{ ifroFlash.classList.remove('show'); }, 1100);
-    // keep the intensified mode for a while then slowly revert
-    setTimeout(()=>{ document.body.classList.remove('ifro-active'); writeLine('>>> Modo IFRO desativado.'); }, 9000);
-
-    // speed up matrix temporarily
     setMatrixSpeed(18);
-    setTimeout(()=> setMatrixSpeed(40), 9500);
+    // remove flash after 1.1s
+    setTimeout(()=> ifroFlash.classList.remove('show'), 1100);
+    // keep effect for 9s then revert
+    setTimeout(()=>{
+      document.body.classList.remove('ifro-active');
+      writeLine('>>> Modo IFRO desativado.');
+      setMatrixSpeed(40);
+    }, 9000);
   }
 
-  // Keyboard shortcuts
+  // keyboard shortcuts
   window.addEventListener('keydown', (e)=>{
-    if(e.key.toLowerCase()==='m'){ // toggle music
-      if(state.musicPlaying){ music.pause(); state.musicPlaying=false; writeLine('Música pausada (atalho).'); }
-      else { music.play(); state.musicPlaying=true; writeLine('Música iniciada (atalho).'); }
-      updateMusicStatus();
-    }
-    if(e.key.toLowerCase()==='t'){ // theme toggle (example)
-      document.body.classList.toggle('ifro-active');
-      writeLine('Tema alternado (atalho).');
-    }
+    if(e.key.toLowerCase()==='m'){ if(state.musicPlaying){ music.pause(); state.musicPlaying=false; writeLine('> Música pausada (atalho).'); } else { music.play(); state.musicPlaying=true; writeLine('> Música iniciada (atalho).'); } updateMusicStatus(); }
+    if(e.key.toLowerCase()==='t'){ document.body.classList.toggle('ifro-active'); writeLine('> Tema alternado (atalho).'); }
     if(e.key==='Escape'){ cmdInput.focus(); }
   });
 
   // focus terminal on click
   termOutput.addEventListener('click', ()=>{ cmdInput.focus(); });
 
-  // preload images (optional)
+  // preload images optional
   ['IMG-20250513-WA0029(1).jpg','IMG-20250826-WA0086.jpg','IMG-20250901-WA0020.jpg','IMG-20250918-WA0038.jpg','IMG-20251011-WA0001.jpg'].forEach(src=>{ const i=new Image(); i.src=src; });
 
-  // ============================
-  // MATRIX CANVAS (background)
-  // ============================
+  // MATRIX CANVAS
   (function(){
     const canvas = document.getElementById('matrix');
     const ctx = canvas.getContext('2d');
@@ -311,17 +338,12 @@
     const letters = "01";
     let interval = 40;
 
-    function resize(){
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-      columns = Math.floor(width / fontSize);
-      drops = Array(columns).fill(1);
-    }
+    function resize(){ width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; columns = Math.floor(width / fontSize); drops = Array(columns).fill(1); }
     window.addEventListener('resize', resize);
 
     function draw(){
-      ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "rgba(0,0,0,0.06)";
+      ctx.fillRect(0,0,width,height);
       ctx.fillStyle = "#00ff66";
       ctx.font = fontSize + "px monospace";
       for(let i=0;i<drops.length;i++){
@@ -333,13 +355,7 @@
     }
 
     let timer = setInterval(draw, interval);
-
-    window.setMatrixSpeed = function(ms){
-      // ms is interval in ms (smaller = faster)
-      clearInterval(timer);
-      interval = ms;
-      timer = setInterval(draw, interval);
-    };
+    window.setMatrixSpeed = function(ms){ clearInterval(timer); interval = ms; timer = setInterval(draw, interval); };
   })();
 
   </script>
