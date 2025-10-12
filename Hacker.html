@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Modo Hacker — Turma 1°A</title>
-  <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modo Hacker - Turma 1A IFRO</title>
+  <link rel="icon" type="image/png" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
+
   <style>
-    /* ===== Geral ===== */
     :root{
       --bg:#000;
       --green:#00ff66;
@@ -15,8 +15,16 @@
       --glass: rgba(0,0,0,0.45);
       --accent:#00b34c;
     }
-    html,body{height:100%;margin:0;font-family: "Orbitron", "Courier New", monospace;background:var(--bg);color:var(--green);-webkit-font-smoothing:antialiased}
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:"Orbitron","Courier New",monospace;
+      background:var(--bg);
+      color:var(--green);
+      overflow-x:hidden;
+    }
     a{color:var(--green);text-decoration:none}
+
     .wrap{
       min-height:100vh;
       display:flex;
@@ -25,93 +33,141 @@
       justify-content:flex-start;
       gap:18px;
       padding:18px;
-      box-sizing:border-box;
     }
 
-    /* ===== Top bar ===== */
     .topbar{
       width:100%;
       max-width:1100px;
       display:flex;
       justify-content:space-between;
       align-items:center;
+      flex-wrap:wrap;
       gap:12px;
       z-index:40;
     }
     .brand{
-      display:flex;align-items:center;gap:12px;
+      display:flex;
+      align-items:center;
+      gap:12px;
       color:var(--green);
+      flex-wrap:wrap;
     }
-    .brand img{height:42px;border-radius:6px;box-shadow:0 0 12px rgba(0,255,102,0.06)}
-    .controls{display:flex;gap:8px;align-items:center}
+    .brand img{
+      height:42px;
+      border-radius:6px;
+      box-shadow:0 0 12px rgba(0,255,102,0.06);
+    }
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      justify-content:center;
+    }
     .btn{
-      background:linear-gradient(180deg, rgba(0,255,102,0.06), rgba(0,0,0,0.12));
+      background:linear-gradient(180deg,rgba(0,255,102,0.06),rgba(0,0,0,0.12));
       border:1px solid rgba(0,255,102,0.12);
       color:var(--green);
-      padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;
-      box-shadow:0 6px 18px rgba(0,255,102,0.02);
+      padding:8px 12px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:0.9rem;
     }
     .btn.ghost{background:transparent;border:1px dashed rgba(0,255,102,0.12)}
     .btn:active{transform:translateY(1px)}
 
-    /* ===== Main area ===== */
     .main{
       width:100%;
       max-width:1100px;
       display:grid;
-      grid-template-columns: 1fr 360px;
+      grid-template-columns:1fr 360px;
       gap:18px;
       align-items:start;
-      z-index:30;
     }
 
-    /* Terminal */
     .terminal{
-      background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));
+      background:linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.55));
       border:1px solid rgba(0,255,102,0.08);
       box-shadow:0 12px 40px rgba(0,255,102,0.04);
-      padding:16px;border-radius:10px;min-height:460px;
-      display:flex;flex-direction:column;gap:10px;overflow:hidden;
+      padding:16px;
+      border-radius:10px;
+      min-height:420px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow:hidden;
     }
     .term-output{
       background:rgba(0,0,0,0.6);
-      padding:12px;border-radius:8px;flex:1;overflow:auto;
-      color:var(--muted);line-height:1.45;font-size:0.95rem;
-      box-shadow: inset 0 0 30px rgba(0,0,0,0.3);
+      padding:12px;
+      border-radius:8px;
+      flex:1;
+      overflow:auto;
+      color:var(--muted);
+      line-height:1.45;
+      font-size:0.95rem;
+      box-shadow:inset 0 0 30px rgba(0,0,0,0.3);
+      max-height:60vh;
     }
     .term-line{margin:6px 0}
     .prompt{
-      display:flex;gap:10px;align-items:center;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
     }
-    .prompt .prefix{min-width:120px;color:var(--green);font-weight:700}
+    .prompt .prefix{min-width:100px;color:var(--green);font-weight:700}
     .cmd-input{
-      flex:1;background:transparent;border:none;outline:none;color:var(--green);font-family:inherit;font-size:1rem;
+      flex:1;
+      background:transparent;
+      border:none;
+      outline:none;
+      color:var(--green);
+      font-family:inherit;
+      font-size:1rem;
+      min-width:150px;
     }
     .hint{font-size:0.85rem;color:rgba(0,255,102,0.25);margin-top:6px}
 
-    /* Right panel */
     .panel{
-      background:linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));
-      padding:14px;border-radius:10px;border:1px solid rgba(0,255,102,0.06);
+      background:linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.55));
+      padding:14px;
+      border-radius:10px;
+      border:1px solid rgba(0,255,102,0.06);
       box-shadow:0 8px 30px rgba(0,255,102,0.03);
-      min-height:460px;
+      min-height:420px;
     }
     .panel h3{color:var(--green);margin-bottom:8px}
     .panel .item{background:var(--glass);padding:10px;border-radius:8px;margin-bottom:10px}
-    .kbd{background:#072007;padding:6px 8px;border-radius:6px;color:var(--green);font-weight:700}
-
-    /* footer small */
-    .small{font-size:0.85rem;color:rgba(255,255,255,0.6)}
-
-    /* Canvas matrix behind */
-    canvas#matrix {
-      position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;mix-blend-mode:screen;
+    .kbd{
+      background:#072007;
+      padding:6px 8px;
+      border-radius:6px;
+      color:var(--green);
+      font-weight:700;
+      font-size:0.85rem;
     }
 
-    /* Responsive */
-    @media (max-width:980px){
-      .main{grid-template-columns:1fr}
-      .panel{order:2}
+    canvas#matrix{
+      position:fixed;
+      left:0;top:0;
+      width:100%;height:100%;
+      z-index:0;
+      pointer-events:none;
+      mix-blend-mode:screen;
+    }
+
+    @media (max-width:900px){
+      .main{grid-template-columns:1fr;}
+      .panel{order:2;}
+      .prompt{flex-direction:column;align-items:flex-start;}
+      .prefix{min-width:auto;}
+      .cmd-input{width:100%;}
+      .term-output{max-height:50vh;}
+      .controls{justify-content:center;}
+      .btn{font-size:0.8rem;padding:6px 10px;}
+      .wrap{padding:10px;}
     }
   </style>
 </head>
@@ -123,316 +179,113 @@
       <div class="brand">
         <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="IFRO">
         <div>
-          <div style="font-weight:900">Modo Hacker — Turma 1°A</div>
-          <div style="font-size:0.85rem;color:rgba(255,255,255,0.6)">Painel seguro para demonstração (somente local)</div>
+          <h3>Modo Hacker - Turma 1A</h3>
+          <small>Painel seguro para demonstração (somente local)</small>
         </div>
       </div>
-
       <div class="controls">
-        <button class="btn" id="openSite">Abrir site</button>
-        <button class="btn" id="toggleMusic">Música (M)</button>
-        <button class="btn ghost" id="downloadLog">Baixar log</button>
-        <button class="btn" id="closeBtn">Voltar</button>
+        <button class="btn" onclick="window.open('index.html','_blank')">Abrir site</button>
+        <button class="btn" onclick="toggleMusic()">🎵 Música (M)</button>
       </div>
     </div>
 
     <div class="main">
-      <!-- Terminal -->
-      <div class="terminal" role="region" aria-label="terminal">
-        <div class="term-output" id="termOutput" tabindex="0"></div>
-
-        <div class="prompt">
-          <div class="prefix">user@turma1a:~$</div>
-          <input id="cmdInput" class="cmd-input" placeholder="Digite um comando e pressione Enter (ajuda: help)">
+      <div class="terminal">
+        <div class="term-output" id="output">
+          <div class="term-line">> Inicializando IFRO SYSTEM...</div>
+          <div class="term-line">> Sistema pronto. Digite "help" para ver comandos.</div>
         </div>
-
-        <div class="hint">Comandos: <span class="kbd">help</span>, <span class="kbd">clear</span>, <span class="kbd">about</span>, <span class="kbd">open</span>, <span class="kbd">music</span>, <span class="kbd">theme</span>, <span class="kbd">download</span></div>
+        <div class="prompt">
+          <span class="prefix">user@turma1A:~$</span>
+          <input type="text" id="cmd" class="cmd-input" placeholder="Digite um comando e pressione Enter">
+        </div>
       </div>
 
-      <!-- Right panel -->
-      <aside class="panel">
+      <div class="panel">
         <h3>Informações & Comandos</h3>
-
-        <div class="item">
-          <strong>Ajuda rápida:</strong>
-          <ul class="small" style="margin:10px 0 0 18px;">
-            <li><code>help</code> — lista comandos</li>
-            <li><code>clear</code> ou <code>cls</code> — limpa terminal</li>
-            <li><code>about</code> — sobre o sistema</li>
-            <li><code>open <url></code> — abre página (ex: open index.html)</li>
-            <li><code>music on/off</code> — tocar/pausar lofi</li>
-            <li><code>theme matrix/dark</code> — alterna tema</li>
-            <li><code>download</code> — baixa log em .txt</li>
-          </ul>
-        </div>
-
-        <div class="item">
-          <strong>Atalhos:</strong>
-          <div class="small" style="margin-top:8px">
-            <span class="kbd">M</span> Música — <span class="kbd">T</span> Tema — <span class="kbd">Esc</span> Focar terminal
-          </div>
-        </div>
-
-        <div class="item">
-          <strong>Status:</strong>
-          <div id="statusMusic" style="margin-top:8px;color:var(--muted)">Música: parada</div>
-          <div id="statusTheme" style="margin-top:6px;color:var(--muted)">Tema: matrix</div>
-        </div>
-
-        <div class="item small">
-          <strong>Observação:</strong>
-          <div style="margin-top:6px">Este modo é apenas visual/educativo. Use os comandos para testar a interatividade do painel.</div>
-        </div>
-      </aside>
-    </div>
-
-    <div style="width:100%;max-width:1100px;text-align:center;color:rgba(255,255,255,0.6);font-size:0.9rem">
-      <div style="margin-top:8px">Dica: digite <span class="kbd">help</span> no terminal para começar.</div>
+        <div class="item"><b>Ajuda:</b> <span class="kbd">help</span></div>
+        <div class="item"><b>Limpar terminal:</b> <span class="kbd">clear</span></div>
+        <div class="item"><b>Sobre:</b> <span class="kbd">about</span></div>
+        <div class="item"><b>Abrir site:</b> <span class="kbd">open</span></div>
+        <div class="item"><b>Baixar arquivo:</b> <span class="kbd">download</span></div>
+      </div>
     </div>
   </div>
 
-  <!-- Howler (CDN) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
-
   <script>
-  // ============================
-  // MODO HACKER — SCRIPT
-  // ============================
+    const output = document.getElementById("output");
+    const cmdInput = document.getElementById("cmd");
 
-  // DOM refs
-  const termOutput = document.getElementById('termOutput');
-  const cmdInput = document.getElementById('cmdInput');
-  const openSiteBtn = document.getElementById('openSite');
-  const toggleMusicBtn = document.getElementById('toggleMusic');
-  const downloadLogBtn = document.getElementById('downloadLog');
-  const closeBtn = document.getElementById('closeBtn');
-  const statusMusic = document.getElementById('statusMusic');
-  const statusTheme = document.getElementById('statusTheme');
-
-  // STATE
-  const state = {
-    theme: localStorage.getItem('hf_theme') || 'matrix',
-    musicPlaying: false,
-    log: [],
-  };
-
-  // Init Howler music
-  const music = new Howl({
-    src: ['https://cdn.pixabay.com/download/audio/2023/01/23/audio_c0b8a7b0a7.mp3?filename=lofi-study-112191.mp3'],
-    loop: true,
-    volume: 0.25
-  });
-
-  // Utility: write line to terminal
-  function writeLine(text, cls='') {
-    const p = document.createElement('div');
-    p.className = 'term-line ' + cls;
-    p.textContent = text;
-    termOutput.appendChild(p);
-    termOutput.scrollTop = termOutput.scrollHeight;
-    state.log.push(text);
-  }
-
-  // Initial intro
-  writeLine('> Inicializando IFRO SYSTEM...', 'info');
-  setTimeout(()=> writeLine('> Sistema pronto. Digite "help" para ver comandos.'), 600);
-
-  // COMMAND HANDLER
-  function runCommand(raw) {
-    if (!raw) return;
-    writeLine('> ' + raw); // echo
-    const parts = raw.trim().split(/\s+/);
-    const cmd = parts[0].toLowerCase();
-    const args = parts.slice(1);
-
-    switch(cmd) {
-      case 'help':
-        writeLine('Comandos disponíveis: help, clear/cls, about, open, music, theme, download, echo');
-        break;
-      case 'clear':
-      case 'cls':
-        termOutput.innerHTML = '';
-        state.log = [];
-        writeLine('> Terminal limpo.');
-        break;
-      case 'about':
-        writeLine('Turma 1°A — Técnico em Informática (IFRO Ariquemes). Painel demonstrativo.');
-        writeLine('Criado por Turma 1A — 2025');
-        break;
-      case 'open':
-        if (args.length === 0) { writeLine('Uso: open <arquivo ou URL>'); break; }
-        const target = args[0];
-        try {
-          // abrir relativo (index.html, galeria.html) ou URL absoluto
-          if (/^https?:\/\//i.test(target)) window.open(target, '_blank');
-          else window.open(target, '_blank');
-          writeLine('Abrindo: ' + target);
-        } catch (e) {
-          writeLine('Erro ao abrir: ' + e.message);
-        }
-        break;
-      case 'music':
-        if (args[0] === 'on' || args[0] === 'play') {
-          music.play(); state.musicPlaying = true; updateMusicStatus(); writeLine('Música iniciada.');
-        } else if (args[0] === 'off' || args[0] === 'stop' || args[0] === 'pause') {
-          music.pause(); state.musicPlaying = false; updateMusicStatus(); writeLine('Música pausada.');
-        } else {
-          writeLine('Use "music on" ou "music off".');
-        }
-        break;
-      case 'theme':
-        if (!args[0]) { writeLine('Uso: theme matrix|dark'); break; }
-        const chosen = args[0].toLowerCase();
-        if (chosen === 'matrix' || chosen === 'dark') {
-          setTheme(chosen);
-          writeLine('Tema alterado para: ' + chosen);
-        } else writeLine('Tema inválido. Use matrix ou dark.');
-        break;
-      case 'download':
-        downloadLog();
-        writeLine('Iniciando download do log...');
-        break;
-      case 'echo':
-        writeLine(args.join(' '));
-        break;
-      default:
-        writeLine('Comando não encontrado. Digite "help".');
+    function printLine(text){
+      const line = document.createElement("div");
+      line.className = "term-line";
+      line.textContent = text;
+      output.appendChild(line);
+      output.scrollTop = output.scrollHeight;
     }
-  }
 
-  // keyboard Enter handler
-  cmdInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const v = cmdInput.value;
-      runCommand(v);
-      cmdInput.value = '';
-    } else if (e.key === 'Escape') {
-      cmdInput.blur();
-    }
-  });
-
-  // Buttons
-  openSiteBtn.addEventListener('click', () => {
-    window.open('index.html', '_blank');
-    writeLine('Abrindo index.html em nova aba...');
-  });
-
-  toggleMusicBtn.addEventListener('click', () => {
-    if (state.musicPlaying) { music.pause(); state.musicPlaying=false; writeLine('Música pausada.'); }
-    else { music.play(); state.musicPlaying=true; writeLine('Música iniciada.'); }
-    updateMusicStatus();
-  });
-
-  downloadLogBtn.addEventListener('click', () => {
-    downloadLog();
-  });
-
-  closeBtn.addEventListener('click', () => {
-    // volta para index no mesmo tab
-    window.location.href = 'index.html';
-  });
-
-  // music status UI
-  function updateMusicStatus() {
-    statusMusic.textContent = 'Música: ' + (state.musicPlaying ? 'tocando' : 'parada');
-  }
-
-  // theme
-  function setTheme(t) {
-    state.theme = t;
-    localStorage.setItem('hf_theme', t);
-    statusTheme.textContent = 'Tema: ' + t;
-    if (t === 'matrix') {
-      document.body.style.background = '#000';
-      // matrix canvas already present
-    } else {
-      document.body.style.background = '#071007';
-    }
-  }
-  setTheme(state.theme);
-
-  // download log as txt
-  function downloadLog() {
-    const data = state.log.join('\n');
-    const blob = new Blob([data], {type:'text/plain;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ifro_terminal_log.txt';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  // Global shortcuts
-  window.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'm') {
-      // toggle music
-      e.preventDefault();
-      if (state.musicPlaying) { music.pause(); state.musicPlaying=false; writeLine('Música pausada (atalho)'); }
-      else { music.play(); state.musicPlaying=true; writeLine('Música iniciada (atalho)'); }
-      updateMusicStatus();
-    }
-    if (e.key.toLowerCase() === 't') {
-      // toggle theme quick
-      const next = state.theme === 'matrix' ? 'dark' : 'matrix';
-      setTheme(next);
-      writeLine('Tema alternado via atalho para ' + next);
-    }
-    if (e.key === 'Escape') {
-      cmdInput.focus();
-    }
-  });
-
-  // focus terminal on click
-  termOutput.addEventListener('click', ()=> { cmdInput.focus(); });
-
-  // small helper to preload images (optional)
-  ['IMG-20250513-WA0029(1).jpg','IMG-20250826-WA0086.jpg','IMG-20250901-WA0020.jpg','IMG-20250918-WA0038.jpg','IMG-20251011-WA0001.jpg'].forEach(src=>{
-    const i=new Image(); i.src=src;
-  });
-
-  updateMusicStatus();
-
-  // ============================
-  // MATRIX CANVAS (background)
-  // ============================
-  (function initMatrix(){
-    const canvas = document.getElementById('matrix');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let width = canvas.width = window.innerWidth;
-    let height = canvas.height = window.innerHeight;
-    const fontSize = 14;
-    let columns = Math.floor(width / fontSize);
-    let drops = Array(columns).fill(1);
-    const letters = "01";
-
-    function resize() {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-      columns = Math.floor(width / fontSize);
-      drops = Array(columns).fill(1);
-    }
-    window.addEventListener('resize', resize);
-
-    function draw() {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
-      ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = '#00ff66';
-      ctx.font = fontSize + 'px monospace';
-      for (let i = 0; i < drops.length; i++) {
-        const text = letters.charAt(Math.floor(Math.random() * letters.length));
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-        if (drops[i] * fontSize > height && Math.random() > 0.975) drops[i] = 0;
-        drops[i]++;
+    function processCommand(cmd){
+      switch(cmd.toLowerCase()){
+        case "help":
+          printLine("> Comandos disponíveis: help, clear, about, open, download, music");
+          break;
+        case "clear":
+          output.innerHTML = "";
+          break;
+        case "about":
+          printLine("> Projeto Turma 1A - IFRO. Criado para aprendizado e demonstração 💻");
+          break;
+        case "open":
+          printLine("> Abrindo site principal...");
+          window.open("index.html","_blank");
+          break;
+        case "download":
+          printLine("> Simulando download do projeto...");
+          break;
+        case "music":
+          toggleMusic();
+          break;
+        default:
+          printLine("> Comando não reconhecido. Digite 'help'.");
       }
     }
 
-    setInterval(draw, 40);
-  })();
+    cmdInput.addEventListener("keypress", function(e){
+      if(e.key === "Enter"){
+        const cmd = cmdInput.value.trim();
+        printLine("user@turma1A:~$ " + cmd);
+        processCommand(cmd);
+        cmdInput.value = "";
+      }
+    });
 
+    function toggleMusic(){
+      alert("🎵 Modo música (simulado)");
+    }
+
+    // Efeito Matrix
+    const c = document.getElementById("matrix");
+    const ctx = c.getContext("2d");
+    c.height = window.innerHeight;
+    c.width = window.innerWidth;
+    const letters = "01";
+    const fontSize = 14;
+    const columns = c.width / fontSize;
+    const drops = [];
+    for(let x=0;x<columns;x++) drops[x]=1;
+    function draw(){
+      ctx.fillStyle="rgba(0,0,0,0.05)";
+      ctx.fillRect(0,0,c.width,c.height);
+      ctx.fillStyle="#00FF66";
+      ctx.font=fontSize+"px monospace";
+      for(let i=0;i<drops.length;i++){
+        const text=letters.charAt(Math.floor(Math.random()*letters.length));
+        ctx.fillText(text,i*fontSize,drops[i]*fontSize);
+        if(drops[i]*fontSize>c.height && Math.random()>0.975) drops[i]=0;
+        drops[i]++;
+      }
+    }
+    setInterval(draw,33);
   </script>
 </body>
 </html>
