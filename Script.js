@@ -1,18 +1,14 @@
 /* ==========================
-   Turma 1°A — script.js (Modular & Profissional)
-   - initApp() chama todos os init*
-   - salva preferências (tema, música) no localStorage
-   - inclui: music, themes, gallery, terminal, matrix, toasts,
-     fullscreen, custom commands, helpers
+   Turma 1°A — script.js (com suas fotos na galeria)
+   Cole este arquivo inteiro no seu repositório (substitua o antigo).
+   Coloque as imagens em /img/gal1.jpg ... /img/gal7.jpg (veja instruções acima).
    ========================== */
 
 document.addEventListener("DOMContentLoaded", () => {
   initApp();
 });
 
-/* ==========================
-   CONFIGURAÇÕES GLOBAIS
-   ========================== */
+/* CONFIG */
 const CONFIG = {
   musicSrc: 'https://cdn.pixabay.com/download/audio/2023/01/23/audio_c0b8a7b0a7.mp3?filename=lofi-study-112191.mp3',
   galleryInterval: 6000,
@@ -21,19 +17,13 @@ const CONFIG = {
   toastDuration: 3500,
 };
 
-/* ==========================
-   ESTADO (salvo / runtime)
-   ========================== */
 const state = {
   musicPlaying: false,
-  currentTheme: localStorage.getItem('ifro_theme') || 'dark', // 'dark' or 'matrix'
+  currentTheme: localStorage.getItem('ifro_theme') || 'dark',
   galleryIndex: 0,
-  commands: {}, // armazenará comandos customizados
+  commands: {},
 };
 
-/* ==========================
-   INIT PRINCIPAL
-   ========================== */
 function initApp() {
   initDOMRefs();
   initMusic();
@@ -49,9 +39,7 @@ function initApp() {
   showWelcomeMessage();
 }
 
-/* ==========================
-   DOM REFS (cache de seletores)
-   ========================== */
+/* DOM Refs */
 const $ = {};
 function initDOMRefs() {
   $.playMusic = document.getElementById('playMusic');
@@ -63,7 +51,7 @@ function initDOMRefs() {
   $.canvas = document.getElementById('matrix');
   $.toastContainer = document.getElementById('toast-container');
   $.title = document.getElementById('titulo');
-  // proteções caso algum elemento não exista
+
   if (!$.toastContainer) {
     const tc = document.createElement('div');
     tc.id = 'toast-container';
@@ -72,9 +60,7 @@ function initDOMRefs() {
   }
 }
 
-/* ==========================
-   MUSIC (Howler)
-   ========================== */
+/* MUSIC */
 let sound;
 function initMusic() {
   sound = new Howl({
@@ -86,7 +72,6 @@ function initMusic() {
   if ($.playMusic) {
     $.playMusic.addEventListener('click', () => {
       toggleMusic();
-      // se estado muda pra true, showToast já chamada por toggleMusic
     });
   }
 }
@@ -104,9 +89,7 @@ function toggleMusic() {
   }
 }
 
-/* ==========================
-   THEMES
-   ========================== */
+/* THEMES + HACKER BUTTON */
 function initThemes() {
   if ($.toggleTheme) {
     $.toggleTheme.addEventListener('click', () => {
@@ -115,14 +98,10 @@ function initThemes() {
     });
   }
 
-  // Botão "Hacker" também abre nova aba + ativa matrix
   if ($.modoHacker) {
-    $.modoHacker.addEventListener('click', (e) => {
-      // Abre nova aba para "hacker.html" (crie o arquivo)
-      try {
-        window.open('hacker.html', '_blank');
-      } catch (err) { /* fallback silencioso */ }
-      // ativa modo matrix localmente também
+    $.modoHacker.addEventListener('click', () => {
+      // abre hacker.html em nova aba — ajuste se o arquivo estiver em outra pasta
+      try { window.open('hacker.html', '_blank'); } catch (e) { /* ignore */ }
       setTheme('matrix');
       showToast('💻 Modo Hacker: nova aba aberta');
     });
@@ -141,30 +120,30 @@ function applySavedTheme() {
   setTheme(state.currentTheme);
 }
 
-/* ==========================
-   GALLERY (carrossel modular)
-   ========================== */
+/* -----------------------------
+   GALLERY — AQUI COLOQUEI SUAS FOTOS
+   As imagens devem existir em /img/gal1.jpg ... /img/gal7.jpg
+   ----------------------------- */
 const GALLERY = [
-  { src: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80", caption: "Programando o futuro 💻" },
-  { src: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1200&q=80", caption: "Turma 1°A — inovação em cada linha de código ⚙️" },
-  { src: "https://images.unsplash.com/photo-1537432376769-00a4c0f7e3b1?auto=format&fit=crop&w=1200&q=80", caption: "Aprendendo juntos, crescendo juntos 🚀" },
-  { src: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80", caption: "Conectando ideias e tecnologia 💡" }
+  { src: "img/gal1.jpg", caption: "Turma no laboratório — aprendizado em ação 💻" },
+  { src: "img/gal2.jpg", caption: "Comemorando momentos — bolo e amizade 🎂" },
+  { src: "img/gal3.jpg", caption: "Aula prática no laboratório — foco e dedicação ⚙️" },
+  { src: "img/gal4.jpg", caption: "Estudo noturno no lab — horas de código ✨" },
+  { src: "img/gal5.jpg", caption: "Torcida e energia no ginásio — espírito escolar 💙" },
+  { src: "img/gal6.jpg", caption: "Passeio e confraternização — memórias ao ar livre 🌤️" },
+  { src: "img/gal7.jpg", caption: "Grande foto da turma — juntos conquistamos muito 🏆" }
 ];
 
 let galleryTimer = null;
 function initGallery() {
   if (!$.slide || !$.caption) return;
-  // set inicial
+
   $.slide.src = GALLERY[0].src;
   $.caption.textContent = GALLERY[0].caption;
   state.galleryIndex = 0;
 
-  // intervalo
-  galleryTimer = setInterval(() => {
-    nextGallery();
-  }, CONFIG.galleryInterval);
+  galleryTimer = setInterval(nextGallery, CONFIG.galleryInterval);
 
-  // opcional: pausa ao passar o mouse
   $.slide.addEventListener('mouseenter', () => clearInterval(galleryTimer));
   $.slide.addEventListener('mouseleave', () => galleryTimer = setInterval(nextGallery, CONFIG.galleryInterval));
 }
@@ -172,7 +151,6 @@ function initGallery() {
 function nextGallery() {
   state.galleryIndex = (state.galleryIndex + 1) % GALLERY.length;
   const next = GALLERY[state.galleryIndex];
-  // efeito de fade simples
   $.slide.style.transition = 'opacity 600ms ease';
   $.slide.style.opacity = 0;
   setTimeout(() => {
@@ -182,22 +160,16 @@ function nextGallery() {
   }, 600);
 }
 
-/* ==========================
-   TERMINAL (typing + comandos)
-   ========================== */
+/* TERMINAL */
 function initTerminal() {
   if (!$.terminal) return;
   const intro = [
     "Inicializando Turma 1°A...",
     "Conectando ao IFRO...",
-    "Compilando criatividade...",
+    "Compilando criatividade..."
   ];
-  writeLines(intro, 700, () => {
-    // após intro, inicia loop de mensagens lentas
-    startTerminalLoop();
-  });
+  writeLines(intro, 700, startTerminalLoop);
 
-  // permitir clicar no terminal para digitar um comando simples
   $.terminal.addEventListener('click', () => {
     const cmd = prompt('Digite um comando (ex: help, clear, nome):');
     if (!cmd) return;
@@ -243,10 +215,10 @@ function appendTerminal(text) {
   $.terminal.scrollTop = $.terminal.scrollHeight;
 }
 
+/* Comandos customizáveis */
 function initCustomCommands() {
-  // adiciona comandos padrões
   addCustomCommand('help', () => {
-    appendTerminal("> Comandos disponíveis: help, clear, nome, site");
+    appendTerminal("> Comandos: help, clear, nome, site");
     showToast('ℹ️ help exibido no terminal');
   });
 
@@ -265,13 +237,11 @@ function initCustomCommands() {
   });
 }
 
-/* registra comandos que podem ser chamados por runCommand */
 function addCustomCommand(cmd, handler) {
   if (typeof cmd !== 'string' || typeof handler !== 'function') return;
   state.commands[cmd.toLowerCase()] = handler;
 }
 
-/* executa comando (string) */
 function runCommand(cmd) {
   if (!cmd) return;
   const parts = cmd.split(' ').filter(Boolean);
@@ -288,9 +258,7 @@ function runCommand(cmd) {
   }
 }
 
-/* ==========================
-   MATRIX (canvas)
-   ========================== */
+/* MATRIX */
 let matrixInterval = null;
 function initMatrix() {
   if (!$.canvas) return;
@@ -332,12 +300,8 @@ function drawMatrix() {
   }
 }
 
-/* ==========================
-   TOASTS (notificações)
-   ========================== */
-function initToasts() {
-  // container já criado em initDOMRefs; nada extra agora
-}
+/* TOASTS */
+function initToasts() { /* container criado em initDOMRefs */ }
 
 function showToast(message, duration = CONFIG.toastDuration) {
   if (!$.toastContainer) return;
@@ -347,14 +311,11 @@ function showToast(message, duration = CONFIG.toastDuration) {
   $.toastContainer.appendChild(toast);
   setTimeout(() => {
     toast.style.opacity = '0';
-    // remove depois da transição
     setTimeout(() => toast.remove(), 500);
   }, duration);
 }
 
-/* ==========================
-   FULLSCREEN
-   ========================== */
+/* FULLSCREEN */
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(err => {
@@ -365,18 +326,14 @@ function toggleFullscreen() {
   }
 }
 
-/* ==========================
-   ATALHOS DE TECLADO
-   ========================== */
+/* SHORTCUTS */
 function initShortcuts() {
   window.addEventListener('keydown', (e) => {
-    // evitar quando usuário está digitando em inputs (não temos inputs aqui, mas por segurança)
     if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
-
     const key = e.key.toLowerCase();
-    if (key === 'm') toggleMusic();     // M = Música
-    if (key === 'f') toggleFullscreen(); // F = Fullscreen
-    if (key === 't') {                  // T = alterna tema
+    if (key === 'm') toggleMusic();
+    if (key === 'f') toggleFullscreen();
+    if (key === 't') {
       if (state.currentTheme === 'matrix') setTheme('dark');
       else setTheme('matrix');
     }
@@ -386,22 +343,17 @@ function initShortcuts() {
   });
 }
 
-/* ==========================
-   WELCOME MESSAGE
-   ========================== */
+/* WELCOME */
 function showWelcomeMessage() {
   const hour = new Date().getHours();
   let greet = 'Bem-vindo!';
   if (hour < 12) greet = 'Bom dia, Turma 1°A!';
   else if (hour < 18) greet = 'Boa tarde, Turma 1°A!';
   else greet = 'Boa noite, Turma 1°A!';
-
   showToast(`🚀 ${greet} — IFRO Ariquemes`);
 }
 
-/* ==========================
-   UTILIDADES EXTRA
-   ========================== */
+/* UTIL */
 function randomMessage() {
   const arr = [
     "Inovação ativa",
@@ -412,10 +364,7 @@ function randomMessage() {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-
-/* ==========================
-   EXPOSIÇÃO (para debug / console)
-   ========================== */
+/* EXPOSIÇÃO (debug) */
 window.IFRO = {
   toggleMusic,
   toggleFullscreen,
