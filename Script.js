@@ -1,14 +1,9 @@
-// MENU HAMBÚRGUER
-const menuBtn = document.getElementById("menuBtn");
-const navMenu = document.getElementById("navMenu");
+// menu hambúrguer responsivo
+document.addEventListener("DOMContentLoaded", () => {
+  const menuToggle = document.getElementById("mobile-menu");
+  const navLinks = document.querySelector(".nav-links");
 
-menuBtn.addEventListener("click", () => {
-  navMenu.classList.toggle("active");
-});
-
-// Fecha o menu ao clicar em um link
-document.querySelectorAll("nav a").forEach(link => {
-  link.addEventListener("click", () => {
-    navMenu.classList.remove("active");
+  menuToggle.addEventListener("click", () => {
+    navLinks.classList.toggle("active");
   });
 });
