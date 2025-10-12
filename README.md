@@ -14,6 +14,6 @@ Este é um site simples feito para testes e aprendizado de HTML, CSS e JavaScrip
 3. Em *Branch*, escolha **main** e salve.  
 4. O site vai ficar online no endereço:
 
-https://seu-usuario.github.io/turma-1A-ifro/
+https://vg135575-oss.github.io/turma-1A-ifro/
 
 (Troque `seu-usuario` pelo seu nome de usuário do GitHub)
