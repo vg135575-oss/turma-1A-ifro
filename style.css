@@ -1,157 +1,179 @@
-/* ====== Estilo geral ====== */
-body {
-  margin: 0;
-  font-family: "Orbitron", sans-serif;
-  background-color: #000;
-  color: #e0e0e0;
+/* ===== Geral ===== */
+:root{
+  --bg:#000;
+  --green:#00ff66;
+  --panel:#061006;
+  --muted:#9bdaa0;
+  --glass: rgba(0,0,0,0.45);
+  --accent:#00b34c;
+}
+html,body{
+  height:100%;
+  margin:0;
+  font-family:"Orbitron","Courier New",monospace;
+  background:var(--bg);
+  color:var(--green);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:var(--green);text-decoration:none}
+
+.wrap{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:18px;
+  padding:18px;
+  box-sizing:border-box;
 }
 
-/* ====== Cabeçalho ====== */
-header {
-  background-color: #006400;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+/* ===== Top bar ===== */
+.topbar{
+  width:100%;
+  max-width:1100px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  z-index:40;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  color:var(--green);
+  flex-wrap:wrap;
+}
+.brand img{
+  height:42px;
+  border-radius:6px;
+  box-shadow:0 0 12px rgba(0,255,102,0.06);
+}
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  justify-content:center;
+}
+.btn{
+  background:linear-gradient(180deg,rgba(0,255,102,0.06),rgba(0,0,0,0.12));
+  border:1px solid rgba(0,255,102,0.12);
+  color:var(--green);
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:700;
+  font-size:0.9rem;
+}
+.btn.ghost{background:transparent;border:1px dashed rgba(0,255,102,0.12)}
+.btn:active{transform:translateY(1px)}
+
+/* ===== Main area ===== */
+.main{
+  width:100%;
+  max-width:1100px;
+  display:grid;
+  grid-template-columns:1fr 360px;
+  gap:18px;
+  align-items:start;
+  z-index:30;
 }
 
-.logo {
-  height: 50px;
+/* Terminal */
+.terminal{
+  background:linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.55));
+  border:1px solid rgba(0,255,102,0.08);
+  box-shadow:0 12px 40px rgba(0,255,102,0.04);
+  padding:16px;
+  border-radius:10px;
+  min-height:420px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  overflow:hidden;
+}
+.term-output{
+  background:rgba(0,0,0,0.6);
+  padding:12px;
+  border-radius:8px;
+  flex:1;
+  overflow:auto;
+  color:var(--muted);
+  line-height:1.45;
+  font-size:0.95rem;
+  box-shadow:inset 0 0 30px rgba(0,0,0,0.3);
+  max-height:60vh;
+}
+.term-line{margin:6px 0}
+.prompt{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.prompt .prefix{min-width:100px;color:var(--green);font-weight:700}
+.cmd-input{
+  flex:1;
+  background:transparent;
+  border:none;
+  outline:none;
+  color:var(--green);
+  font-family:inherit;
+  font-size:1rem;
+  min-width:150px;
+}
+.hint{font-size:0.85rem;color:rgba(0,255,102,0.25);margin-top:6px}
+
+/* Right panel */
+.panel{
+  background:linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.55));
+  padding:14px;
+  border-radius:10px;
+  border:1px solid rgba(0,255,102,0.06);
+  box-shadow:0 8px 30px rgba(0,255,102,0.03);
+  min-height:420px;
+}
+.panel h3{color:var(--green);margin-bottom:8px}
+.panel .item{background:var(--glass);padding:10px;border-radius:8px;margin-bottom:10px}
+.kbd{
+  background:#072007;
+  padding:6px 8px;
+  border-radius:6px;
+  color:var(--green);
+  font-weight:700;
+  font-size:0.85rem;
 }
 
-.nav-links {
-  list-style: none;
-  display: flex;
-  gap: 20px;
+/* Canvas matrix behind */
+canvas#matrix{
+  position:fixed;
+  left:0;top:0;
+  width:100%;height:100%;
+  z-index:0;
+  pointer-events:none;
+  mix-blend-mode:screen;
 }
 
-.nav-links li a {
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-.nav-links li a:hover,
-.nav-links li a.active {
-  color: #00ff66;
-}
-
-/* ====== Menu hambúrguer (mobile) ====== */
-.menu-toggle {
-  display: none;
-  font-size: 2rem;
-  cursor: pointer;
-}
-
-@media (max-width: 768px) {
-  .nav-links {
-    display: none;
-    flex-direction: column;
-    background-color: #004d00;
-    position: absolute;
-    top: 70px;
-    right: 10px;
-    width: 200px;
-    border-radius: 10px;
-    padding: 10px;
+/* ===== MOBILE ===== */
+@media (max-width:900px){
+  .main{
+    grid-template-columns:1fr;
   }
-
-  .nav-links.active {
-    display: flex;
-    animation: slideIn 0.3s ease-out;
+  .panel{
+    order:2;
   }
-
-  .menu-toggle {
-    display: block;
+  .prompt{
+    flex-direction:column;
+    align-items:flex-start;
   }
-
-  @keyframes slideIn {
-    from {opacity: 0; transform: translateY(-10px);}
-    to {opacity: 1; transform: translateY(0);}
-  }
-}
-
-/* ====== Galeria ====== */
-.galeria-section {
-  text-align: center;
-  padding: 20px;
-}
-
-.galeria-section h1 {
-  color: #00ff66;
-  text-shadow: 0 0 10px #00ff66;
-}
-
-.intro-text {
-  color: #ccc;
-  font-size: 1.1rem;
-  margin-bottom: 30px;
-}
-
-.gallery {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 30px;
-}
-
-.photo-card {
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 20px;
-  box-shadow: 0 0 20px #00ff00;
-  overflow: hidden;
-  text-align: center;
-  width: 90%;
-  max-width: 500px;
-  transition: transform 0.3s ease;
-}
-
-.photo-card:hover {
-  transform: scale(1.03);
-}
-
-.photo-card img {
-  width: 100%;
-  height: auto;
-  border-bottom: 2px solid #00ff00;
-}
-
-.photo-card p {
-  color: #e0e0e0;
-  padding: 10px;
-  font-size: 1rem;
-}
-
-/* ====== Botão Voltar ====== */
-.back-btn {
-  margin-top: 40px;
-}
-
-.back-btn a {
-  background-color: #00ff66;
-  color: #000;
-  text-decoration: none;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-.back-btn a:hover {
-  background-color: #009944;
-}
-
-/* ====== Rodapé ====== */
-footer {
-  background-color: #003300;
-  color: #ccc;
-  text-align: center;
-  padding: 15px;
-  margin-top: 50px;
-  font-size: 0.9rem;
+  .prefix{min-width:auto;}
+  .cmd-input{width:100%;}
+  .term-output{max-height:50vh;}
+  .controls{justify-content:center;}
+  .btn{font-size:0.8rem;padding:6px 10px;}
+  .wrap{padding:10px;}
 }
