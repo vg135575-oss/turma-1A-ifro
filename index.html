@@ -1,49 +1,54 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Turma 1A IFRO</title>
+  <title>Turma 1A IFRO 💚</title>
   <link rel="stylesheet" href="style.css">
-  <script src="Script.js" defer></script>
+  <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
 </head>
 <body>
-
-  <header class="cabecalho">
-    <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
-    <nav>
-      <ul class="menu">
-        <li><a href="#inicio">Início</a></li>
-        <li><a href="#sobre">Sobre</a></li>
-        <li><a href="#galeria">Galeria</a></li>
-        <li><a href="Hacker.html" target="_blank">Hacker</a></li>
-      </ul>
+  <header>
+    <div class="logo-container">
+      <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
+      <button class="menu-btn" id="menuBtn">☰</button>
+    </div>
+    <nav id="navMenu">
+      <a href="index.html">Início</a>
+      <a href="#sobre">Sobre</a>
+      <a href="galeria.html">Galeria</a>
+      <a href="Hacker.html" target="_blank">Hacker</a>
     </nav>
   </header>
 
-  <main id="inicio" class="conteudo-principal">
-    <h1>Bem-vindo ao Projeto da Turma 1A IFRO</h1>
-    <p>Site criado pelos alunos do curso técnico integrado em informática.</p>
+  <main>
+    <section class="hero">
+      <h1>Bem-vindo ao Projeto da Turma 1A IFRO</h1>
+      <p>Site criado pelos alunos do curso técnico integrado em informática.</p>
+    </section>
+
+    <section id="sobre" class="sobre">
+      <h2>Sobre a Turma</h2>
+      <p>Somos uma turma unida, criativa e apaixonada por tecnologia. Este projeto representa nosso aprendizado e dedicação no curso técnico em informática do IFRO.</p>
+    </section>
+
+    <section id="galeria" class="galeria">
+      <h2>📸 Galeria da Turma 1A IFRO</h2>
+      <div class="galeria-container">
+        <img src="IMG-20250513-WA0029(1).jpg" alt="Turma 1A IFRO 1">
+        <img src="IMG-20250826-WA0086.jpg" alt="Turma 1A IFRO 2">
+        <img src="IMG-20250901-WA0020.jpg" alt="Turma 1A IFRO 3">
+        <img src="IMG-20250918-WA0038.jpg" alt="Turma 1A IFRO 4">
+        <img src="IMG-20251011-WA0001.jpg" alt="Turma 1A IFRO 5">
+      </div>
+      <a href="galeria.html" class="btn">Ver galeria completa</a>
+    </section>
   </main>
-
-  <section id="sobre" class="sobre">
-    <h2>Sobre a Turma</h2>
-    <p>Somos uma turma unida, criativa e apaixonada por tecnologia. Este projeto representa nosso aprendizado e dedicação no curso técnico em informática do IFRO.</p>
-  </section>
-
-  <section id="galeria" class="galeria">
-    <h2>📸 Galeria da Turma 1A IFRO</h2>
-    <div class="galeria-container">
-      <img src="IMG-20250513-WA0029(1).jpg" alt="Turma 1A IFRO 1">
-      <img src="IMG-20250826-WA0086.jpg" alt="Turma 1A IFRO 2">
-      <img src="IMG-20250901-WA0020.jpg" alt="Turma 1A IFRO 3">
-    </div>
-    <a href="galeria.html" target="_blank" class="botao-ver-mais">Ver mais fotos</a>
-  </section>
 
   <footer>
     <p>© 2025 Turma 1A - Instituto Federal de Rondônia</p>
   </footer>
 
+  <script src="Script.js"></script>
 </body>
 </html>
