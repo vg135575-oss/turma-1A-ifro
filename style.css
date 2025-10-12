@@ -1,64 +1,71 @@
-/* ---------- ESTILO GERAL ---------- */
+/* ---------- GERAL ---------- */
 body {
   margin: 0;
   font-family: 'Orbitron', sans-serif;
   background-color: #1a1a1a;
   color: #0ff;
   overflow-x: hidden;
-  transition: background 0.5s, color 0.5s;
+  transition: background-color 0.6s ease, color 0.6s ease;
 }
 
+/* ---------- CABEÇALHO ---------- */
 header {
   text-align: center;
-  padding: 40px 10px 20px;
+  padding: 50px 10px 30px;
   background: rgba(0, 0, 0, 0.8);
-  box-shadow: 0 2px 10px #00ff66;
+  box-shadow: 0 2px 15px #00ff66;
 }
 
 header img {
   width: 100px;
-  display: block;
-  margin: 0 auto 10px;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 0 5px #00ff66);
 }
 
-h1 {
-  font-size: 2em;
+#titulo {
   color: #00ff66;
-  animation: blink 1.5s infinite;
+  font-size: 2.2em;
+  white-space: nowrap;
+  overflow: hidden;
+  border-right: 3px solid #00ff66;
+  width: 0;
+  animation: typing 3s steps(30, end) forwards, blink 1s infinite;
 }
 
-@keyframes blink {
-  50% { opacity: 0.5; }
-}
+@keyframes typing { from { width: 0; } to { width: 100%; } }
+@keyframes blink { 50% { border-color: transparent; } }
 
+/* ---------- BOTÕES ---------- */
 .btn-group {
-  margin-top: 15px;
+  margin-top: 20px;
   display: flex;
   justify-content: center;
   gap: 15px;
+  flex-wrap: wrap;
 }
 
 button {
   background: #00ff66;
   color: #000;
   border: none;
-  padding: 10px 20px;
+  padding: 10px 25px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
-  box-shadow: 0 0 10px #00ff66;
-  transition: 0.3s;
+  box-shadow: 0 0 15px #00ff66;
+  transition: all 0.3s;
 }
 
 button:hover {
   background: #000;
   color: #00ff66;
-  box-shadow: 0 0 20px #00ff66;
+  transform: scale(1.05);
+  box-shadow: 0 0 25px #00ff66;
 }
 
 /* ---------- SEÇÕES ---------- */
 section {
-  padding: 30px;
+  padding: 40px 20px;
   text-align: center;
 }
 
@@ -69,10 +76,32 @@ h2 {
   margin-bottom: 20px;
 }
 
-p {
+/* ---------- GALERIA ---------- */
+.gallery {
+  position: relative;
   max-width: 800px;
-  margin: auto;
-  line-height: 1.6;
+  margin: 20px auto;
+  overflow: hidden;
+  border-radius: 15px;
+  box-shadow: 0 0 25px #00ff66;
+}
+
+.gallery img {
+  width: 100%;
+  display: block;
+  border-radius: 15px;
+}
+
+.gallery-caption {
+  position: absolute;
+  bottom: 10px;
+  width: 100%;
+  color: #fff;
+  text-shadow: 0 0 10px #000;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px;
+  font-size: 1.1em;
+  border-radius: 0 0 15px 15px;
 }
 
 /* ---------- TERMINAL ---------- */
@@ -81,47 +110,14 @@ p {
   color: #0f0;
   font-family: monospace;
   padding: 20px;
-  margin: 20px auto;
   width: 90%;
   max-width: 600px;
   border-radius: 10px;
   text-align: left;
   height: 200px;
   overflow-y: auto;
-  box-shadow: 0 0 10px #00ff66;
-}
-
-/* ---------- GALERIA ---------- */
-.gallery {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  width: 100%;
-  max-width: 800px;
+  box-shadow: 0 0 20px #00ff66;
   margin: 0 auto;
-  overflow: hidden;
-  border-radius: 10px;
-  box-shadow: 0 0 20px #0ff;
-}
-
-.gallery img {
-  width: 100%;
-  height: auto;
-  border-radius: 10px;
-  transition: opacity 1s ease;
-}
-
-.gallery-caption {
-  position: absolute;
-  bottom: 10px;
-  left: 0;
-  width: 100%;
-  text-align: center;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.5);
-  font-size: 1.2em;
-  padding: 5px;
 }
 
 /* ---------- RODAPÉ ---------- */
@@ -129,9 +125,14 @@ footer {
   background-color: #001900;
   color: #0f0;
   text-align: center;
-  padding: 15px;
+  padding: 20px;
   font-size: 0.9em;
-  box-shadow: 0 -2px 10px #00ff66;
+  box-shadow: 0 -2px 15px #00ff66;
+}
+
+footer a {
+  color: #0ff;
+  text-decoration: none;
 }
 
 /* ---------- CANVAS ---------- */
@@ -144,32 +145,35 @@ canvas#matrix {
   height: 100%;
 }
 
-/* ---------- TEMA MATRIX (ESCURO) ---------- */
-body.matrix {
-  background-color: #000;
-  color: #00ff66;
+/* ---------- TOAST ---------- */
+#toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
 }
 
-body.matrix footer {
-  background-color: #001900;
-  box-shadow: 0 -2px 10px #00ff66;
+.toast {
+  background: #00ff66;
+  color: #000;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  margin-top: 10px;
+  box-shadow: 0 0 15px #00ff66;
+  animation: fadeInOut 3s forwards;
+}
+@keyframes fadeInOut {
+  0%,100% { opacity: 0; transform: translateY(20px); }
+  10%,90% { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------- TEMA CINZA ESCURO (PADRÃO) ---------- */
-body.dark {
-  background-color: #1a1a1a;
-  color: #0ff;
-}
-
-body.dark footer {
-  background-color: #111;
-  box-shadow: 0 -2px 10px #0ff;
-}
+/* ---------- TEMAS ---------- */
+body.matrix { background-color: #000; color: #00ff66; }
+body.dark { background-color: #1a1a1a; color: #0ff; }
 
 /* ---------- RESPONSIVIDADE ---------- */
 @media (max-width: 600px) {
-  .btn-group {
-    flex-direction: column;
-    gap: 10px;
-  }
+  #titulo { font-size: 1.5em; }
+  .btn-group { flex-direction: column; }
 }
