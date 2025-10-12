@@ -1,61 +1,131 @@
-/* ---------- ESTILO GERAL ---------- */
+/* ====== GERAL ====== */
 body {
+  font-family: Arial, Helvetica, sans-serif;
   margin: 0;
-  font-family: 'Orbitron', sans-serif;
-  background-color: #1a1a1a;
-  color: #00ffcc;
-  overflow-x: hidden;
-  transition: background 0.6s ease, color 0.6s ease;
+  padding: 0;
+  background-color: #f9fff9;
+  color: #333;
 }
 
-/* ---------- CABEÇALHO ---------- */
-header {
+header.cabecalho {
+  background-color: #007a33;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 40px;
+}
+
+.logo {
+  height: 50px;
+}
+
+.menu {
+  list-style: none;
+  display: flex;
+  gap: 25px;
+  margin: 0;
+  padding: 0;
+}
+
+.menu li a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.menu li a:hover {
+  text-decoration: underline;
+}
+
+/* ====== CONTEÚDO PRINCIPAL ====== */
+.conteudo-principal {
   text-align: center;
-  padding: 50px 10px 30px;
-  background: rgba(0, 0, 0, 0.85);
-  box-shadow: 0 2px 20px #00ff66;
-  position: relative;
-  z-index: 2;
+  padding: 60px 20px;
 }
 
-/* ---------- LOGO IFRO ---------- */
-.logo-ifro {
-  width: 280px;
-  max-width: 90%;
-  margin-bottom: 15px;
-  filter: drop-shadow(0 0 6px #00ff66);
-  animation: logoEntry 1.8s ease-out;
+.conteudo-principal h1 {
+  color: #007a33;
+  font-size: 36px;
 }
 
-@keyframes logoEntry {
-  0% {
-    opacity: 0;
-    transform: scale(0.85);
-    filter: drop-shadow(0 0 0 #00ff66);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.05);
-    filter: drop-shadow(0 0 10px #00ff66);
-  }
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 6px #00ff66);
-  }
+/* ====== SOBRE ====== */
+.sobre {
+  padding: 40px 20px;
+  text-align: center;
+  background-color: #e8f5e9;
 }
 
-/* ---------- TÍTULO PRINCIPAL ---------- */
-h1 {
-  font-size: 2.3em;
-  color: #00ff66;
-  letter-spacing: 1px;
-  animation: fadeInText 2.5s ease-out;
+.sobre h2 {
+  color: #007a33;
+  font-size: 28px;
 }
 
-@keyframes fadeInText {
-  0% { opacity: 0; transform: translateY(-10px); }
-  100% { opacity: 1; transform: translateY(0); }
+/* ====== GALERIA ====== */
+.galeria {
+  text-align: center;
+  padding: 40px 20px;
+  background-color: #f0f8f0;
 }
+
+.galeria h2 {
+  font-size: 28px;
+  color: #007a33;
+  margin-bottom: 30px;
+}
+
+.galeria-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.galeria-container img {
+  width: 300px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 15px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.galeria-container img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.botao-ver-mais {
+  display: inline-block;
+  margin-top: 25px;
+  padding: 12px 25px;
+  background-color: #007a33;
+  color: white;
+  font-weight: bold;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.botao-ver-mais:hover {
+  background-color: #005c27;
+}
+
+/* ====== FUNDO GALERIA ====== */
+.fundo-galeria {
+  background: linear-gradient(180deg, #e8f5e9, #f9fff9);
+  min-height: 100vh;
+}
+
+/* ====== RODAPÉ ====== */
+footer {
+  background-color: #007a33;
+  color: white;
+  text-align: center;
+  padding: 15px 0;
+  margin-top: 40px;
+}}
 
 /* ---------- BOTÕES ---------- */
 .btn-group {
