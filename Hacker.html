@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Modo Hacker - Turma 1A IFRO</title>
-  <link rel="icon" type="image/png" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Modo Hacker — Turma 1°A</title>
+  <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
   <style>
     :root{
       --bg:#000;
@@ -14,288 +13,335 @@
       --muted:#9bdaa0;
       --glass: rgba(0,0,0,0.45);
       --accent:#00b34c;
+      --ifro-glow: 0 0 30px rgba(0,255,102,0.25);
     }
-    html,body{
-      height:100%;
-      margin:0;
-      font-family:"Orbitron","Courier New",monospace;
-      background:var(--bg);
-      color:var(--green);
-      overflow-x:hidden;
-    }
+    html,body{height:100%;margin:0;font-family: "Orbitron", "Courier New", monospace;background:var(--bg);color:var(--green);-webkit-font-smoothing:antialiased;overflow-x:hidden}
     a{color:var(--green);text-decoration:none}
+    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;padding:18px;box-sizing:border-box;}
 
-    .wrap{
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:flex-start;
-      gap:18px;
-      padding:18px;
-    }
-
-    .topbar{
-      width:100%;
-      max-width:1100px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      flex-wrap:wrap;
-      gap:12px;
-      z-index:40;
-    }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      color:var(--green);
-      flex-wrap:wrap;
-    }
-    .brand img{
-      height:42px;
-      border-radius:6px;
-      box-shadow:0 0 12px rgba(0,255,102,0.06);
-    }
-    .controls{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:center;
-      justify-content:center;
-    }
-    .btn{
-      background:linear-gradient(180deg,rgba(0,255,102,0.06),rgba(0,0,0,0.12));
-      border:1px solid rgba(0,255,102,0.12);
-      color:var(--green);
-      padding:8px 12px;
-      border-radius:8px;
-      cursor:pointer;
-      font-weight:700;
-      font-size:0.9rem;
-    }
+    /* topbar */
+    .topbar{width:100%;max-width:1100px;display:flex;justify-content:space-between;align-items:center;gap:12px;z-index:40;flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:12px;color:var(--green);flex-wrap:wrap}
+    .brand img{height:42px;border-radius:6px;box-shadow:0 0 12px rgba(0,255,102,0.06)}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:linear-gradient(180deg, rgba(0,255,102,0.06), rgba(0,0,0,0.12));border:1px solid rgba(0,255,102,0.12);color:var(--green);padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
     .btn.ghost{background:transparent;border:1px dashed rgba(0,255,102,0.12)}
     .btn:active{transform:translateY(1px)}
 
-    .main{
-      width:100%;
-      max-width:1100px;
-      display:grid;
-      grid-template-columns:1fr 360px;
-      gap:18px;
-      align-items:start;
-    }
+    /* main */
+    .main{width:100%;max-width:1100px;display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start;z-index:30}
 
-    .terminal{
-      background:linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.55));
-      border:1px solid rgba(0,255,102,0.08);
-      box-shadow:0 12px 40px rgba(0,255,102,0.04);
-      padding:16px;
-      border-radius:10px;
-      min-height:420px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      overflow:hidden;
-    }
-    .term-output{
-      background:rgba(0,0,0,0.6);
-      padding:12px;
-      border-radius:8px;
-      flex:1;
-      overflow:auto;
-      color:var(--muted);
-      line-height:1.45;
-      font-size:0.95rem;
-      box-shadow:inset 0 0 30px rgba(0,0,0,0.3);
-      max-height:60vh;
-    }
+    /* terminal */
+    .terminal{background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));border:1px solid rgba(0,255,102,0.08);box-shadow:0 12px 40px rgba(0,255,102,0.04);padding:16px;border-radius:10px;min-height:420px;display:flex;flex-direction:column;gap:10px;overflow:hidden;position:relative}
+    .term-output{background:rgba(0,0,0,0.6);padding:12px;border-radius:8px;flex:1;overflow:auto;color:var(--muted);line-height:1.45;font-size:0.95rem;box-shadow:inset 0 0 30px rgba(0,0,0,0.3);max-height:60vh}
     .term-line{margin:6px 0}
-    .prompt{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
+    .prompt{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .prompt .prefix{min-width:100px;color:var(--green);font-weight:700}
-    .cmd-input{
-      flex:1;
-      background:transparent;
-      border:none;
-      outline:none;
-      color:var(--green);
-      font-family:inherit;
-      font-size:1rem;
-      min-width:150px;
-    }
+    .cmd-input{flex:1;background:transparent;border:none;outline:none;color:var(--green);font-family:inherit;font-size:1rem;min-width:150px}
+    .hint{font-size:0.85rem;color:rgba(0,255,102,0.25);margin-top:6px}
 
-    .panel{
-      background:linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.55));
-      padding:14px;
-      border-radius:10px;
-      border:1px solid rgba(0,255,102,0.06);
-      box-shadow:0 8px 30px rgba(0,255,102,0.03);
-      min-height:420px;
-    }
+    /* right panel */
+    .panel{background:linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));padding:14px;border-radius:10px;border:1px solid rgba(0,255,102,0.06);box-shadow:0 8px 30px rgba(0,255,102,0.03);min-height:420px}
     .panel h3{color:var(--green);margin-bottom:8px}
     .panel .item{background:var(--glass);padding:10px;border-radius:8px;margin-bottom:10px}
-    .kbd{
-      background:#072007;
-      padding:6px 8px;
-      border-radius:6px;
-      color:var(--green);
-      font-weight:700;
-      font-size:0.85rem;
-    }
+    .kbd{background:#072007;padding:6px 8px;border-radius:6px;color:var(--green);font-weight:700;font-size:0.85rem}
 
-    canvas#matrix{
-      position:fixed;
-      left:0;top:0;
-      width:100%;height:100%;
-      z-index:0;
+    /* canvas matrix */
+    canvas#matrix{position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;mix-blend-mode:screen;transition:0.3s}
+
+    /* secret flash overlay */
+    .ifro-flash{
       pointer-events:none;
-      mix-blend-mode:screen;
+      position:fixed;inset:0;background:linear-gradient(180deg, rgba(0,255,102,0.15), rgba(0,255,102,0.06));
+      opacity:0;z-index:60;mix-blend-mode:overlay;transition:opacity 0.35s ease;
+      box-shadow:0 0 120px rgba(0,255,102,0.25) inset;
+    }
+    .ifro-flash.show{opacity:1;animation:flashPulse 1s ease-out}
+    @keyframes flashPulse{
+      0%{opacity:0;transform:scale(0.98)}
+      50%{opacity:1;transform:scale(1)}
+      100%{opacity:0;transform:scale(1.02)}
     }
 
-    @media (max-width:900px){
-      .main{grid-template-columns:1fr;}
-      .panel{order:2;}
-      .prompt{flex-direction:column;align-items:flex-start;}
-      .prefix{min-width:auto;}
-      .cmd-input{width:100%;}
-      .term-output{max-height:50vh;}
-      .controls{justify-content:center;}
-      .btn{font-size:0.8rem;padding:6px 10px;}
-      .wrap{padding:10px;}
+    /* intensified matrix (activated) */
+    body.ifro-active canvas#matrix{filter:brightness(1.4) contrast(1.1) blur(0);opacity:0.95}
+    body.ifro-active .terminal{box-shadow:var(--ifro-glow);border-color:rgba(0,255,102,0.2)}
+    body.ifro-active .panel{box-shadow:var(--ifro-glow);border-color:rgba(0,255,102,0.14)}
+
+    /* responsive */
+    @media (max-width:980px){
+      .main{grid-template-columns:1fr}
+      .panel{order:2}
+    }
+    @media (max-width:720px){
+      .topbar{padding:6px}
+      .controls{justify-content:center}
     }
   </style>
 </head>
 <body>
   <canvas id="matrix"></canvas>
 
-  <div class="wrap">
+  <!-- secret flash overlay -->
+  <div id="ifroFlash" class="ifro-flash" aria-hidden="true"></div>
+
+  <div class="wrap" role="main">
     <div class="topbar">
       <div class="brand">
-        <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="IFRO">
+        <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="IFRO" style="height:42px;border-radius:6px">
         <div>
-          <h3>Modo Hacker - Turma 1A</h3>
-          <small>Painel seguro para demonstração (somente local)</small>
+          <div style="font-weight:900">Modo Hacker — Turma 1°A</div>
+          <div style="font-size:0.85rem;color:rgba(255,255,255,0.6)">Painel seguro para demonstração (somente local)</div>
         </div>
       </div>
-      <div class="controls">
-        <button class="btn" onclick="window.open('index.html','_blank')">Abrir site</button>
-        <button class="btn" onclick="toggleMusic()">🎵 Música (M)</button>
+
+      <div class="controls" role="toolbar" aria-label="Controles">
+        <button class="btn" id="openSite">Abrir site</button>
+        <button class="btn" id="toggleMusic">Música (M)</button>
+        <button class="btn ghost" id="downloadLog">Baixar log</button>
+        <button class="btn" id="closeBtn">Voltar</button>
       </div>
     </div>
 
     <div class="main">
-      <div class="terminal">
-        <div class="term-output" id="output">
-          <div class="term-line">> Inicializando IFRO SYSTEM...</div>
-          <div class="term-line">> Sistema pronto. Digite "help" para ver comandos.</div>
-        </div>
+      <div class="terminal" role="region" aria-label="terminal">
+        <div class="term-output" id="termOutput" tabindex="0"></div>
+
         <div class="prompt">
-          <span class="prefix">user@turma1A:~$</span>
-          <input type="text" id="cmd" class="cmd-input" placeholder="Digite um comando e pressione Enter">
+          <div class="prefix">user@turma1a:~$</div>
+          <input id="cmdInput" class="cmd-input" placeholder="Digite um comando e pressione Enter (help)" aria-label="Comando">
         </div>
+
+        <div class="hint">Comandos: <span class="kbd">help</span>, <span class="kbd">clear</span>, <span class="kbd">about</span>, <span class="kbd">open</span>, <span class="kbd">music</span>, <span class="kbd">ifro</span>, <span class="kbd">download</span></div>
       </div>
 
-      <div class="panel">
+      <aside class="panel" aria-label="Informações">
         <h3>Informações & Comandos</h3>
-        <div class="item"><b>Ajuda:</b> <span class="kbd">help</span></div>
-        <div class="item"><b>Limpar terminal:</b> <span class="kbd">clear</span></div>
-        <div class="item"><b>Sobre:</b> <span class="kbd">about</span></div>
-        <div class="item"><b>Abrir site:</b> <span class="kbd">open</span></div>
-        <div class="item"><b>Baixar arquivo:</b> <span class="kbd">download</span></div>
-      </div>
+        <div class="item"><strong>Ajuda rápida:</strong>
+          <ul style="margin:10px 0 0 18px;color:rgba(255,255,255,0.8);font-size:0.92rem">
+            <li><code>help</code> — lista comandos</li>
+            <li><code>clear</code> — limpa terminal</li>
+            <li><code>about</code> — sobre</li>
+            <li><code>open <url></code> — abre página</li>
+            <li><code>music on/off</code> — tocar/pausar</li>
+            <li><code>ifro</code> — modo secreto</li>
+            <li><code>download</code> — baixa log</li>
+          </ul>
+        </div>
+
+        <div class="item">
+          <strong>Atalhos:</strong>
+          <div style="margin-top:8px;color:var(--muted)"><span class="kbd">M</span> Música — <span class="kbd">T</span> Tema — <span class="kbd">Esc</span> Focar</div>
+        </div>
+
+        <div class="item">
+          <strong>Status:</strong>
+          <div id="statusMusic" style="margin-top:8px;color:var(--muted)">Música: parada</div>
+        </div>
+      </aside>
+    </div>
+
+    <div style="width:100%;max-width:1100px;text-align:center;color:rgba(255,255,255,0.6);font-size:0.9rem">
+      <div style="margin-top:8px">Dica: digite <span class="kbd">help</span> no terminal para começar.</div>
     </div>
   </div>
 
-  <audio id="typeSound" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-typewriter-soft-click-1124.mp3" type="audio/mpeg">
-  </audio>
+  <!-- audio (type + secret) -->
+  <audio id="typeSound" preload="auto" src="https://assets.mixkit.co/sfx/preview/mixkit-typewriter-soft-click-1124.mp3"></audio>
+  <audio id="secretSound" preload="auto" src="https://assets.mixkit.co/sfx/preview/mixkit-fast-laser-impact-1684.mp3"></audio>
+
+  <!-- Howler for optional lofi (kept minimal for mobile) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
 
   <script>
-    const output = document.getElementById("output");
-    const cmdInput = document.getElementById("cmd");
-    const typeSound = document.getElementById("typeSound");
+  // ====== DOM refs ======
+  const termOutput = document.getElementById('termOutput');
+  const cmdInput = document.getElementById('cmdInput');
+  const openSiteBtn = document.getElementById('openSite');
+  const toggleMusicBtn = document.getElementById('toggleMusic');
+  const downloadLogBtn = document.getElementById('downloadLog');
+  const closeBtn = document.getElementById('closeBtn');
+  const statusMusic = document.getElementById('statusMusic');
+  const ifroFlash = document.getElementById('ifroFlash');
+  const typeSound = document.getElementById('typeSound');
+  const secretSound = document.getElementById('secretSound');
 
-    function playTypeSound(){
-      typeSound.currentTime = 0;
-      typeSound.play();
+  // State
+  const state = { musicPlaying:false, log:[], matrixSpeed:40 };
+
+  // Howler music
+  const music = new Howl({
+    src: ['https://cdn.pixabay.com/download/audio/2023/01/23/audio_c0b8a7b0a7.mp3?filename=lofi-study-112191.mp3'],
+    loop: true, volume: 0.25
+  });
+
+  // UTIL: write line
+  function writeLine(text, cls=''){
+    const p = document.createElement('div');
+    p.className = 'term-line ' + cls;
+    p.textContent = text;
+    termOutput.appendChild(p);
+    termOutput.scrollTop = termOutput.scrollHeight;
+    state.log.push(text);
+  }
+
+  // Intro
+  writeLine('> Inicializando IFRO SYSTEM...');
+  setTimeout(()=> writeLine('> Sistema pronto. Digite "help" para ver comandos.'), 600);
+
+  // Command handler
+  function runCommand(raw){
+    if(!raw) return;
+    writeLine('> ' + raw);
+    const parts = raw.trim().split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+    switch(cmd){
+      case 'help':
+        writeLine('Comandos: help, clear, about, open, music, ifro, download, echo');
+        break;
+      case 'clear':
+        termOutput.innerHTML = '';
+        state.log = [];
+        writeLine('> Terminal limpo.');
+        break;
+      case 'about':
+        writeLine('Turma 1°A — Técnico em Informática (IFRO Ariquemes). Painel demonstrativo.');
+        break;
+      case 'open':
+        if(args.length===0){ writeLine('Uso: open <arquivo ou URL>'); break; }
+        const target = args[0];
+        try{ window.open(target, '_blank'); writeLine('Abrindo: ' + target); }catch(e){ writeLine('Erro ao abrir: '+e.message); }
+        break;
+      case 'music':
+        if(!args[0]){ writeLine('Use: music on | music off'); break; }
+        if(args[0]==='on' || args[0]==='play'){ music.play(); state.musicPlaying=true; updateMusicStatus(); writeLine('Música iniciada.'); }
+        else { music.pause(); state.musicPlaying=false; updateMusicStatus(); writeLine('Música pausada.'); }
+        break;
+      case 'ifro':
+        activateIFRO();
+        break;
+      case 'download':
+        downloadLog(); writeLine('Download do log iniciado.'); break;
+      case 'echo':
+        writeLine(args.join(' ')); break;
+      default:
+        writeLine('Comando não encontrado. Use "help".');
     }
+  }
 
-    function printLine(text){
-      const line = document.createElement("div");
-      line.className = "term-line";
-      line.textContent = text;
-      output.appendChild(line);
-      output.scrollTop = output.scrollHeight;
+  // Input handlers
+  cmdInput.addEventListener('keydown', (e)=>{
+    // play type sound for visible keys (exclude control keys)
+    if(e.key.length === 1) { try{ typeSound.currentTime = 0; typeSound.play(); } catch(_){} }
+    if(e.key === 'Enter'){
+      const v = cmdInput.value;
+      runCommand(v);
+      cmdInput.value = '';
+    } else if(e.key === 'Escape'){ cmdInput.blur(); }
+  });
+
+  // Buttons
+  openSiteBtn.addEventListener('click', ()=>{ window.open('index.html','_blank'); writeLine('Abrindo index.html...'); });
+  toggleMusicBtn.addEventListener('click', ()=>{ if(state.musicPlaying){ music.pause(); state.musicPlaying=false; writeLine('Música pausada.'); } else { music.play(); state.musicPlaying=true; writeLine('Música iniciada.'); } updateMusicStatus(); });
+  downloadLogBtn.addEventListener('click', ()=>{ downloadLog(); writeLine('Download do log iniciado.'); });
+  closeBtn.addEventListener('click', ()=>{ window.location.href = 'index.html'; });
+
+  function updateMusicStatus(){ statusMusic.textContent = 'Música: ' + (state.musicPlaying ? 'tocando' : 'parada'); }
+
+  // Download log
+  function downloadLog(){
+    const data = state.log.join('\n');
+    const blob = new Blob([data], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'ifro_terminal_log.txt';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  // SECRET: IFRO activation
+  function activateIFRO(){
+    // flash overlay + sound + intensified matrix + message
+    secretSound.currentTime = 0;
+    secretSound.play().catch(()=>{ /* ignore autoplay block */ });
+
+    ifroFlash.classList.add('show');
+    document.body.classList.add('ifro-active');
+    writeLine('>>> Modo IFRO ativado! Nível de brilho aumentado.');
+    // remove flash after short time
+    setTimeout(()=>{ ifroFlash.classList.remove('show'); }, 1100);
+    // keep the intensified mode for a while then slowly revert
+    setTimeout(()=>{ document.body.classList.remove('ifro-active'); writeLine('>>> Modo IFRO desativado.'); }, 9000);
+
+    // speed up matrix temporarily
+    setMatrixSpeed(18);
+    setTimeout(()=> setMatrixSpeed(40), 9500);
+  }
+
+  // Keyboard shortcuts
+  window.addEventListener('keydown', (e)=>{
+    if(e.key.toLowerCase()==='m'){ // toggle music
+      if(state.musicPlaying){ music.pause(); state.musicPlaying=false; writeLine('Música pausada (atalho).'); }
+      else { music.play(); state.musicPlaying=true; writeLine('Música iniciada (atalho).'); }
+      updateMusicStatus();
     }
-
-    function processCommand(cmd){
-      switch(cmd.toLowerCase()){
-        case "help":
-          printLine("> Comandos disponíveis: help, clear, about, open, download, music");
-          break;
-        case "clear":
-          output.innerHTML = "";
-          break;
-        case "about":
-          printLine("> Projeto Turma 1A - IFRO. Criado para aprendizado e demonstração 💻");
-          break;
-        case "open":
-          printLine("> Abrindo site principal...");
-          window.open("index.html","_blank");
-          break;
-        case "download":
-          printLine("> Simulando download do projeto...");
-          break;
-        case "music":
-          toggleMusic();
-          break;
-        default:
-          printLine("> Comando não reconhecido. Digite 'help'.");
-      }
+    if(e.key.toLowerCase()==='t'){ // theme toggle (example)
+      document.body.classList.toggle('ifro-active');
+      writeLine('Tema alternado (atalho).');
     }
+    if(e.key==='Escape'){ cmdInput.focus(); }
+  });
 
-    cmdInput.addEventListener("keypress", function(e){
-      playTypeSound();
-      if(e.key === "Enter"){
-        const cmd = cmdInput.value.trim();
-        printLine("user@turma1A:~$ " + cmd);
-        processCommand(cmd);
-        cmdInput.value = "";
-      }
-    });
+  // focus terminal on click
+  termOutput.addEventListener('click', ()=>{ cmdInput.focus(); });
 
-    function toggleMusic(){
-      alert("🎵 Modo música (simulado)");
-    }
+  // preload images (optional)
+  ['IMG-20250513-WA0029(1).jpg','IMG-20250826-WA0086.jpg','IMG-20250901-WA0020.jpg','IMG-20250918-WA0038.jpg','IMG-20251011-WA0001.jpg'].forEach(src=>{ const i=new Image(); i.src=src; });
 
-    // Efeito Matrix
-    const c = document.getElementById("matrix");
-    const ctx = c.getContext("2d");
-    c.height = window.innerHeight;
-    c.width = window.innerWidth;
+  // ============================
+  // MATRIX CANVAS (background)
+  // ============================
+  (function(){
+    const canvas = document.getElementById('matrix');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+    let fontSize = 14;
+    let columns = Math.floor(width / fontSize);
+    let drops = Array(columns).fill(1);
     const letters = "01";
-    const fontSize = 14;
-    const columns = c.width / fontSize;
-    const drops = [];
-    for(let x=0;x<columns;x++) drops[x]=1;
+    let interval = 40;
+
+    function resize(){
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      columns = Math.floor(width / fontSize);
+      drops = Array(columns).fill(1);
+    }
+    window.addEventListener('resize', resize);
+
     function draw(){
-      ctx.fillStyle="rgba(0,0,0,0.05)";
-      ctx.fillRect(0,0,c.width,c.height);
-      ctx.fillStyle="#00FF66";
-      ctx.font=fontSize+"px monospace";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "#00ff66";
+      ctx.font = fontSize + "px monospace";
       for(let i=0;i<drops.length;i++){
-        const text=letters.charAt(Math.floor(Math.random()*letters.length));
-        ctx.fillText(text,i*fontSize,drops[i]*fontSize);
-        if(drops[i]*fontSize>c.height && Math.random()>0.975) drops[i]=0;
+        const text = letters.charAt(Math.floor(Math.random()*letters.length));
+        ctx.fillText(text, i*fontSize, drops[i]*fontSize);
+        if(drops[i]*fontSize > height && Math.random()>0.975) drops[i]=0;
         drops[i]++;
       }
     }
-    setInterval(draw,33);
+
+    let timer = setInterval(draw, interval);
+
+    window.setMatrixSpeed = function(ms){
+      // ms is interval in ms (smaller = faster)
+      clearInterval(timer);
+      interval = ms;
+      timer = setInterval(draw, interval);
+    };
+  })();
+
   </script>
 </body>
 </html>
