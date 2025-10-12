@@ -128,7 +128,6 @@
       font-size:1rem;
       min-width:150px;
     }
-    .hint{font-size:0.85rem;color:rgba(0,255,102,0.25);margin-top:6px}
 
     .panel{
       background:linear-gradient(180deg,rgba(0,0,0,0.45),rgba(0,0,0,0.55));
@@ -212,9 +211,19 @@
     </div>
   </div>
 
+  <audio id="typeSound" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-typewriter-soft-click-1124.mp3" type="audio/mpeg">
+  </audio>
+
   <script>
     const output = document.getElementById("output");
     const cmdInput = document.getElementById("cmd");
+    const typeSound = document.getElementById("typeSound");
+
+    function playTypeSound(){
+      typeSound.currentTime = 0;
+      typeSound.play();
+    }
 
     function printLine(text){
       const line = document.createElement("div");
@@ -251,6 +260,7 @@
     }
 
     cmdInput.addEventListener("keypress", function(e){
+      playTypeSound();
       if(e.key === "Enter"){
         const cmd = cmdInput.value.trim();
         printLine("user@turma1A:~$ " + cmd);
