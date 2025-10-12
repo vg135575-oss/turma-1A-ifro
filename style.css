@@ -1,135 +1,39 @@
-/* ====== GERAL ====== */
+/* ---------- ESTILO GERAL ---------- */
 body {
-  font-family: Arial, Helvetica, sans-serif;
   margin: 0;
-  padding: 0;
-  background-color: #f9fff9;
-  color: #333;
+  font-family: 'Orbitron', sans-serif;
+  background-color: #1a1a1a;
+  color: #0ff;
+  overflow-x: hidden;
+  transition: background 0.5s, color 0.5s;
 }
 
-header.cabecalho {
-  background-color: #007a33;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 40px;
-}
-
-.logo {
-  height: 50px;
-}
-
-.menu {
-  list-style: none;
-  display: flex;
-  gap: 25px;
-  margin: 0;
-  padding: 0;
-}
-
-.menu li a {
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-.menu li a:hover {
-  text-decoration: underline;
-}
-
-/* ====== CONTEÚDO PRINCIPAL ====== */
-.conteudo-principal {
+header {
   text-align: center;
-  padding: 60px 20px;
+  padding: 40px 10px 20px;
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 2px 10px #00ff66;
 }
 
-.conteudo-principal h1 {
-  color: #007a33;
-  font-size: 36px;
+header img {
+  width: 220px;
+  max-width: 90%;
+  display: block;
+  margin: 0 auto 10px;
 }
 
-/* ====== SOBRE ====== */
-.sobre {
-  padding: 40px 20px;
-  text-align: center;
-  background-color: #e8f5e9;
+h1 {
+  font-size: 2em;
+  color: #00ff66;
+  animation: blink 1.5s infinite;
 }
 
-.sobre h2 {
-  color: #007a33;
-  font-size: 28px;
+@keyframes blink {
+  50% { opacity: 0.5; }
 }
 
-/* ====== GALERIA ====== */
-.galeria {
-  text-align: center;
-  padding: 40px 20px;
-  background-color: #f0f8f0;
-}
-
-.galeria h2 {
-  font-size: 28px;
-  color: #007a33;
-  margin-bottom: 30px;
-}
-
-.galeria-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 20px;
-}
-
-.galeria-container img {
-  width: 300px;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 15px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.galeria-container img:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
-.botao-ver-mais {
-  display: inline-block;
-  margin-top: 25px;
-  padding: 12px 25px;
-  background-color: #007a33;
-  color: white;
-  font-weight: bold;
-  border-radius: 10px;
-  text-decoration: none;
-  transition: background-color 0.3s ease;
-}
-
-.botao-ver-mais:hover {
-  background-color: #005c27;
-}
-
-/* ====== FUNDO GALERIA ====== */
-.fundo-galeria {
-  background: linear-gradient(180deg, #e8f5e9, #f9fff9);
-  min-height: 100vh;
-}
-
-/* ====== RODAPÉ ====== */
-footer {
-  background-color: #007a33;
-  color: white;
-  text-align: center;
-  padding: 15px 0;
-  margin-top: 40px;
-}}
-
-/* ---------- BOTÕES ---------- */
 .btn-group {
-  margin-top: 20px;
+  margin-top: 15px;
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
@@ -140,24 +44,23 @@ button {
   background: #00ff66;
   color: #000;
   border: none;
-  padding: 12px 24px;
-  border-radius: 10px;
+  padding: 10px 20px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
-  box-shadow: 0 0 15px #00ff66;
-  transition: all 0.3s ease;
+  box-shadow: 0 0 10px #00ff66;
+  transition: 0.3s;
 }
 
 button:hover {
   background: #000;
   color: #00ff66;
-  box-shadow: 0 0 25px #00ff66, 0 0 40px #00ff66;
-  transform: scale(1.05);
+  box-shadow: 0 0 20px #00ff66;
 }
 
 /* ---------- SEÇÕES ---------- */
 section {
-  padding: 40px 20px;
+  padding: 30px;
   text-align: center;
 }
 
@@ -165,52 +68,50 @@ h2 {
   color: #00ff66;
   border-bottom: 2px solid #00ff66;
   display: inline-block;
-  margin-bottom: 25px;
-  padding-bottom: 5px;
+  margin-bottom: 20px;
 }
 
 p {
-  max-width: 850px;
+  max-width: 800px;
   margin: auto;
-  line-height: 1.7;
-  font-size: 1.05em;
+  line-height: 1.6;
 }
 
 /* ---------- TERMINAL ---------- */
 #terminal {
   background-color: #001900;
-  color: #00ff66;
+  color: #0f0;
   font-family: monospace;
   padding: 20px;
-  margin: 30px auto;
+  margin: 20px auto;
   width: 90%;
-  max-width: 650px;
-  border-radius: 12px;
+  max-width: 600px;
+  border-radius: 10px;
   text-align: left;
-  height: 220px;
+  height: 200px;
   overflow-y: auto;
-  box-shadow: 0 0 20px #00ff66;
+  box-shadow: 0 0 10px #00ff66;
 }
 
-/* ---------- GALERIA ---------- */
+/* ---------- GALERIA PRINCIPAL (index.html) ---------- */
 .gallery {
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
   width: 100%;
-  max-width: 850px;
+  max-width: 800px;
   margin: 0 auto;
   overflow: hidden;
-  border-radius: 12px;
-  box-shadow: 0 0 30px #00ffcc;
+  border-radius: 10px;
+  box-shadow: 0 0 20px #0ff;
 }
 
 .gallery img {
   width: 100%;
   height: auto;
-  border-radius: 12px;
-  transition: opacity 1s ease, transform 1s ease;
+  border-radius: 10px;
+  transition: opacity 1s ease;
 }
 
 .gallery-caption {
@@ -221,32 +122,44 @@ p {
   text-align: center;
   color: #fff;
   background: rgba(0, 0, 0, 0.5);
-  font-size: 1.1em;
-  padding: 8px 5px;
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
+  font-size: 1.2em;
+  padding: 5px;
+}
+
+/* ---------- GALERIA COMPLETA (galeria.html) ---------- */
+.gallery-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  justify-items: center;
+}
+
+.gallery-container img {
+  width: 100%;
+  max-width: 350px;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gallery-container img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* ---------- RODAPÉ ---------- */
 footer {
   background-color: #001900;
-  color: #00ff66;
+  color: #0f0;
   text-align: center;
-  padding: 18px;
-  font-size: 0.95em;
-  box-shadow: 0 -2px 15px #00ff66;
+  padding: 15px;
+  font-size: 0.9em;
+  box-shadow: 0 -2px 10px #00ff66;
 }
 
-footer a {
-  color: #00ffcc;
-  text-decoration: none;
-}
-
-footer a:hover {
-  text-decoration: underline;
-}
-
-/* ---------- CANVAS MATRIX ---------- */
+/* ---------- CANVAS ---------- */
 canvas#matrix {
   position: fixed;
   top: 0;
@@ -254,77 +167,70 @@ canvas#matrix {
   z-index: -1;
   width: 100%;
   height: 100%;
-  opacity: 0.9;
 }
 
-/* ---------- TEMA MATRIX ---------- */
+/* ---------- TEMA MATRIX (ESCURO) ---------- */
 body.matrix {
   background-color: #000;
   color: #00ff66;
-  transition: background 0.6s, color 0.6s;
 }
 
 body.matrix footer {
   background-color: #001900;
-  box-shadow: 0 -2px 15px #00ff66;
+  box-shadow: 0 -2px 10px #00ff66;
 }
 
-/* ---------- TEMA DARK (CINZA ESCURO) ---------- */
+/* ---------- TEMA CINZA ESCURO (PADRÃO) ---------- */
 body.dark {
   background-color: #1a1a1a;
-  color: #00ffcc;
+  color: #0ff;
 }
 
 body.dark footer {
   background-color: #111;
-  box-shadow: 0 -2px 15px #00ffcc;
+  box-shadow: 0 -2px 10px #0ff;
 }
 
-/* ---------- TOAST (MENSAGEM FLUTUANTE) ---------- */
-#toast-container {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  z-index: 9999;
+/* ---------- BOTÃO VOLTAR ---------- */
+.btn-voltar {
+  display: inline-block;
+  background: #007a33;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  box-shadow: 0 0 10px #007a33;
+  transition: background 0.3s, transform 0.2s;
+  margin-top: 20px;
 }
 
-.toast {
-  background: rgba(0, 0, 0, 0.85);
-  color: #00ff66;
-  padding: 14px 20px;
-  margin-top: 10px;
-  border-radius: 10px;
-  font-size: 0.95em;
-  box-shadow: 0 0 15px #00ff66;
-  animation: slideIn 0.5s ease, fadeOut 0.5s ease 3s forwards;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(50px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes fadeOut {
-  to { opacity: 0; transform: translateX(80px); }
+.btn-voltar:hover {
+  background: #00b34c;
+  transform: scale(1.05);
 }
 
 /* ---------- RESPONSIVIDADE ---------- */
-@media (max-width: 700px) {
-  h1 {
-    font-size: 1.7em;
-  }
-
+@media (max-width: 600px) {
   .btn-group {
     flex-direction: column;
     gap: 10px;
   }
 
-  #terminal {
-    font-size: 0.9em;
-    height: 180px;
+  header img {
+    width: 160px;
   }
 
-  .gallery-caption {
-    font-size: 1em;
+  h1 {
+    font-size: 1.5em;
+  }
+
+  .gallery-container {
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+
+  .gallery-container img {
+    max-width: 100%;
   }
 }
