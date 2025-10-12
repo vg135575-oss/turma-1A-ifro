@@ -1,67 +1,49 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Turma 1°A | IFRO Ariquemes 💚</title>
-  <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" type="image/png">
-
-  <!-- Fontes & ícones -->
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <!-- Seu CSS (coloque style.css na mesma pasta) -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turma 1A IFRO</title>
   <link rel="stylesheet" href="style.css">
+  <script src="Script.js" defer></script>
 </head>
-<body class="dark">
-  <!-- Canvas Matrix -->
-  <canvas id="matrix"></canvas>
+<body>
 
-  <header>
-    <!-- logo IFRO (horizontal) -->
-    <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo-ifro">
-
-    <h1 id="titulo">Turma 1°A | Técnico em Informática 💚</h1>
-
-    <div class="btn-group">
-      <button id="playMusic"><i class="fa-solid fa-music"></i> Música</button>
-      <button id="modoHacker"><i class="fa-solid fa-terminal"></i> Modo Hacker</button>
-      <button id="toggleTheme"><i class="fa-solid fa-adjust"></i> Tema</button>
-      <button id="fullscreenBtn" onclick="IFRO.toggleFullscreen && IFRO.toggleFullscreen()"><i class="fa-solid fa-expand"></i> Fullscreen</button>
-    </div>
+  <header class="cabecalho">
+    <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
+    <nav>
+      <ul class="menu">
+        <li><a href="#inicio">Início</a></li>
+        <li><a href="#sobre">Sobre</a></li>
+        <li><a href="#galeria">Galeria</a></li>
+        <li><a href="Hacker.html" target="_blank">Hacker</a></li>
+      </ul>
+    </nav>
   </header>
 
-  <section id="apresentacao">
-    <h2>Bem-vindo</h2>
-    <p>
-      Somos a <strong>Turma 1°A</strong> do curso Técnico em Informática do 
-      <strong>IFRO Campus Ariquemes</strong> 💚. Aqui mostramos nossos projetos, estudos e momentos.
-    </p>
+  <main id="inicio" class="conteudo-principal">
+    <h1>Bem-vindo ao Projeto da Turma 1A IFRO</h1>
+    <p>Site criado pelos alunos do curso técnico integrado em informática.</p>
+  </main>
+
+  <section id="sobre" class="sobre">
+    <h2>Sobre a Turma</h2>
+    <p>Somos uma turma unida, criativa e apaixonada por tecnologia. Este projeto representa nosso aprendizado e dedicação no curso técnico em informática do IFRO.</p>
   </section>
 
-  <section id="galeria">
-    <h2>Galeria da Turma</h2>
-    <div class="gallery">
-      <img id="slide" src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80" alt="Foto da turma">
-      <div class="gallery-caption" id="caption">Compilando ideias e amizade no IFRO 🚀</div>
+  <section id="galeria" class="galeria">
+    <h2>📸 Galeria da Turma 1A IFRO</h2>
+    <div class="galeria-container">
+      <img src="IMG-20250513-WA0029.jpg" alt="Turma 1A IFRO 1">
+      <img src="IMG-20250826-WA0086.jpg" alt="Turma 1A IFRO 2">
+      <img src="IMG-20250901-WA0020.jpg" alt="Turma 1A IFRO 3">
     </div>
+    <a href="galeria.html" target="_blank" class="botao-ver-mais">Ver mais fotos</a>
   </section>
-
-  <section id="terminal"></section>
 
   <footer>
-    <p>
-      Instituto Federal de Rondônia – Campus Ariquemes<br>
-      <a href="mailto:g27826909@gmail.com">g27826909@gmail.com</a><br>
-      Desenvolvido pela Turma 1°A 💚 | 2025
-    </p>
+    <p>© 2025 Turma 1A - Instituto Federal de Rondônia</p>
   </footer>
 
-  <!-- Toast container (caso o script não crie) -->
-  <div id="toast-container"></div>
-
-  <!-- Libs e Script principal (coloque script.js na mesma pasta) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
-  <script src="script.js"></script>
 </body>
 </html>
