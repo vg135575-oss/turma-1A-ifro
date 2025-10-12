@@ -1,153 +1,157 @@
+/* ====== Estilo geral ====== */
 body {
   margin: 0;
-  font-family: 'Poppins', sans-serif;
-  background-color: #f4fff4;
-  color: #003300;
+  font-family: "Orbitron", sans-serif;
+  background-color: #000;
+  color: #e0e0e0;
 }
 
+/* ====== Cabeçalho ====== */
 header {
   background-color: #006400;
   color: white;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 5px 0;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-
-.logo-container {
-  width: 100%;
-  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 15px;
+  padding: 10px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .logo {
   height: 50px;
 }
 
-.menu-btn {
-  background: none;
-  border: none;
-  font-size: 28px;
-  color: white;
-  cursor: pointer;
-  display: none;
-}
-
-/* Menu principal */
-nav {
+.nav-links {
+  list-style: none;
   display: flex;
   gap: 20px;
-  transition: all 0.3s ease;
 }
 
-nav a {
+.nav-links li a {
   color: white;
   text-decoration: none;
   font-weight: bold;
+  transition: 0.3s;
 }
 
-nav a:hover {
-  text-decoration: underline;
+.nav-links li a:hover,
+.nav-links li a.active {
+  color: #00ff66;
 }
 
-/* Conteúdo principal */
-main {
-  padding: 20px;
-  text-align: center;
+/* ====== Menu hambúrguer (mobile) ====== */
+.menu-toggle {
+  display: none;
+  font-size: 2rem;
+  cursor: pointer;
 }
 
-.hero h1 {
-  color: #006400;
-  font-size: 1.8em;
-}
-
-.sobre {
-  background-color: #e6ffe6;
-  margin: 20px auto;
-  padding: 20px;
-  border-radius: 10px;
-  max-width: 800px;
-}
-
-.galeria-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 15px;
-  margin: 20px auto;
-  max-width: 800px;
-}
-
-.galeria-container img {
-  width: 100%;
-  border-radius: 10px;
-  box-shadow: 0 0 8px #006400;
-  transition: transform 0.3s ease;
-}
-
-.galeria-container img:hover {
-  transform: scale(1.05);
-}
-
-.btn {
-  background-color: #006400;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 8px;
-  text-decoration: none;
-  display: inline-block;
-  margin-top: 10px;
-}
-
-.btn:hover {
-  background-color: #004d00;
-}
-
-/* Rodapé */
-footer {
-  background-color: #003300;
-  color: #fff;
-  text-align: center;
-  padding: 15px;
-  margin-top: 30px;
-}
-
-/* ========== RESPONSIVO ========== */
 @media (max-width: 768px) {
-  .menu-btn {
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    background-color: #004d00;
+    position: absolute;
+    top: 70px;
+    right: 10px;
+    width: 200px;
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .nav-links.active {
+    display: flex;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .menu-toggle {
     display: block;
   }
 
-  nav {
-    display: none;
-    flex-direction: column;
-    width: 100%;
-    background-color: #004d00;
+  @keyframes slideIn {
+    from {opacity: 0; transform: translateY(-10px);}
+    to {opacity: 1; transform: translateY(0);}
   }
+}
 
-  nav.active {
-    display: flex;
-    animation: slideDown 0.4s ease;
-  }
+/* ====== Galeria ====== */
+.galeria-section {
+  text-align: center;
+  padding: 20px;
+}
 
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+.galeria-section h1 {
+  color: #00ff66;
+  text-shadow: 0 0 10px #00ff66;
+}
 
-  nav a {
-    padding: 10px;
-    text-align: center;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-  }
+.intro-text {
+  color: #ccc;
+  font-size: 1.1rem;
+  margin-bottom: 30px;
+}
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.photo-card {
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 20px;
+  box-shadow: 0 0 20px #00ff00;
+  overflow: hidden;
+  text-align: center;
+  width: 90%;
+  max-width: 500px;
+  transition: transform 0.3s ease;
+}
+
+.photo-card:hover {
+  transform: scale(1.03);
+}
+
+.photo-card img {
+  width: 100%;
+  height: auto;
+  border-bottom: 2px solid #00ff00;
+}
+
+.photo-card p {
+  color: #e0e0e0;
+  padding: 10px;
+  font-size: 1rem;
+}
+
+/* ====== Botão Voltar ====== */
+.back-btn {
+  margin-top: 40px;
+}
+
+.back-btn a {
+  background-color: #00ff66;
+  color: #000;
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.back-btn a:hover {
+  background-color: #009944;
+}
+
+/* ====== Rodapé ====== */
+footer {
+  background-color: #003300;
+  color: #ccc;
+  text-align: center;
+  padding: 15px;
+  margin-top: 50px;
+  font-size: 0.9rem;
 }
