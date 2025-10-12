@@ -1,363 +1,255 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Modo Hacker — Turma 1°A</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turma 1A IFRO 💚</title>
   <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#000;
-      --green:#00ff66;
-      --panel:#061006;
-      --muted:#9bdaa0;
-      --glass: rgba(0,0,0,0.45);
-      --accent:#00b34c;
-      --ifro-glow: 0 0 30px rgba(0,255,102,0.25);
+    /* ======== GERAL ======== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    html,body{height:100%;margin:0;font-family: "Orbitron", "Courier New", monospace;background:var(--bg);color:var(--green);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-    a{color:var(--green);text-decoration:none}
-    /* layout wrap */
-    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;padding:14px;box-sizing:border-box}
-    /* topbar */
-    .topbar{width:100%;max-width:1100px;display:flex;justify-content:space-between;align-items:center;gap:12px;z-index:40;flex-wrap:wrap}
-    .brand{display:flex;align-items:center;gap:12px;color:var(--green);flex-wrap:wrap}
-    .brand img{height:42px;border-radius:6px;box-shadow:0 0 12px rgba(0,255,102,0.06)}
-    .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
-    .btn{background:linear-gradient(180deg, rgba(0,255,102,0.06), rgba(0,0,0,0.12));border:1px solid rgba(0,255,102,0.12);color:var(--green);padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
-    .btn.ghost{background:transparent;border:1px dashed rgba(0,255,102,0.12)}
-    .btn:active{transform:translateY(1px)}
-    /* main grid (desktop) */
-    .main{width:100%;max-width:1100px;display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start;z-index:30}
-    /* terminal */
-    .terminal{background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));border:1px solid rgba(0,255,102,0.08);box-shadow:0 12px 40px rgba(0,255,102,0.04);padding:16px;border-radius:10px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:visible}
-    .term-output{background:rgba(0,0,0,0.6);padding:12px;border-radius:8px;flex:1;overflow:auto;color:var(--muted);line-height:1.45;font-size:0.95rem;box-shadow:inset 0 0 30px rgba(0,0,0,0.3);max-height:60vh}
-    .term-line{margin:6px 0;white-space:pre-wrap}
-    .prompt{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .prefix{min-width:120px;color:var(--green);font-weight:700;letter-spacing:0.6px}
-    .cmd-input{flex:1;background:transparent;border:none;outline:none;color:var(--green);font-family:inherit;font-size:1rem;min-width:150px}
-    .hint{font-size:0.85rem;color:rgba(0,255,102,0.25);margin-top:6px}
 
-    /* chips (command shortcuts) - placed right below terminal */
-    .chipbar{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      justify-content:center;
-      margin-top:6px;
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background-color: #0a0a0a;
+      color: #00ff66;
+      overflow-x: hidden;
     }
-    .chip{
-      background:rgba(0,0,0,0.6);
-      border:1px solid rgba(0,255,102,0.14);
-      padding:8px 12px;
-      border-radius:12px;
-      color:var(--green);
-      cursor:pointer;
-      font-weight:700;
-      box-shadow:0 6px 18px rgba(0,255,102,0.02);
-      transition:transform 0.12s;
-      user-select:none;
+
+    /* ======== CABEÇALHO ======== */
+    header {
+      background: #001900;
+      color: #00ff66;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      box-shadow: 0 2px 10px #00ff66;
+      position: relative;
     }
-    .chip:active{transform:translateY(1px)}
 
-    /* right panel */
-    .panel{background:linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55));padding:14px;border-radius:10px;border:1px solid rgba(0,255,102,0.06);box-shadow:0 8px 30px rgba(0,255,102,0.03);min-height:420px;overflow:auto}
-    .panel h3{color:var(--green);margin-bottom:8px}
-    .panel .item{background:var(--glass);padding:10px;border-radius:8px;margin-bottom:10px}
-    .kbd{background:#072007;padding:6px 8px;border-radius:6px;color:var(--green);font-weight:700;font-size:0.85rem}
-
-    /* flash overlay and ifro active */
-    .ifro-flash{pointer-events:none;position:fixed;inset:0;background:linear-gradient(180deg, rgba(0,255,102,0.14), rgba(0,255,102,0.06));opacity:0;z-index:60;mix-blend-mode:overlay;transition:opacity 0.35s ease;box-shadow:0 0 120px rgba(0,255,102,0.25) inset}
-    .ifro-flash.show{opacity:1;animation:flashPulse 1s ease-out}
-    @keyframes flashPulse{0%{opacity:0;transform:scale(0.98)}50%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.02)}}
-    body.ifro-active .terminal{box-shadow:var(--ifro-glow);border-color:rgba(0,255,102,0.2)}
-    body.ifro-active .panel{box-shadow:var(--ifro-glow);border-color:rgba(0,255,102,0.14)}
-
-    /* matrix canvas */
-    canvas#matrix{position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;mix-blend-mode:screen;transition:filter 0.25s}
-
-    /* responsive adjustments for mobile (scrollable layout) */
-    @media (max-width:980px){
-      .main{grid-template-columns:1fr}
-      .panel{order:2;margin-top:10px}
-      .term-output{max-height:55vh}
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 900px;
     }
-    @media (max-width:720px){
-      .topbar{padding:6px}
-      .brand img{height:36px}
-      .prefix{min-width:auto}
-      .cmd-input{width:100%}
-      .controls{justify-content:center}
-      .panel{min-height:200px}
-      .term-output{max-height:45vh}
-      .chip{padding:7px 10px;font-size:0.92rem;border-radius:10px}
+
+    .logo {
+      width: 150px;
+    }
+
+    nav {
+      display: flex;
+      gap: 20px;
+      margin-top: 10px;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: #00ff66;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    nav a:hover {
+      color: white;
+    }
+
+    /* ======== MENU HAMBÚRGUER ======== */
+    .menu-btn {
+      background: none;
+      border: 2px solid #00ff66;
+      color: #00ff66;
+      font-size: 26px;
+      border-radius: 8px;
+      padding: 5px 10px;
+      cursor: pointer;
+      display: none;
+      transition: 0.3s;
+    }
+
+    .menu-btn:hover {
+      background: #00ff66;
+      color: #000;
+    }
+
+    @media (max-width: 750px) {
+      nav {
+        display: none;
+        flex-direction: column;
+        background: rgba(0, 25, 0, 0.95);
+        position: absolute;
+        top: 70px;
+        right: 10px;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px #00ff66;
+      }
+
+      nav.show {
+        display: flex;
+        animation: slideDown 0.3s ease;
+      }
+
+      @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .menu-btn {
+        display: block;
+      }
+    }
+
+    /* ======== CONTEÚDO ======== */
+    main {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .hero {
+      padding: 50px 20px;
+      background: linear-gradient(to bottom, #001900, #000);
+      color: #00ff66;
+      border-bottom: 2px solid #00ff66;
+    }
+
+    .hero h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      font-size: 1.1em;
+    }
+
+    .sobre {
+      margin-top: 40px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .sobre h2 {
+      color: #00ff66;
+      border-bottom: 2px solid #00ff66;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .sobre p {
+      color: #ccc;
+      font-size: 1em;
+      line-height: 1.6;
+    }
+
+    /* ======== MEMÓRIAS ======== */
+    .memorias {
+      margin-top: 60px;
+      background: linear-gradient(rgba(0, 25, 0, 0.9), rgba(0, 25, 0, 0.9)), 
+                  url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      padding: 60px 20px;
+      color: #fff;
+      border-radius: 15px;
+      box-shadow: 0 0 20px #00ff66;
+    }
+
+    .memorias h2 {
+      font-size: 1.8em;
+      margin-bottom: 15px;
+      color: #00ff66;
+    }
+
+    .memorias p {
+      max-width: 700px;
+      margin: 0 auto 25px;
+      font-size: 1.1em;
+    }
+
+    .btn {
+      background: #00ff66;
+      color: #000;
+      text-decoration: none;
+      padding: 12px 25px;
+      border-radius: 8px;
+      font-weight: bold;
+      transition: 0.3s;
+      box-shadow: 0 0 15px #00ff66;
+    }
+
+    .btn:hover {
+      background: #000;
+      color: #00ff66;
+      box-shadow: 0 0 25px #00ff66;
+    }
+
+    /* ======== RODAPÉ ======== */
+    footer {
+      background: #001900;
+      color: #00ff66;
+      text-align: center;
+      padding: 20px;
+      margin-top: 50px;
+      font-size: 0.9em;
+      box-shadow: 0 -2px 10px #00ff66;
     }
   </style>
 </head>
 <body>
-  <canvas id="matrix"></canvas>
-  <div id="ifroFlash" class="ifro-flash" aria-hidden="true"></div>
-
-  <div class="wrap" role="main">
-    <div class="topbar">
-      <div class="brand">
-        <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="IFRO">
-        <div>
-          <div style="font-weight:900">Modo Hacker — Turma 1°A</div>
-          <div style="font-size:0.85rem;color:rgba(255,255,255,0.6)">Painel seguro para demonstração (apenas local)</div>
-        </div>
-      </div>
-
-      <div class="controls" role="toolbar" aria-label="Controles">
-        <button class="btn" id="openSite">Abrir site</button>
-        <button class="btn" id="toggleMusic">Música (M)</button>
-        <button class="btn ghost" id="downloadLog">Baixar log</button>
-        <button class="btn" id="closeBtn">Voltar</button>
-      </div>
+  <header>
+    <div class="logo-container">
+      <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
+      <button class="menu-btn" id="menuBtn">☰</button>
     </div>
+    <nav id="navMenu">
+      <a href="index.html">Início</a>
+      <a href="#sobre">Sobre</a>
+      <a href="galeria.html">Galeria</a>
+      <a href="Hacker.html" target="_blank">Hacker</a>
+    </nav>
+  </header>
 
-    <div class="main">
-      <!-- Terminal area -->
-      <div class="terminal" role="region" aria-label="Terminal interativo">
-        <div class="term-output" id="termOutput" tabindex="0">
-          <!-- initial messages injected by JS -->
-        </div>
+  <main>
+    <section class="hero">
+      <h1>💚 Turma 1°A | Técnico em Informática – IFRO</h1>
+      <p>Unidos pela tecnologia, movidos pela amizade e pelo conhecimento.</p>
+    </section>
 
-        <div class="prompt">
-          <div class="prefix">user@turma1a:~$</div>
-          <input id="cmdInput" class="cmd-input" placeholder="Digite um comando e pressione Enter (help)" aria-label="Campo de comando">
-        </div>
+    <section id="sobre" class="sobre">
+      <h2>Sobre a Turma</h2>
+      <p>Somos alunos dedicados e curiosos do curso Técnico em Informática do IFRO - Campus Ariquemes. Cada projeto é uma nova descoberta, e este site representa o início da nossa jornada digital. 🚀</p>
+    </section>
 
-        <div class="chipbar" id="chipbar" aria-hidden="false">
-          <!-- quick command chips -->
-          <div class="chip" data-cmd="help">help</div>
-          <div class="chip" data-cmd="clear">clear</div>
-          <div class="chip" data-cmd="about">about</div>
-          <div class="chip" data-cmd="open index.html">open</div>
-          <div class="chip" data-cmd="music on">music</div>
-          <div class="chip" data-cmd="ifro">ifro</div>
-          <div class="chip" data-cmd="download">download</div>
-        </div>
-      </div>
+    <section id="memorias" class="memorias">
+      <h2>📸 Nossas Memórias</h2>
+      <p>Cada momento vivido juntos é uma lembrança especial. Clique abaixo e explore nossa galeria completa com fotos, projetos e conquistas!</p>
+      <a href="galeria.html" class="btn">✨ Ver Galeria Completa</a>
+    </section>
+  </main>
 
-      <!-- Info panel -->
-      <aside class="panel" aria-label="Informações">
-        <h3>Informações & Comandos</h3>
-        <div class="item">
-          <strong>Ajuda rápida:</strong>
-          <ul style="margin:10px 0 0 18px;color:rgba(255,255,255,0.9);font-size:0.92rem">
-            <li><code>help</code> — lista comandos</li>
-            <li><code>clear</code> — limpa terminal</li>
-            <li><code>about</code> — sobre</li>
-            <li><code>open &lt;url&gt;</code> — abre página (ex: open index.html)</li>
-            <li><code>music on/off</code> — tocar/pausar</li>
-            <li><code>ifro</code> — modo secreto</li>
-            <li><code>download</code> — baixa log</li>
-          </ul>
-        </div>
-
-        <div class="item">
-          <strong>Atalhos:</strong>
-          <div style="margin-top:8px;color:var(--muted)"><span class="kbd">M</span> Música — <span class="kbd">T</span> Tema — <span class="kbd">Esc</span> Focar</div>
-        </div>
-
-        <div class="item">
-          <strong>Status:</strong>
-          <div id="statusMusic" style="margin-top:8px;color:var(--muted)">Música: parada</div>
-        </div>
-      </aside>
-    </div>
-
-    <div style="width:100%;max-width:1100px;text-align:center;color:rgba(255,255,255,0.6);font-size:0.9rem">
-      <div style="margin-top:8px">Dica: clique em um chip ou digite <span class="kbd">help</span> no terminal para começar.</div>
-    </div>
-  </div>
-
-  <!-- audio -->
-  <audio id="typeSound" preload="auto" src="https://assets.mixkit.co/sfx/preview/mixkit-typewriter-soft-click-1124.mp3"></audio>
-  <audio id="secretSound" preload="auto" src="https://assets.mixkit.co/sfx/preview/mixkit-fast-laser-impact-1684.mp3"></audio>
-
-  <!-- Howler (for lofi) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+  <footer>
+    <p>© 2025 Turma 1°A – Instituto Federal de Rondônia | Desenvolvido com 💚</p>
+  </footer>
 
   <script>
-  // DOM
-  const termOutput = document.getElementById('termOutput');
-  const cmdInput = document.getElementById('cmdInput');
-  const openSiteBtn = document.getElementById('openSite');
-  const toggleMusicBtn = document.getElementById('toggleMusic');
-  const downloadLogBtn = document.getElementById('downloadLog');
-  const closeBtn = document.getElementById('closeBtn');
-  const statusMusic = document.getElementById('statusMusic');
-  const ifroFlash = document.getElementById('ifroFlash');
-  const typeSound = document.getElementById('typeSound');
-  const secretSound = document.getElementById('secretSound');
-  const chipbar = document.getElementById('chipbar');
+    // Menu hambúrguer funcional
+    const menuBtn = document.getElementById('menuBtn');
+    const navMenu = document.getElementById('navMenu');
 
-  // State
-  const state = { musicPlaying:false, log:[], matrixSpeed:40 };
-
-  // Howler music
-  const music = new Howl({
-    src: ['https://cdn.pixabay.com/download/audio/2023/01/23/audio_c0b8a7b0a7.mp3?filename=lofi-study-112191.mp3'],
-    loop: true, volume: 0.25
-  });
-
-  // util write
-  function writeLine(text, cls=''){
-    const p = document.createElement('div');
-    p.className = 'term-line ' + cls;
-    p.textContent = text;
-    termOutput.appendChild(p);
-    termOutput.scrollTop = termOutput.scrollHeight;
-    state.log.push(text);
-  }
-
-  // initial
-  writeLine('> Inicializando IFRO SYSTEM...');
-  setTimeout(()=> writeLine('> Sistema pronto. Digite "help" para ver comandos.'), 600);
-
-  // commands
-  function runCommand(raw){
-    if(!raw) return;
-    writeLine('> ' + raw);
-    const parts = raw.trim().split(/\s+/);
-    const cmd = parts[0].toLowerCase();
-    const args = parts.slice(1);
-    switch(cmd){
-      case 'help':
-        writeLine('Comandos: help, clear, about, open, music, ifro, download, echo');
-        break;
-      case 'clear':
-        termOutput.innerHTML = '';
-        state.log = [];
-        writeLine('> Terminal limpo.');
-        break;
-      case 'about':
-        writeLine('Turma 1°A — Técnico em Informática (IFRO Ariquemes). Painel demonstrativo.');
-        break;
-      case 'open':
-        if(args.length===0){ writeLine('Uso: open <arquivo ou URL>'); break; }
-        const target = args[0];
-        try{ window.open(target, '_blank'); writeLine('Abrindo: ' + target); } catch(e){ writeLine('Erro ao abrir: '+e.message); }
-        break;
-      case 'music':
-        if(args[0] === 'on' || args[0] === 'play'){ music.play(); state.musicPlaying=true; updateMusicStatus(); writeLine('Música iniciada.'); }
-        else if(args[0] === 'off' || args[0] === 'pause' || args[0] === 'stop'){ music.pause(); state.musicPlaying=false; updateMusicStatus(); writeLine('Música pausada.'); }
-        else writeLine('Use: music on | music off');
-        break;
-      case 'ifro':
-        activateIFRO();
-        break;
-      case 'download':
-        downloadLog(); writeLine('Download do log iniciado.');
-        break;
-      case 'echo':
-        writeLine(args.join(' '));
-        break;
-      default:
-        writeLine('Comando não encontrado. Use "help".');
-    }
-  }
-
-  // input handlers + type sound
-  cmdInput.addEventListener('keydown', (e)=>{
-    if(e.key.length === 1){ try{ typeSound.currentTime = 0; typeSound.play(); } catch(_){} }
-    if(e.key === 'Enter'){ const v = cmdInput.value.trim(); if(v){ runCommand(v); cmdInput.value=''; } }
-    if(e.key === 'Escape'){ cmdInput.blur(); }
-  });
-
-  // chips click
-  chipbar.addEventListener('click', (ev)=>{
-    const chip = ev.target.closest('.chip');
-    if(!chip) return;
-    const c = chip.dataset.cmd;
-    // put in input and run
-    cmdInput.value = c;
-    cmdInput.focus();
-    // small timeout to allow play sound then enter
-    setTimeout(()=>{ runCommand(c); cmdInput.value=''; }, 120);
-  });
-
-  // buttons
-  openSiteBtn.addEventListener('click', ()=>{ window.open('index.html','_blank'); writeLine('> Abrindo index.html...'); });
-  toggleMusicBtn.addEventListener('click', ()=>{ if(state.musicPlaying){ music.pause(); state.musicPlaying=false; writeLine('> Música pausada.'); } else { music.play(); state.musicPlaying=true; writeLine('> Música iniciada.'); } updateMusicStatus(); });
-  downloadLogBtn.addEventListener('click', ()=>{ downloadLog(); writeLine('> Download do log iniciado.'); });
-  closeBtn.addEventListener('click', ()=>{ window.location.href='index.html'; });
-
-  function updateMusicStatus(){ statusMusic.textContent = 'Música: ' + (state.musicPlaying ? 'tocando' : 'parada'); }
-
-  // download log
-  function downloadLog(){
-    const data = state.log.join('\n');
-    const blob = new Blob([data], {type:'text/plain;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'ifro_terminal_log.txt';
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  }
-
-  // IFRO secret activation
-  function activateIFRO(){
-    try{ secretSound.currentTime = 0; secretSound.play(); } catch(_) {}
-    ifroFlash.classList.add('show');
-    document.body.classList.add('ifro-active');
-    writeLine('>>> Modo IFRO ativado! Nível de brilho aumentado.');
-    setMatrixSpeed(18);
-    // remove flash after 1.1s
-    setTimeout(()=> ifroFlash.classList.remove('show'), 1100);
-    // keep effect for 9s then revert
-    setTimeout(()=>{
-      document.body.classList.remove('ifro-active');
-      writeLine('>>> Modo IFRO desativado.');
-      setMatrixSpeed(40);
-    }, 9000);
-  }
-
-  // keyboard shortcuts
-  window.addEventListener('keydown', (e)=>{
-    if(e.key.toLowerCase()==='m'){ if(state.musicPlaying){ music.pause(); state.musicPlaying=false; writeLine('> Música pausada (atalho).'); } else { music.play(); state.musicPlaying=true; writeLine('> Música iniciada (atalho).'); } updateMusicStatus(); }
-    if(e.key.toLowerCase()==='t'){ document.body.classList.toggle('ifro-active'); writeLine('> Tema alternado (atalho).'); }
-    if(e.key==='Escape'){ cmdInput.focus(); }
-  });
-
-  // focus terminal on click
-  termOutput.addEventListener('click', ()=>{ cmdInput.focus(); });
-
-  // preload images optional
-  ['IMG-20250513-WA0029(1).jpg','IMG-20250826-WA0086.jpg','IMG-20250901-WA0020.jpg','IMG-20250918-WA0038.jpg','IMG-20251011-WA0001.jpg'].forEach(src=>{ const i=new Image(); i.src=src; });
-
-  // MATRIX CANVAS
-  (function(){
-    const canvas = document.getElementById('matrix');
-    const ctx = canvas.getContext('2d');
-    let width = canvas.width = window.innerWidth;
-    let height = canvas.height = window.innerHeight;
-    let fontSize = 14;
-    let columns = Math.floor(width / fontSize);
-    let drops = Array(columns).fill(1);
-    const letters = "01";
-    let interval = 40;
-
-    function resize(){ width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; columns = Math.floor(width / fontSize); drops = Array(columns).fill(1); }
-    window.addEventListener('resize', resize);
-
-    function draw(){
-      ctx.fillStyle = "rgba(0,0,0,0.06)";
-      ctx.fillRect(0,0,width,height);
-      ctx.fillStyle = "#00ff66";
-      ctx.font = fontSize + "px monospace";
-      for(let i=0;i<drops.length;i++){
-        const text = letters.charAt(Math.floor(Math.random()*letters.length));
-        ctx.fillText(text, i*fontSize, drops[i]*fontSize);
-        if(drops[i]*fontSize > height && Math.random()>0.975) drops[i]=0;
-        drops[i]++;
-      }
-    }
-
-    let timer = setInterval(draw, interval);
-    window.setMatrixSpeed = function(ms){ clearInterval(timer); interval = ms; timer = setInterval(draw, interval); };
-  })();
-
+    menuBtn.addEventListener('click', () => {
+      navMenu.classList.toggle('show');
+    });
   </script>
 </body>
 </html>
