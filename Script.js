@@ -1,103 +1,126 @@
-// ==========================
-// 💻 MODO HACKER
-// ==========================
-document.getElementById("modoHacker").addEventListener("click", () => {
-  alert("💻 Modo Hacker Ativado!");
-  window.open("hacker.html", "_blank"); // abre outra aba
-});
+/* ============================
+   SCRIPT PRINCIPAL - IFRO 1°A
+============================ */
 
-// ==========================
-// 🌗 TEMA CLARO/ESCURO
-// ==========================
-const body = document.body;
-const themeButton = document.getElementById("toggleTheme");
-
-if (localStorage.getItem("theme")) {
-  body.className = localStorage.getItem("theme");
-}
-
-themeButton.addEventListener("click", () => {
-  body.classList.toggle("light");
-  body.classList.toggle("dark");
-  const currentTheme = body.classList.contains("light") ? "light" : "dark";
-  localStorage.setItem("theme", currentTheme);
-});
-
-// ==========================
-// 📅 CALENDÁRIO
-// ==========================
-const calendar = document.getElementById("calendar");
-const events = [
-  { date: "2025-10-15", title: "Prova de Matemática 📘" },
-  { date: "2025-10-20", title: "Entrega de Projeto 💻" },
-  { date: "2025-11-01", title: "Feriado - Todos os Santos 🕊️" },
-  { date: "2025-11-10", title: "Reunião de Grupo 👥" }
-];
-
-function renderCalendar() {
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-
-  let html = `<h3>${now.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3><ul>`;
-  events.forEach(e => {
-    const eventDate = new Date(e.date);
-    if (eventDate.getMonth() === month && eventDate.getFullYear() === year) {
-      html += `<li><strong>${eventDate.getDate()}/${eventDate.getMonth()+1}</strong> – ${e.title}</li>`;
-    }
-  });
-  html += "</ul>";
-  calendar.innerHTML = html;
-}
-renderCalendar();
-
-// ==========================
-// 👀 CONTADOR DE VISITAS
-// ==========================
-let visitCount = localStorage.getItem("visitCount");
-if (!visitCount) {
-  visitCount = 1;
-  localStorage.setItem("visitCount", visitCount);
-} else {
-  visitCount = parseInt(visitCount);
-}
-document.getElementById("visitCount").textContent = visitCount;
-
-// ==========================
-// 📸 LINK PARA GALERIA
-// ==========================
-document.getElementById("abrirGaleria").addEventListener("click", () => {
-  window.open("galeria.html", "_blank");
-});
-
-// ==========================
-// 🌧️ EFEITO MATRIX
-// ==========================
+/* ===== EFEITO MATRIX ===== */
 const canvas = document.getElementById('matrix');
 const ctx = canvas.getContext('2d');
+
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
+
 const letters = "01";
-const fontSize = 14;
+const fontSize = 16;
 const columns = canvas.width / fontSize;
 const drops = Array(Math.floor(columns)).fill(1);
 
 function drawMatrix() {
   ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#00ff66";
+
+  ctx.fillStyle = "#0f0";
   ctx.font = fontSize + "px monospace";
+
   for (let i = 0; i < drops.length; i++) {
     const text = letters.charAt(Math.floor(Math.random() * letters.length));
     ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
     if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
       drops[i] = 0;
     }
     drops[i]++;
   }
 }
-setInterval(drawMatrix, 33);
-window.addEventListener("resize", () => {
+
+setInterval(drawMatrix, 40);
+
+window.addEventListener('resize', () => {
   canvas.height = window.innerHeight;
   canvas.width = window.innerWidth;
 });
+
+/* ===== CONTADOR DE VISITAS ===== */
+const visitCountEl = document.getElementById('visitCount');
+if (visitCountEl) {
+  let visits = localStorage.getItem('visitas1A');
+  if (!visits) visits = 0;
+  visits++;
+  localStorage.setItem('visitas1A', visits);
+  visitCountEl.textContent = visits;
+}
+
+/* ===== BOTÃO: MODO HACKER ===== */
+const hackerBtn = document.getElementById('modoHacker');
+if (hackerBtn) {
+  hackerBtn.addEventListener('click', () => {
+    window.open('Hacker.html', '_blank');
+  });
+}
+
+/* ===== BOTÃO: GALERIA ===== */
+const galeriaBtn = document.getElementById('abrirGaleria');
+if (galeriaBtn) {
+  galeriaBtn.addEventListener('click', () => {
+    window.open('galeria.html', '_blank');
+  });
+}
+
+/* ===== MODO CLARO/ESCURO ===== */
+const toggleThemeBtn = document.getElementById('toggleTheme');
+if (toggleThemeBtn) {
+  toggleThemeBtn.addEventListener('click', () => {
+    document.body.classList.toggle('light');
+  });
+}
+
+/* ===== CALENDÁRIO SIMPLES ===== */
+const calendarEl = document.getElementById('calendar');
+if (calendarEl) {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+
+  const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+
+  const events = {
+    "2025-10-15": "Trabalho de Redes",
+    "2025-10-25": "Apresentação de Projeto",
+    "2025-11-02": "Prova de Matemática",
+    "2025-11-10": "Feira de Ciências"
+  };
+
+  function renderCalendar(year, month) {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+
+    let html = `<h3>${monthNames[month]} ${year}</h3>`;
+    html += `<table><tr>
+      <th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th>
+    </tr><tr>`;
+
+    let dayOfWeek = firstDay.getDay();
+    for (let i = 0; i < dayOfWeek; i++) html += "<td></td>";
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const event = events[dateStr];
+      const isToday = (day === today.getDate() && month === today.getMonth());
+
+      html += `<td class="${event ? 'event' : ''}" title="${event || ''}">
+        ${isToday ? `<strong>${day}</strong>` : day}
+        ${event ? `<br><small>${event}</small>` : ''}
+      </td>`;
+
+      if ((day + dayOfWeek) % 7 === 0) html += "</tr><tr>";
+    }
+
+    html += "</tr></table>";
+    calendarEl.innerHTML = html;
+  }
+
+  renderCalendar(year, month);
+}
