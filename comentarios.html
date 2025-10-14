@@ -115,69 +115,79 @@
   </footer>
 
   <script type="module">
-  // Importar funções do Firebase
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    // Importar funções do Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-  // ⚙️ CONFIGURAÇÃO DO SEU PROJETO (copie do Firebase)
-  const firebaseConfig = {
-  apiKey: "AIzaSyDDP25sq9YORCe7x2FZalP_miA9bsQqDUU",
-  authDomain: "turma-1a-ifro.firebaseapp.com",
-  projectId: "turma-1a-ifro",
-  storageBucket: "turma-1a-ifro.firebasestorage.app",
-  messagingSenderId: "237008011343",
-  appId: "1:237008011343:web:075686ab6eff1d327eaa3a"
-};
+    // ⚙️ CONFIGURAÇÃO DO SEU PROJETO FIREBASE
+    const firebaseConfig = {
+      apiKey: "AIzaSyDDP25sq9YORCe7x2FZalP_miA9bsQqDUU",
+      authDomain: "turma-1a-ifro.firebaseapp.com",
+      projectId: "turma-1a-ifro",
+      storageBucket: "turma-1a-ifro.firebasestorage.app",
+      messagingSenderId: "237008011343",
+      appId: "1:237008011343:web:075686ab6eff1d327eaa3a"
+    };
 
-  // 1️⃣ Inicializa o Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    // Inicializa Firebase e Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  // 2️⃣ Pega os elementos do formulário
-  const form = document.getElementById('comentarioForm');
-  const lista = document.getElementById('comentariosLista');
+    // Pega os elementos do formulário
+    const form = document.getElementById('comentarioForm');
+    const lista = document.getElementById('comentariosLista');
 
-  // 3️⃣ Envia o comentário para o banco de dados
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    // Envia o comentário
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-    const nome = document.getElementById('nome').value.trim();
-    const mensagem = document.getElementById('mensagem').value.trim();
+      const nome = document.getElementById('nome').value.trim();
+      const mensagem = document.getElementById('mensagem').value.trim();
 
-    if (!nome || !mensagem) return alert("Preencha todos os campos!");
+      if (!nome || !mensagem) return alert("Preencha todos os campos!");
 
-    // Adiciona no Firestore
-    await addDoc(collection(db, "comentarios"), {
-      nome,
-      mensagem,
-      data: serverTimestamp()
+      try {
+        await addDoc(collection(db, "comentarios"), {
+          nome,
+          mensagem,
+          timestamp: serverTimestamp()
+        });
+
+        form.reset();
+        alert("Comentário enviado com sucesso!");
+        carregarComentarios();
+      } catch (erro) {
+        console.error("Erro ao enviar comentário:", erro);
+        alert("Erro ao enviar o comentário. Verifique a configuração do Firebase.");
+      }
     });
 
-    form.reset();
+    // Carrega os comentários
+    async function carregarComentarios() {
+      lista.innerHTML = "<p>Carregando comentários...</p>";
+      try {
+        const q = query(collection(db, "comentarios"), orderBy("timestamp", "desc"));
+        const querySnapshot = await getDocs(q);
+
+        lista.innerHTML = "";
+        querySnapshot.forEach((doc) => {
+          const c = doc.data();
+          const data = c.timestamp
+            ? new Date(c.timestamp.seconds * 1000).toLocaleString()
+            : "(sem data)";
+          const div = document.createElement("div");
+          div.className = "comentario";
+          div.innerHTML = `<strong>${c.nome}</strong> <small>${data}</small><br>${c.mensagem}`;
+          lista.appendChild(div);
+        });
+      } catch (erro) {
+        console.error("Erro ao carregar comentários:", erro);
+        lista.innerHTML = "<p>Erro ao carregar comentários 😢</p>";
+      }
+    }
+
+    // Executa ao abrir a página
     carregarComentarios();
-  });
-
-  // 4️⃣ Busca e mostra todos os comentários do Firestore
-  async function carregarComentarios() {
-    lista.innerHTML = "<p>Carregando comentários...</p>";
-    const q = query(collection(db, "comentarios"), orderBy("data", "desc"));
-    const querySnapshot = await getDocs(q);
-
-    lista.innerHTML = "";
-    querySnapshot.forEach((doc) => {
-      const c = doc.data();
-      const data = c.data
-        ? new Date(c.data.seconds * 1000).toLocaleString()
-        : "(sem data)";
-      const div = document.createElement("div");
-      div.className = "comentario";
-      div.innerHTML = `<strong>${c.nome}</strong> <small>${data}</small><br>${c.mensagem}`;
-      lista.appendChild(div);
-    });
-  }
-
-  // 5️⃣ Executa ao abrir a página
-  carregarComentarios();
-</script>
+  </script>
 </body>
 </html>
