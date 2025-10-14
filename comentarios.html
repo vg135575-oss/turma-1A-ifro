@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comentários 💬 | Turma 1A IFRO</title>
+  <title>💬 Comentários - Turma 1A IFRO</title>
   <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
 
@@ -13,134 +13,186 @@
       background-color: #0a0a0a;
       color: #00ff66;
       margin: 0;
-      padding: 20px;
+      padding: 0;
       text-align: center;
     }
 
-    h1 {
+    header {
+      background: #001900;
       color: #00ff66;
-      text-shadow: 0 0 10px #00ff66;
+      padding: 15px;
+      box-shadow: 0 2px 10px #00ff66;
+    }
+
+    h1 {
+      margin-top: 20px;
     }
 
     form {
-      background: #001900;
+      background: rgba(0, 25, 0, 0.85);
+      border: 2px solid #00ff66;
+      border-radius: 10px;
       padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px #00ff66;
+      width: 90%;
       max-width: 500px;
-      margin: 20px auto;
-    }
-
-    input, textarea, button {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-      border-radius: 6px;
-      border: none;
-      font-family: 'Orbitron', sans-serif;
+      margin: 30px auto;
+      box-shadow: 0 0 15px #00ff66;
     }
 
     input, textarea {
-      background: #0a0a0a;
+      width: 90%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-family: 'Orbitron', sans-serif;
+      background: #001900;
       color: #00ff66;
-      border: 1px solid #00ff66;
+    }
+
+    textarea {
+      height: 100px;
+      resize: none;
     }
 
     button {
       background: #00ff66;
       color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
       font-weight: bold;
       cursor: pointer;
       transition: 0.3s;
+      box-shadow: 0 0 10px #00ff66;
     }
 
     button:hover {
       background: #000;
       color: #00ff66;
-      box-shadow: 0 0 15px #00ff66;
+      box-shadow: 0 0 20px #00ff66;
+    }
+
+    #listaComentarios {
+      margin-top: 40px;
+      padding: 10px;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .comentario {
-      background: #001900;
+      background: rgba(0, 25, 0, 0.85);
       border: 1px solid #00ff66;
-      padding: 15px;
       border-radius: 10px;
-      margin: 15px auto;
-      max-width: 500px;
+      padding: 10px;
+      margin: 10px 0;
       text-align: left;
+      color: #bfffcf;
+      box-shadow: 0 0 10px #00ff66;
+    }
+
+    .comentario strong {
+      color: #00ff66;
     }
 
     a.voltar {
-      color: #00ff66;
-      text-decoration: none;
       display: inline-block;
-      margin-bottom: 20px;
+      margin-top: 20px;
+      text-decoration: none;
+      color: #00ff66;
+      border: 1px solid #00ff66;
+      padding: 10px 15px;
+      border-radius: 8px;
+      transition: 0.3s;
     }
 
     a.voltar:hover {
-      text-decoration: underline;
+      background: #00ff66;
+      color: #000;
     }
   </style>
+</head>
+<body>
+
+  <header>
+    <h1>💬 Comentários da Turma 1A</h1>
+    <p>Deixe seu recado aqui!</p>
+  </header>
+
+  <main>
+    <form id="formComentario">
+      <input type="text" name="nome" placeholder="Seu nome" required>
+      <textarea name="mensagem" placeholder="Escreva seu comentário..." required></textarea>
+      <button type="submit">Enviar</button>
+    </form>
+
+    <section id="listaComentarios">
+      <h2>🗨️ Comentários recentes:</h2>
+    </section>
+
+    <a href="index.html" class="voltar">⬅️ Voltar ao início</a>
+  </main>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
-      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    // Importar funções do Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // ⚙️ SUA CONFIGURAÇÃO DO FIREBASE AQUI:
+    // Configuração do Firebase da sua conta
     const firebaseConfig = {
-      apiKey: "SUA_API_KEY_AQUI",
-      authDomain: "SEU_PROJETO.firebaseapp.com",
-      projectId: "SEU_PROJETO",
-      storageBucket: "SEU_PROJETO.appspot.com",
-      messagingSenderId: "SEU_SENDER_ID",
-      appId: "SEU_APP_ID"
+      apiKey: "AIzaSyDDP25sq9YORCe7x2FZalP_miA9bsQqDUU",
+      authDomain: "turma-1a-ifro.firebaseapp.com",
+      projectId: "turma-1a-ifro",
+      storageBucket: "turma-1a-ifro.firebasestorage.app",
+      messagingSenderId: "237008011343",
+      appId: "1:237008011343:web:075686ab6eff1d327eaa3a"
     };
 
+    // Inicializa o Firebase e Firestore
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    async function enviarComentario(event) {
-      event.preventDefault();
-      const nome = document.getElementById("nome").value;
-      const mensagem = document.getElementById("mensagem").value;
+    // Referências HTML
+    const form = document.getElementById("formComentario");
+    const lista = document.getElementById("listaComentarios");
+
+    // Enviar comentário
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nome = form.nome.value.trim();
+      const mensagem = form.mensagem.value.trim();
+
       if (nome && mensagem) {
         await addDoc(collection(db, "comentarios"), {
           nome,
           mensagem,
-          data: new Date()
+          data: new Date().toISOString()
         });
-        document.getElementById("form-comentario").reset();
+        alert("💚 Comentário enviado com sucesso!");
+        form.reset();
+        carregarComentarios();
+      } else {
+        alert("⚠️ Preencha todos os campos!");
       }
-    }
-
-    const q = query(collection(db, "comentarios"), orderBy("data", "desc"));
-    onSnapshot(q, (snapshot) => {
-      const lista = document.getElementById("lista-comentarios");
-      lista.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const c = doc.data();
-        const div = document.createElement("div");
-        div.classList.add("comentario");
-        div.innerHTML = `<strong>${c.nome}</strong><p>${c.mensagem}</p>`;
-        lista.appendChild(div);
-      });
     });
 
-    window.enviarComentario = enviarComentario;
+    // Carregar comentários
+    async function carregarComentarios() {
+      lista.innerHTML = "<h2>🗨️ Comentários recentes:</h2>";
+      const querySnapshot = await getDocs(collection(db, "comentarios"));
+      querySnapshot.forEach((doc) => {
+        const comentario = doc.data();
+        const div = document.createElement("div");
+        div.classList.add("comentario");
+        div.innerHTML = `<strong>${comentario.nome}</strong>: ${comentario.mensagem}`;
+        lista.appendChild(div);
+      });
+    }
+
+    carregarComentarios();
   </script>
-</head>
 
-<body>
-  <a href="index.html" class="voltar">⬅ Voltar para o início</a>
-  <h1>💬 Comentários da Turma 1A</h1>
-
-  <form id="form-comentario" onsubmit="enviarComentario(event)">
-    <input type="text" id="nome" placeholder="Seu nome" required>
-    <textarea id="mensagem" placeholder="Escreva seu comentário..." required></textarea>
-    <button type="submit">Enviar Comentário</button>
-  </form>
-
-  <div id="lista-comentarios"></div>
 </body>
 </html>
