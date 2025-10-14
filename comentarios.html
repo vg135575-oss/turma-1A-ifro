@@ -3,40 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>💬 Comentários - Turma 1A IFRO</title>
-  <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
-
+  <title>Comentários - Turma 1A 💚</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
+      background-color: #000;
+      color: #00ff66;
       font-family: 'Orbitron', sans-serif;
-      background-color: #0a0a0a;
-      color: #00ff66;
-      margin: 0;
-      padding: 0;
       text-align: center;
-    }
-
-    header {
-      background: #001900;
-      color: #00ff66;
-      padding: 15px;
-      box-shadow: 0 2px 10px #00ff66;
+      padding: 20px;
     }
 
     h1 {
-      margin-top: 20px;
+      font-size: 1.8em;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #ccc;
+      margin-bottom: 25px;
     }
 
     form {
-      background: rgba(0, 25, 0, 0.85);
-      border: 2px solid #00ff66;
-      border-radius: 10px;
+      background: #001900;
       padding: 20px;
-      width: 90%;
-      max-width: 500px;
-      margin: 30px auto;
+      border-radius: 12px;
       box-shadow: 0 0 15px #00ff66;
+      max-width: 500px;
+      margin: 0 auto 30px;
     }
 
     input, textarea {
@@ -44,28 +38,22 @@
       margin: 10px 0;
       padding: 10px;
       border-radius: 8px;
-      border: none;
-      outline: none;
-      font-family: 'Orbitron', sans-serif;
-      background: #001900;
+      border: 2px solid #00ff66;
+      background: #000;
       color: #00ff66;
-    }
-
-    textarea {
-      height: 100px;
-      resize: none;
+      font-family: 'Orbitron', sans-serif;
     }
 
     button {
       background: #00ff66;
-      color: #000;
       border: none;
       padding: 10px 20px;
-      border-radius: 8px;
+      color: #000;
       font-weight: bold;
+      border-radius: 8px;
       cursor: pointer;
       transition: 0.3s;
-      box-shadow: 0 0 10px #00ff66;
+      font-family: 'Orbitron', sans-serif;
     }
 
     button:hover {
@@ -74,36 +62,32 @@
       box-shadow: 0 0 20px #00ff66;
     }
 
-    #listaComentarios {
-      margin-top: 40px;
-      padding: 10px;
-      max-width: 700px;
-      margin-left: auto;
-      margin-right: auto;
+    .comentarios {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: left;
     }
 
     .comentario {
-      background: rgba(0, 25, 0, 0.85);
-      border: 1px solid #00ff66;
+      background: #001900;
+      padding: 15px;
       border-radius: 10px;
-      padding: 10px;
       margin: 10px 0;
-      text-align: left;
-      color: #bfffcf;
       box-shadow: 0 0 10px #00ff66;
     }
 
-    .comentario strong {
-      color: #00ff66;
+    small {
+      color: #ccc;
+      font-size: 0.8em;
     }
 
     a.voltar {
       display: inline-block;
-      margin-top: 20px;
+      margin-top: 25px;
       text-decoration: none;
       color: #00ff66;
-      border: 1px solid #00ff66;
-      padding: 10px 15px;
+      border: 2px solid #00ff66;
+      padding: 8px 15px;
       border-radius: 8px;
       transition: 0.3s;
     }
@@ -111,36 +95,30 @@
     a.voltar:hover {
       background: #00ff66;
       color: #000;
+      box-shadow: 0 0 15px #00ff66;
     }
   </style>
 </head>
 <body>
+  <h1>💬 Comentários da Turma 1A</h1>
+  <p>Deixe seu recado aqui!</p>
 
-  <header>
-    <h1>💬 Comentários da Turma 1A</h1>
-    <p>Deixe seu recado aqui!</p>
-  </header>
+  <form id="formComentario">
+    <input type="text" id="nome" placeholder="Seu nome" required><br>
+    <textarea id="mensagem" placeholder="Escreva sua mensagem..." required></textarea><br>
+    <button type="submit">Enviar</button>
+  </form>
 
-  <main>
-    <form id="formComentario">
-      <input type="text" name="nome" placeholder="Seu nome" required>
-      <textarea name="mensagem" placeholder="Escreva seu comentário..." required></textarea>
-      <button type="submit">Enviar</button>
-    </form>
+  <h2>🗨️ Comentários recentes:</h2>
+  <div id="comentarios" class="comentarios"></div>
 
-    <section id="listaComentarios">
-      <h2>🗨️ Comentários recentes:</h2>
-    </section>
+  <a href="index.html" class="voltar">⬅️ Voltar ao início</a>
 
-    <a href="index.html" class="voltar">⬅️ Voltar ao início</a>
-  </main>
-
+  <!-- Firebase -->
   <script type="module">
-    // Importar funções do Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Configuração do Firebase da sua conta
     const firebaseConfig = {
       apiKey: "AIzaSyDDP25sq9YORCe7x2FZalP_miA9bsQqDUU",
       authDomain: "turma-1a-ifro.firebaseapp.com",
@@ -150,49 +128,43 @@
       appId: "1:237008011343:web:075686ab6eff1d327eaa3a"
     };
 
-    // Inicializa o Firebase e Firestore
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Referências HTML
     const form = document.getElementById("formComentario");
-    const lista = document.getElementById("listaComentarios");
+    const divComentarios = document.getElementById("comentarios");
 
-    // Enviar comentário
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const nome = form.nome.value.trim();
-      const mensagem = form.mensagem.value.trim();
-
-      if (nome && mensagem) {
-        await addDoc(collection(db, "comentarios"), {
-          nome,
-          mensagem,
-          data: new Date().toISOString()
-        });
-        alert("💚 Comentário enviado com sucesso!");
-        form.reset();
-        carregarComentarios();
-      } else {
-        alert("⚠️ Preencha todos os campos!");
-      }
-    });
-
-    // Carregar comentários
     async function carregarComentarios() {
-      lista.innerHTML = "<h2>🗨️ Comentários recentes:</h2>";
-      const querySnapshot = await getDocs(collection(db, "comentarios"));
+      divComentarios.innerHTML = "";
+      const q = query(collection(db, "comentarios"), orderBy("data", "desc"));
+      const querySnapshot = await getDocs(q);
       querySnapshot.forEach((doc) => {
-        const comentario = doc.data();
+        const c = doc.data();
+        const dataHora = new Date(c.data).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
         const div = document.createElement("div");
         div.classList.add("comentario");
-        div.innerHTML = `<strong>${comentario.nome}</strong>: ${comentario.mensagem}`;
-        lista.appendChild(div);
+        div.innerHTML = `<strong>${c.nome}</strong>: ${c.mensagem}<br><small>🕒 ${dataHora}</small>`;
+        divComentarios.appendChild(div);
       });
     }
 
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById("nome").value.trim();
+      const mensagem = document.getElementById("mensagem").value.trim();
+
+      if (nome && mensagem) {
+        await addDoc(collection(db, "comentarios"), {
+          nome: nome,
+          mensagem: mensagem,
+          data: new Date().toISOString()
+        });
+        form.reset();
+        carregarComentarios();
+      }
+    });
+
     carregarComentarios();
   </script>
-
 </body>
 </html>
