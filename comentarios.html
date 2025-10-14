@@ -114,40 +114,70 @@
     <p>© 2025 Turma 1°A – IFRO | Desenvolvido com 💚</p>
   </footer>
 
-  <script>
-    // Sistema de comentários (salva no navegador)
-    const form = document.getElementById('comentarioForm');
-    const lista = document.getElementById('comentariosLista');
+  <script type="module">
+  // Importar funções do Firebase
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    // Carregar comentários salvos
-    const comentarios = JSON.parse(localStorage.getItem('comentarios')) || [];
-    renderComentarios();
+  // ⚙️ CONFIGURAÇÃO DO SEU PROJETO (copie do Firebase)
+  const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "SEU_AUTH_DOMAIN",
+    projectId: "SEU_PROJECT_ID",
+    storageBucket: "SEU_STORAGE_BUCKET",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SEU_APP_ID"
+  };
 
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
+  // 1️⃣ Inicializa o Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-      const nome = document.getElementById('nome').value.trim();
-      const mensagem = document.getElementById('mensagem').value.trim();
+  // 2️⃣ Pega os elementos do formulário
+  const form = document.getElementById('comentarioForm');
+  const lista = document.getElementById('comentariosLista');
 
-      if (nome && mensagem) {
-        const novoComentario = { nome, mensagem, data: new Date().toLocaleString() };
-        comentarios.push(novoComentario);
-        localStorage.setItem('comentarios', JSON.stringify(comentarios));
+  // 3️⃣ Envia o comentário para o banco de dados
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-        renderComentarios();
-        form.reset();
-      }
+    const nome = document.getElementById('nome').value.trim();
+    const mensagem = document.getElementById('mensagem').value.trim();
+
+    if (!nome || !mensagem) return alert("Preencha todos os campos!");
+
+    // Adiciona no Firestore
+    await addDoc(collection(db, "comentarios"), {
+      nome,
+      mensagem,
+      data: serverTimestamp()
     });
 
-    function renderComentarios() {
-      lista.innerHTML = '';
-      comentarios.slice().reverse().forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'comentario';
-        div.innerHTML = `<strong>${c.nome}</strong> <small>(${c.data})</small><br>${c.mensagem}`;
-        lista.appendChild(div);
-      });
-    }
-  </script>
+    form.reset();
+    carregarComentarios();
+  });
+
+  // 4️⃣ Busca e mostra todos os comentários do Firestore
+  async function carregarComentarios() {
+    lista.innerHTML = "<p>Carregando comentários...</p>";
+    const q = query(collection(db, "comentarios"), orderBy("data", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    lista.innerHTML = "";
+    querySnapshot.forEach((doc) => {
+      const c = doc.data();
+      const data = c.data
+        ? new Date(c.data.seconds * 1000).toLocaleString()
+        : "(sem data)";
+      const div = document.createElement("div");
+      div.className = "comentario";
+      div.innerHTML = `<strong>${c.nome}</strong> <small>${data}</small><br>${c.mensagem}`;
+      lista.appendChild(div);
+    });
+  }
+
+  // 5️⃣ Executa ao abrir a página
+  carregarComentarios();
+</script>
 </body>
 </html>
