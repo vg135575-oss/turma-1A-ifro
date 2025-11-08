@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎮 Bird Runner | Turma 1A IFRO</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <style>
@@ -21,16 +21,22 @@
     }
 
     canvas {
-      border: 2px solid #00ff66;
+      border: 3px solid #00ff66;
       box-shadow: 0 0 25px #00ff66;
-      background: #000;
+      background: radial-gradient(circle at center, #000 70%, #002200 100%);
       border-radius: 15px;
     }
 
     h1 {
-      margin-bottom: 15px;
+      margin-bottom: 10px;
       text-shadow: 0 0 10px #00ff66;
-      font-size: 1.8em;
+      font-size: 2em;
+      animation: glow 2s infinite alternate;
+    }
+
+    @keyframes glow {
+      from { text-shadow: 0 0 5px #00ff66; }
+      to { text-shadow: 0 0 25px #00ff66; }
     }
 
     .btn-voltar {
@@ -52,83 +58,170 @@
       color: #00ff66;
       box-shadow: 0 0 25px #00ff66;
     }
+
+    #gameOver {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #00ff66;
+      display: none;
+      animation: fadeIn 1s ease forwards;
+    }
+
+    #gameOver h2 {
+      font-size: 2.5em;
+      text-shadow: 0 0 20px red;
+    }
+
+    #restartBtn {
+      background: #00ff66;
+      color: #000;
+      border: none;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: bold;
+      font-size: 1em;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 20px;
+      box-shadow: 0 0 15px #00ff66;
+      transition: 0.3s;
+    }
+
+    #restartBtn:hover {
+      background: #000;
+      color: #00ff66;
+      box-shadow: 0 0 25px #00ff66;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -60%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
+    }
   </style>
 </head>
 <body>
   <a href="index.html" class="btn-voltar">⬅ Voltar</a>
   <h1>Bird Runner 🕹️</h1>
 
-  <!-- Seu jogo -->
-  <canvas id="gameCanvas" width="480" height="640"></canvas>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <div id="gameOver">
+    <h2>💀 GAME OVER 💀</h2>
+    <p id="finalScore"></p>
+    <button id="restartBtn">🔄 Reiniciar</button>
+  </div>
 
   <script>
-    // Aqui vai o seu código JS do jogo
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-    let birdY = 300, gravity = 0.6, velocity = 0, jump = -10;
-    let obstacles = [], frame = 0, score = 0;
-    const bird = { x: 50, y: birdY, size: 20 };
+    let bird = { x: 80, y: 300, size: 20, velocity: 0 };
+    const gravity = 0.5, jump = -8;
+    let pipes = [];
+    let score = 0;
+    let gameActive = true;
+
+    // Sons (opcional)
+    const jumpSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+    const hitSound = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
 
     function drawBird() {
-      ctx.fillStyle = '#00ff66';
+      ctx.fillStyle = "#00ff66";
       ctx.beginPath();
       ctx.arc(bird.x, bird.y, bird.size, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    function drawObstacles() {
-      ctx.fillStyle = '#00ff66';
-      obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.w, obs.h));
+    function drawPipes() {
+      ctx.fillStyle = "#00ff66";
+      pipes.forEach(pipe => {
+        ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
+        ctx.fillRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY);
+      });
     }
 
     function updateGame() {
+      if (!gameActive) return;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      velocity += gravity;
-      bird.y += velocity;
+
+      bird.velocity += gravity;
+      bird.y += bird.velocity;
       drawBird();
 
-      if (frame % 90 === 0) {
-        const top = Math.random() * 300 + 50;
-        obstacles.push({ x: canvas.width, y: 0, w: 40, h: top });
-        obstacles.push({ x: canvas.width, y: top + 150, w: 40, h: canvas.height - top - 150 });
+      // Gerar canos
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200) {
+        const top = Math.random() * 250 + 50;
+        const gap = 140;
+        pipes.push({
+          x: canvas.width,
+          width: 50,
+          top: top,
+          bottomY: top + gap
+        });
       }
 
-      obstacles.forEach(obs => obs.x -= 3);
-      obstacles = obstacles.filter(obs => obs.x + obs.w > 0);
-      drawObstacles();
+      // Atualizar canos
+      pipes.forEach(pipe => pipe.x -= 3);
+      pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
+      drawPipes();
 
-      if (obstacles.some(obs =>
-        bird.x + bird.size > obs.x &&
-        bird.x - bird.size < obs.x + obs.w &&
-        bird.y + bird.size > obs.y &&
-        bird.y - bird.size < obs.y + obs.h)) {
-        gameOver();
-      }
+      // Colisão
+      pipes.forEach(pipe => {
+        if (
+          bird.x + bird.size > pipe.x &&
+          bird.x - bird.size < pipe.x + pipe.width &&
+          (bird.y - bird.size < pipe.top || bird.y + bird.size > pipe.bottomY)
+        ) {
+          hitSound.play();
+          endGame();
+        }
+      });
 
+      // Bordas
       if (bird.y + bird.size > canvas.height || bird.y - bird.size < 0) {
-        gameOver();
+        hitSound.play();
+        endGame();
       }
 
-      ctx.fillStyle = '#00ff66';
-      ctx.font = '20px Orbitron';
-      ctx.fillText(`Score: ${score}`, 10, 30);
+      // Pontuação
+      pipes.forEach(pipe => {
+        if (pipe.x + pipe.width === bird.x) score++;
+      });
 
-      frame++;
-      score++;
+      ctx.fillStyle = "#00ff66";
+      ctx.font = "20px Orbitron";
+      ctx.fillText("Score: " + score, 10, 30);
+
       requestAnimationFrame(updateGame);
     }
 
-    function gameOver() {
-      ctx.fillStyle = 'red';
-      ctx.font = '40px Orbitron';
-      ctx.fillText('GAME OVER', 100, 300);
-      setTimeout(() => location.reload(), 1500);
+    function endGame() {
+      gameActive = false;
+      document.getElementById("gameOver").style.display = "block";
+      document.getElementById("finalScore").textContent = `Pontuação final: ${score}`;
     }
 
-    window.addEventListener('keydown', e => {
-      if (e.code === 'Space') velocity = jump;
+    function resetGame() {
+      bird = { x: 80, y: 300, size: 20, velocity: 0 };
+      pipes = [];
+      score = 0;
+      gameActive = true;
+      document.getElementById("gameOver").style.display = "none";
+      updateGame();
+    }
+
+    window.addEventListener("keydown", e => {
+      if (e.code === "Space" && gameActive) {
+        bird.velocity = jump;
+        jumpSound.play();
+      }
     });
+
+    document.getElementById("restartBtn").addEventListener("click", resetGame);
 
     updateGame();
   </script>
