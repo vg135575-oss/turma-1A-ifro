@@ -4,68 +4,73 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galeria da Turma 1A - IFRO</title>
+
+  <link rel="stylesheet" href="style.css" />
   <style>
     body {
-      font-family: "Poppins", sans-serif;
-      background-color: #000;
-      color: #fff;
+      font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      text-align: center;
+      background-color: #f4f7f5;
+      color: #222;
     }
 
     header {
-      background: #0f0f0f;
-      padding: 15px;
-      box-shadow: 0 0 10px #00ff00;
+      background-color: #036b37;
+      color: white;
+      padding: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .logo {
-      height: 50px;
+      height: 60px;
+      margin-left: 20px;
     }
 
-    nav ul {
+    .navbar ul {
       list-style: none;
+      display: flex;
+      margin: 0;
       padding: 0;
-      margin: 10px 0 0;
     }
 
-    nav ul li {
-      display: inline-block;
-      margin: 0 10px;
-    }
-
-    nav ul li a {
+    .navbar a {
+      color: white;
       text-decoration: none;
-      color: #00ff00;
-      font-weight: bold;
-      transition: 0.3s;
+      padding: 10px 20px;
+      display: block;
     }
 
-    nav ul li a:hover {
-      color: #fff;
+    .navbar a.active {
+      background-color: #025d30;
+      border-radius: 5px;
     }
 
-    .galeria-section {
-      padding: 20px;
+    main {
+      text-align: center;
+      padding: 30px 15px;
+    }
+
+    h1 {
+      color: #036b37;
     }
 
     .gallery {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 20px;
-      margin-top: 20px;
+      margin-top: 30px;
     }
 
     .photo-card {
-      background: #0a0a0a;
-      border: 2px solid #00ff00;
-      border-radius: 15px;
-      width: 280px;
+      background: white;
+      border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 0 15px #00ff00;
-      transition: transform 0.3s;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
     }
 
     .photo-card:hover {
@@ -74,46 +79,40 @@
 
     .photo-card img {
       width: 100%;
-      display: block;
-      border-bottom: 2px solid #00ff00;
+      height: 230px;
+      object-fit: cover;
     }
 
     .photo-card p {
       padding: 10px;
-      font-size: 0.95em;
-      color: #cfcfcf;
+      font-size: 14px;
     }
 
     .back-btn {
-      margin: 30px 0;
+      margin-top: 30px;
     }
 
     .back-btn a {
+      color: #036b37;
       text-decoration: none;
-      background: #00ff00;
-      color: #000;
-      padding: 10px 20px;
-      border-radius: 10px;
       font-weight: bold;
-      transition: 0.3s;
-    }
-
-    .back-btn a:hover {
-      background: #00cc00;
     }
 
     footer {
-      background: #0f0f0f;
-      padding: 15px;
-      box-shadow: 0 -2px 10px #00ff00;
-      font-size: 0.9em;
+      background: #036b37;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      margin-top: 40px;
     }
   </style>
 </head>
+
 <body>
   <header>
     <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
-    <nav>
+
+    <nav class="navbar">
       <ul>
         <li><a href="index.html">Início</a></li>
         <li><a href="index.html#sobre">Sobre</a></li>
@@ -123,9 +122,9 @@
     </nav>
   </header>
 
-  <main class="galeria-section">
+  <main>
     <h1>📸 Galeria da Turma 1A IFRO</h1>
-    <p>Aqui estão nossos melhores momentos e lembranças vividas no IFRO 💚</p>
+    <p>Aqui estão nossos melhores momentos, projetos e lembranças vividas no IFRO. 💚</p>
 
     <div class="gallery">
       <div class="photo-card">
@@ -153,6 +152,7 @@
         <p>Um time que compila amizade 💚</p>
       </div>
 
+      <!-- Novas fotos -->
       <div class="photo-card">
         <img src="turma-ifro-2025.jpg" alt="Turma completa IFRO Ariquemes 2025">
         <p>📚 Nossa turma completa — IFRO Ariquemes 2025 💚</p>
