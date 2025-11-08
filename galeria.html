@@ -5,76 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galeria da Turma 1A - IFRO</title>
 
+  <!-- Usa o mesmo estilo do site -->
   <link rel="stylesheet" href="style.css" />
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f4f7f5;
-      color: #222;
-    }
-
-    header {
-      background-color: #036b37;
-      color: white;
-      padding: 10px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .logo {
-      height: 60px;
-      margin-left: 20px;
-    }
-
-    .navbar ul {
-      list-style: none;
-      display: flex;
-      margin: 0;
-      padding: 0;
-    }
-
-    .navbar a {
-      color: white;
-      text-decoration: none;
-      padding: 10px 20px;
-      display: block;
-    }
-
-    .navbar a.active {
-      background-color: #025d30;
-      border-radius: 5px;
-    }
-
-    main {
+    /* Ajustes específicos da galeria */
+    main.galeria-section {
       text-align: center;
-      padding: 30px 15px;
+      padding: 60px 20px;
+      background-color: #f5f7f6;
+      min-height: 100vh;
     }
 
-    h1 {
+    main.galeria-section h1 {
       color: #036b37;
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    .intro-text {
+      color: #333;
+      font-size: 1rem;
+      margin-bottom: 40px;
     }
 
     .gallery {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
-      margin-top: 30px;
+      gap: 25px;
+      justify-items: center;
+      padding: 0 10px;
     }
 
     .photo-card {
-      background: white;
+      background: #fff;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-      transition: transform 0.2s;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+      transition: transform 0.2s, box-shadow 0.2s;
+      max-width: 330px;
     }
 
     .photo-card:hover {
       transform: scale(1.03);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     }
 
     .photo-card img {
@@ -84,47 +58,63 @@
     }
 
     .photo-card p {
-      padding: 10px;
-      font-size: 14px;
+      padding: 12px;
+      font-size: 0.95rem;
+      color: #333;
     }
 
     .back-btn {
-      margin-top: 30px;
+      margin-top: 40px;
     }
 
     .back-btn a {
-      color: #036b37;
+      background-color: #036b37;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
       text-decoration: none;
       font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    .back-btn a:hover {
+      background-color: #028a47;
     }
 
     footer {
-      background: #036b37;
-      color: white;
+      background-color: #036b37;
+      color: #fff;
       text-align: center;
-      padding: 10px;
-      margin-top: 40px;
+      padding: 15px 10px;
+      margin-top: 60px;
     }
   </style>
 </head>
 
 <body>
+  <!-- Cabeçalho -->
   <header>
-    <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
-
+    <div class="logo-container">
+      <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
+    </div>
     <nav class="navbar">
-      <ul>
+      <ul class="nav-links">
         <li><a href="index.html">Início</a></li>
         <li><a href="index.html#sobre">Sobre</a></li>
         <li><a href="galeria.html" class="active">Galeria</a></li>
         <li><a href="Hacker.html" target="_blank">Hacker</a></li>
       </ul>
+      <div class="menu-toggle" id="mobile-menu">☰</div>
     </nav>
   </header>
 
-  <main>
+  <!-- Conteúdo -->
+  <main class="galeria-section">
     <h1>📸 Galeria da Turma 1A IFRO</h1>
-    <p>Aqui estão nossos melhores momentos, projetos e lembranças vividas no IFRO. 💚</p>
+    <p class="intro-text">
+      Aqui estão nossos melhores momentos, projetos e lembranças vividas no IFRO.<br>
+      Cada foto conta uma história do nosso aprendizado e amizade. 💚
+    </p>
 
     <div class="gallery">
       <div class="photo-card">
@@ -173,8 +163,11 @@
     </div>
   </main>
 
+  <!-- Rodapé -->
   <footer>
     <p>© 2025 Turma 1ªA – Instituto Federal de Rondônia</p>
   </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>
