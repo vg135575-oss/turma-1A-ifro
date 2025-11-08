@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>🎮 Bird Runner 3D | Turma 1A IFRO</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <style>
@@ -12,61 +12,73 @@
       font-family: 'Orbitron', sans-serif;
       background: radial-gradient(circle at center, #002200 0%, #000 80%);
       color: #00ff66;
-      overflow: hidden;
       height: 100vh;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      touch-action: none;
     }
 
     h1 {
-      margin-bottom: 15px;
+      margin-bottom: 10px;
       text-shadow: 0 0 20px #00ff66;
-      font-size: 2em;
+      font-size: 1.5em;
+      text-align: center;
     }
 
     .btn-voltar {
-      position: absolute;
-      top: 15px;
-      left: 15px;
+      position: fixed;
+      top: 10px;
+      left: 10px;
       background: #00ff66;
       color: #000;
       text-decoration: none;
       font-weight: bold;
-      padding: 10px 20px;
+      padding: 8px 15px;
       border-radius: 8px;
-      transition: 0.3s;
-      box-shadow: 0 0 15px #00ff66;
-    }
-
-    .btn-voltar:hover {
-      background: #000;
-      color: #00ff66;
-      box-shadow: 0 0 25px #00ff66;
+      font-size: 0.9em;
+      box-shadow: 0 0 10px #00ff66;
+      z-index: 10;
     }
 
     canvas {
       border: 2px solid #00ff66;
-      box-shadow: 0 0 30px #00ff66;
+      box-shadow: 0 0 20px #00ff66;
       background: linear-gradient(to bottom, #000, #001900);
       border-radius: 20px;
+      max-width: 95vw;
+      max-height: 75vh;
+    }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 1.3em; }
+      .btn-voltar { padding: 6px 12px; font-size: 0.8em; }
     }
   </style>
 </head>
 <body>
   <a href="index.html" class="btn-voltar">⬅ Voltar</a>
   <h1>Bird Runner 3D 🕹️</h1>
-  <canvas id="gameCanvas" width="480" height="640"></canvas>
+  <canvas id="gameCanvas"></canvas>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    let bird = { x: 80, y: 300, size: 20, velocity: 0 };
+    // Ajuste do tamanho automático do canvas
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * 0.9;
+      canvas.height = window.innerHeight * 0.7;
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    let bird = { x: 80, y: canvas.height / 2, size: 20, velocity: 0 };
     let gravity = 0.6, jump = -10;
     let obstacles = [], frame = 0, score = 0, gameOverFlag = false;
-    let stars = Array.from({ length: 50 }, () => ({
+    let stars = Array.from({ length: 40 }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
       size: Math.random() * 2
@@ -108,7 +120,7 @@
         grad.addColorStop(1, "#003300");
         ctx.fillStyle = grad;
         ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 15;
         ctx.shadowColor = "#00ff66";
       });
       ctx.shadowBlur = 0;
@@ -124,7 +136,7 @@
       drawBird();
 
       if (frame % 90 === 0) {
-        const top = Math.random() * 300 + 50;
+        const top = Math.random() * (canvas.height / 2) + 50;
         const gap = 160;
         obstacles.push({ x: canvas.width, y: 0, w: 40, h: top });
         obstacles.push({ x: canvas.width, y: top + gap, w: 40, h: canvas.height - top - gap });
@@ -146,8 +158,8 @@
       }
 
       ctx.fillStyle = "#00ff66";
-      ctx.font = "22px Orbitron";
-      ctx.fillText(`Score: ${score}`, 10, 30);
+      ctx.font = `${canvas.width / 20}px Orbitron`;
+      ctx.fillText(`Score: ${score}`, 10, 40);
 
       score++;
       frame++;
@@ -159,14 +171,14 @@
       ctx.shadowBlur = 25;
       ctx.shadowColor = "red";
       ctx.fillStyle = "red";
-      ctx.font = "50px Orbitron";
-      ctx.fillText("GAME OVER", 80, 320);
+      ctx.font = `${canvas.width / 10}px Orbitron`;
+      ctx.fillText("GAME OVER", canvas.width / 6, canvas.height / 2);
       setTimeout(() => location.reload(), 2000);
     }
 
-    window.addEventListener("keydown", e => {
-      if (e.code === "Space") bird.velocity = jump;
-    });
+    // Controle por toque e espaço
+    window.addEventListener("keydown", e => { if (e.code === "Space") bird.velocity = jump; });
+    window.addEventListener("touchstart", () => bird.velocity = jump);
 
     updateGame();
   </script>
