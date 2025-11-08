@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🎮 Bird Runner | Turma 1A IFRO</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -12,216 +13,237 @@
       font-family: 'Orbitron', sans-serif;
       background: linear-gradient(to bottom, #001900, #000);
       color: #00ff66;
-      overflow: hidden;
-      height: 100vh;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ======== CABEÇALHO ======== */
+    header {
+      background: #001900;
+      color: #00ff66;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      padding: 15px;
+      box-shadow: 0 2px 10px #00ff66;
+      position: relative;
+      width: 100%;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .logo { width: 150px; }
+
+    nav {
+      display: flex;
+      gap: 20px;
+      margin-top: 10px;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: #00ff66;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    nav a:hover { color: white; }
+
+    .menu-btn {
+      background: none;
+      border: 2px solid #00ff66;
+      color: #00ff66;
+      font-size: 26px;
+      border-radius: 8px;
+      padding: 5px 10px;
+      cursor: pointer;
+      display: none;
+      transition: 0.3s;
+    }
+
+    .menu-btn:hover {
+      background: #00ff66;
+      color: #000;
+    }
+
+    @media (max-width: 750px) {
+      nav {
+        display: none;
+        flex-direction: column;
+        background: rgba(0, 25, 0, 0.95);
+        position: absolute;
+        top: 70px;
+        right: 10px;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 0 20px #00ff66;
+      }
+
+      nav.show {
+        display: flex;
+        animation: slideDown 0.3s ease;
+      }
+
+      @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .menu-btn { display: block; }
+    }
+
+    /* ======== CONTEÚDO ======== */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 15px;
+      text-shadow: 0 0 15px #00ff66;
+      font-size: 1.8em;
     }
 
     canvas {
       border: 3px solid #00ff66;
       box-shadow: 0 0 25px #00ff66;
-      background: radial-gradient(circle at center, #000 70%, #002200 100%);
+      background: #000;
       border-radius: 15px;
     }
 
-    h1 {
-      margin-bottom: 10px;
-      text-shadow: 0 0 10px #00ff66;
-      font-size: 2em;
-      animation: glow 2s infinite alternate;
-    }
-
-    @keyframes glow {
-      from { text-shadow: 0 0 5px #00ff66; }
-      to { text-shadow: 0 0 25px #00ff66; }
-    }
-
-    .btn-voltar {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      background: #00ff66;
-      color: #000;
-      text-decoration: none;
-      font-weight: bold;
-      padding: 10px 20px;
-      border-radius: 8px;
-      transition: 0.3s;
-      box-shadow: 0 0 15px #00ff66;
-    }
-
-    .btn-voltar:hover {
-      background: #000;
+    /* ======== RODAPÉ ======== */
+    footer {
+      background: #001900;
       color: #00ff66;
-      box-shadow: 0 0 25px #00ff66;
-    }
-
-    #gameOver {
-      position: absolute;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%);
       text-align: center;
-      color: #00ff66;
-      display: none;
-      animation: fadeIn 1s ease forwards;
-    }
-
-    #gameOver h2 {
-      font-size: 2.5em;
-      text-shadow: 0 0 20px red;
-    }
-
-    #restartBtn {
-      background: #00ff66;
-      color: #000;
-      border: none;
-      font-family: 'Orbitron', sans-serif;
-      font-weight: bold;
-      font-size: 1em;
-      padding: 10px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 20px;
-      box-shadow: 0 0 15px #00ff66;
-      transition: 0.3s;
-    }
-
-    #restartBtn:hover {
-      background: #000;
-      color: #00ff66;
-      box-shadow: 0 0 25px #00ff66;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translate(-50%, -60%); }
-      to { opacity: 1; transform: translate(-50%, -50%); }
+      padding: 20px;
+      margin-top: 50px;
+      font-size: 0.9em;
+      box-shadow: 0 -2px 10px #00ff66;
+      width: 100%;
     }
   </style>
 </head>
 <body>
-  <a href="index.html" class="btn-voltar">⬅ Voltar</a>
-  <h1>Bird Runner 🕹️</h1>
+  <header>
+    <div class="logo-container">
+      <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
+      <button class="menu-btn" id="menuBtn">☰</button>
+    </div>
+    <nav id="navMenu">
+      <a href="index.html">Início</a>
+      <a href="galeria.html">Galeria</a>
+      <a href="Hacker.html" target="_blank">Hacker</a>
+      <a href="comentarios.html">Comentários</a>
+    </nav>
+  </header>
 
-  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <main>
+    <h1>🎮 Bird Runner 🕹️</h1>
+    <canvas id="gameCanvas" width="480" height="640"></canvas>
+  </main>
 
-  <div id="gameOver">
-    <h2>💀 GAME OVER 💀</h2>
-    <p id="finalScore"></p>
-    <button id="restartBtn">🔄 Reiniciar</button>
-  </div>
+  <footer>
+    <p>© 2025 Turma 1°A – Instituto Federal de Rondônia | Desenvolvido com 💚</p>
+  </footer>
 
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+    // ======== MENU HAMBÚRGUER ========
+    const menuBtn = document.getElementById('menuBtn');
+    const navMenu = document.getElementById('navMenu');
+    menuBtn.addEventListener('click', () => navMenu.classList.toggle('show'));
 
-    let bird = { x: 80, y: 300, size: 20, velocity: 0 };
-    const gravity = 0.5, jump = -8;
-    let pipes = [];
-    let score = 0;
-    let gameActive = true;
+    // ======== JOGO ========
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-    // Sons (opcional)
-    const jumpSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
-    const hitSound = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+    let birdY = 300, gravity = 0.6, velocity = 0, jump = -10;
+    let obstacles = [], frame = 0, score = 0;
+    const bird = { x: 50, y: birdY, size: 20 };
+    let isGameOver = false;
 
     function drawBird() {
-      ctx.fillStyle = "#00ff66";
+      ctx.fillStyle = '#00ff66';
       ctx.beginPath();
       ctx.arc(bird.x, bird.y, bird.size, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    function drawPipes() {
-      ctx.fillStyle = "#00ff66";
-      pipes.forEach(pipe => {
-        ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
-        ctx.fillRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY);
-      });
+    function drawObstacles() {
+      ctx.fillStyle = '#00ff66';
+      obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.w, obs.h));
+    }
+
+    function drawScore() {
+      ctx.fillStyle = '#00ff66';
+      ctx.font = '20px Orbitron';
+      ctx.fillText(`Score: ${score}`, 10, 30);
     }
 
     function updateGame() {
-      if (!gameActive) return;
-
+      if (isGameOver) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      bird.velocity += gravity;
-      bird.y += bird.velocity;
+      velocity += gravity;
+      bird.y += velocity;
       drawBird();
 
-      // Gerar canos
-      if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200) {
-        const top = Math.random() * 250 + 50;
-        const gap = 140;
-        pipes.push({
-          x: canvas.width,
-          width: 50,
-          top: top,
-          bottomY: top + gap
-        });
+      if (frame % 90 === 0) {
+        const top = Math.random() * 300 + 50;
+        obstacles.push({ x: canvas.width, y: 0, w: 40, h: top });
+        obstacles.push({ x: canvas.width, y: top + 150, w: 40, h: canvas.height - top - 150 });
       }
 
-      // Atualizar canos
-      pipes.forEach(pipe => pipe.x -= 3);
-      pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
-      drawPipes();
+      obstacles.forEach(obs => obs.x -= 3);
+      obstacles = obstacles.filter(obs => obs.x + obs.w > 0);
+      drawObstacles();
 
-      // Colisão
-      pipes.forEach(pipe => {
-        if (
-          bird.x + bird.size > pipe.x &&
-          bird.x - bird.size < pipe.x + pipe.width &&
-          (bird.y - bird.size < pipe.top || bird.y + bird.size > pipe.bottomY)
-        ) {
-          hitSound.play();
-          endGame();
-        }
-      });
+      if (obstacles.some(obs =>
+        bird.x + bird.size > obs.x &&
+        bird.x - bird.size < obs.x + obs.w &&
+        bird.y + bird.size > obs.y &&
+        bird.y - bird.size < obs.y + obs.h)) {
+        gameOver();
+      }
 
-      // Bordas
       if (bird.y + bird.size > canvas.height || bird.y - bird.size < 0) {
-        hitSound.play();
-        endGame();
+        gameOver();
       }
 
-      // Pontuação
-      pipes.forEach(pipe => {
-        if (pipe.x + pipe.width === bird.x) score++;
-      });
-
-      ctx.fillStyle = "#00ff66";
-      ctx.font = "20px Orbitron";
-      ctx.fillText("Score: " + score, 10, 30);
-
+      drawScore();
+      frame++;
+      score++;
       requestAnimationFrame(updateGame);
     }
 
-    function endGame() {
-      gameActive = false;
-      document.getElementById("gameOver").style.display = "block";
-      document.getElementById("finalScore").textContent = `Pontuação final: ${score}`;
+    function gameOver() {
+      isGameOver = true;
+      ctx.fillStyle = 'red';
+      ctx.font = '40px Orbitron';
+      ctx.fillText('GAME OVER', 130, 300);
+      ctx.font = '20px Orbitron';
+      ctx.fillText(`Pontuação: ${score}`, 170, 350);
+      setTimeout(() => location.reload(), 2000);
     }
 
-    function resetGame() {
-      bird = { x: 80, y: 300, size: 20, velocity: 0 };
-      pipes = [];
-      score = 0;
-      gameActive = true;
-      document.getElementById("gameOver").style.display = "none";
-      updateGame();
-    }
-
-    window.addEventListener("keydown", e => {
-      if (e.code === "Space" && gameActive) {
-        bird.velocity = jump;
-        jumpSound.play();
-      }
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space' && !isGameOver) velocity = jump;
     });
-
-    document.getElementById("restartBtn").addEventListener("click", resetGame);
 
     updateGame();
   </script>
