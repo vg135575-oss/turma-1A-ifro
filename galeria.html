@@ -5,15 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galeria da Turma 1A - IFRO</title>
 
-  <!-- Usa o mesmo estilo do site -->
   <link rel="stylesheet" href="style.css" />
 
   <style>
-    /* Ajustes específicos da galeria */
+    /* Fundo igual ao do ava/index */
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(180deg, #d9f2e0 0%, #ffffff 100%);
+      color: #333;
+    }
+
     main.galeria-section {
       text-align: center;
       padding: 60px 20px;
-      background-color: #f5f7f6;
       min-height: 100vh;
     }
 
@@ -88,32 +93,93 @@
       padding: 15px 10px;
       margin-top: 60px;
     }
+
+    /* --- Menu responsivo (3 pauzinhos) --- */
+    .navbar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #036b37;
+      padding: 10px 0;
+    }
+
+    .nav-links {
+      list-style: none;
+      display: flex;
+      gap: 20px;
+      margin: 0;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: white;
+      font-weight: bold;
+      transition: color 0.3s;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #c7ffd4;
+    }
+
+    .menu-toggle {
+      display: none;
+      font-size: 28px;
+      color: white;
+      cursor: pointer;
+      position: absolute;
+      right: 20px;
+      top: 15px;
+    }
+
+    @media (max-width: 768px) {
+      .menu-toggle {
+        display: block;
+      }
+
+      .nav-links {
+        display: none;
+        flex-direction: column;
+        background-color: #036b37;
+        position: absolute;
+        top: 60px;
+        right: 0;
+        width: 100%;
+        text-align: center;
+        padding: 20px 0;
+      }
+
+      .nav-links.active {
+        display: flex;
+      }
+    }
   </style>
 </head>
 
 <body>
-  <!-- Cabeçalho -->
   <header>
-    <div class="logo-container">
-      <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
+    <div class="logo-container" style="text-align:center; padding:10px;">
+      <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" 
+           alt="Logo IFRO" 
+           class="logo" 
+           style="max-width:230px;">
     </div>
+
     <nav class="navbar">
-      <ul class="nav-links">
+      <div class="menu-toggle" id="mobile-menu">☰</div>
+      <ul class="nav-links" id="nav-links">
         <li><a href="index.html">Início</a></li>
         <li><a href="index.html#sobre">Sobre</a></li>
         <li><a href="galeria.html" class="active">Galeria</a></li>
         <li><a href="Hacker.html" target="_blank">Hacker</a></li>
       </ul>
-      <div class="menu-toggle" id="mobile-menu">☰</div>
     </nav>
   </header>
 
-  <!-- Conteúdo -->
   <main class="galeria-section">
     <h1>📸 Galeria da Turma 1A IFRO</h1>
     <p class="intro-text">
-      Aqui estão nossos melhores momentos, projetos e lembranças vividas no IFRO.<br>
-      Cada foto conta uma história do nosso aprendizado e amizade. 💚
+      Aqui estão nossos melhores momentos e lembranças vividas no IFRO 💚
     </p>
 
     <div class="gallery">
@@ -141,21 +207,6 @@
         <img src="IMG-20251011-WA0001.jpg" alt="Turma 1A 5">
         <p>Um time que compila amizade 💚</p>
       </div>
-
-      <div class="photo-card">
-        <img src="IMG-20251029-WA0026.jpg" alt="Momentos da turma 1A - 29/10/2025">
-        <p>💫 Mais um dia marcante no IFRO!</p>
-      </div>
-
-      <div class="photo-card">
-        <img src="IMG-20251107-WA0054.jpg" alt="Momentos da turma 1A - 07/11/2025">
-        <p>🎉 Sorrisos e memórias fresquinhas!</p>
-      </div>
-
-      <div class="photo-card">
-        <img src="motion_photo_5571883481468426782.jpg" alt="Foto em movimento - Turma 1A">
-        <p>🎬 Capturando a energia da turma!</p>
-      </div>
     </div>
 
     <div class="back-btn">
@@ -163,11 +214,18 @@
     </div>
   </main>
 
-  <!-- Rodapé -->
   <footer>
     <p>© 2025 Turma 1ªA – Instituto Federal de Rondônia</p>
   </footer>
 
-  <script src="script.js"></script>
+  <script>
+    // Faz os 3 pauzinhos funcionarem
+    const menuToggle = document.getElementById("mobile-menu");
+    const navLinks = document.getElementById("nav-links");
+
+    menuToggle.addEventListener("click", () => {
+      navLinks.classList.toggle("active");
+    });
+  </script>
 </body>
 </html>
