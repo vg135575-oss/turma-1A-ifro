@@ -23,9 +23,10 @@
 
     h1 {
       margin-bottom: 10px;
-      text-shadow: 0 0 20px #00ff66;
-      font-size: 1.5em;
+      text-shadow: 0 0 25px #00ff66;
+      font-size: 1.6em;
       text-align: center;
+      letter-spacing: 2px;
     }
 
     .btn-voltar {
@@ -40,16 +41,57 @@
       border-radius: 8px;
       font-size: 0.9em;
       box-shadow: 0 0 10px #00ff66;
+      transition: 0.3s;
       z-index: 10;
+    }
+
+    .btn-voltar:hover {
+      background: #00cc55;
+      box-shadow: 0 0 20px #00ff66;
     }
 
     canvas {
       border: 2px solid #00ff66;
-      box-shadow: 0 0 20px #00ff66;
+      box-shadow: 0 0 25px #00ff66;
       background: linear-gradient(to bottom, #000, #001900);
       border-radius: 20px;
       max-width: 95vw;
       max-height: 75vh;
+    }
+
+    .overlay {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.85);
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 20px;
+      color: #00ff66;
+      font-size: 1.3em;
+      text-align: center;
+      text-shadow: 0 0 20px #00ff66;
+      backdrop-filter: blur(6px);
+    }
+
+    .btn {
+      background: #00ff66;
+      color: #000;
+      border: none;
+      font-weight: bold;
+      margin-top: 20px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1em;
+      box-shadow: 0 0 15px #00ff66;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background: #00cc55;
+      box-shadow: 0 0 25px #00ff66;
     }
 
     @media (max-width: 600px) {
@@ -63,11 +105,17 @@
   <h1>Bird Runner 3D 🕹️</h1>
   <canvas id="gameCanvas"></canvas>
 
+  <div id="menu" class="overlay">
+    <p>Toque ou pressione <b>Espaço</b> para voar!</p>
+    <button class="btn" id="startBtn">🚀 Iniciar Jogo</button>
+  </div>
+
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+    const menu = document.getElementById("menu");
+    const startBtn = document.getElementById("startBtn");
 
-    // Ajuste do tamanho automático do canvas
     function resizeCanvas() {
       canvas.width = window.innerWidth * 0.9;
       canvas.height = window.innerHeight * 0.7;
@@ -75,24 +123,37 @@
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    let bird = { x: 80, y: canvas.height / 2, size: 20, velocity: 0 };
-    let gravity = 0.6, jump = -10;
-    let obstacles = [], frame = 0, score = 0, gameOverFlag = false;
-    let stars = Array.from({ length: 40 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      size: Math.random() * 2
-    }));
+    // Sons (opcionais)
+    const jumpSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+    const hitSound = new Audio("https://actions.google.com/sounds/v1/impacts/crash.ogg");
+
+    let bird, gravity, jump, obstacles, frame, score, gameOverFlag, stars;
+
+    function resetGame() {
+      bird = { x: 80, y: canvas.height / 2, size: 20, velocity: 0 };
+      gravity = 0.6; jump = -10;
+      obstacles = []; frame = 0; score = 0; gameOverFlag = false;
+      stars = Array.from({ length: 50 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 2,
+        speed: Math.random() * 2 + 0.5
+      }));
+    }
 
     function drawBackground() {
-      ctx.fillStyle = "#000";
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "#001100");
+      gradient.addColorStop(1, "#000");
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       ctx.fillStyle = "#00ff66";
       stars.forEach(star => {
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         ctx.fill();
-        star.y += 1;
+        star.y += star.speed;
         if (star.y > canvas.height) {
           star.y = 0;
           star.x = Math.random() * canvas.width;
@@ -102,11 +163,11 @@
 
     function drawBird() {
       const gradient = ctx.createRadialGradient(bird.x, bird.y, 5, bird.x, bird.y, bird.size);
-      gradient.addColorStop(0, "#00ff99");
+      gradient.addColorStop(0, "#00ffcc");
       gradient.addColorStop(1, "#003300");
       ctx.fillStyle = gradient;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "#00ff66";
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = "#00ff99";
       ctx.beginPath();
       ctx.arc(bird.x, bird.y, bird.size, 0, Math.PI * 2);
       ctx.fill();
@@ -120,7 +181,7 @@
         grad.addColorStop(1, "#003300");
         ctx.fillStyle = grad;
         ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 10;
         ctx.shadowColor = "#00ff66";
       });
       ctx.shadowBlur = 0;
@@ -135,6 +196,7 @@
       bird.y += bird.velocity;
       drawBird();
 
+      // Gera obstáculos
       if (frame % 90 === 0) {
         const top = Math.random() * (canvas.height / 2) + 50;
         const gap = 160;
@@ -146,41 +208,59 @@
       obstacles = obstacles.filter(obs => obs.x + obs.w > 0);
       drawObstacles();
 
+      // Colisões
       if (
         obstacles.some(obs =>
           bird.x + bird.size > obs.x &&
           bird.x - bird.size < obs.x + obs.w &&
           bird.y + bird.size > obs.y &&
           bird.y - bird.size < obs.y + obs.h
-        ) || bird.y + bird.size > canvas.height || bird.y - bird.size < 0
+        ) ||
+        bird.y + bird.size > canvas.height || bird.y - bird.size < 0
       ) {
         gameOver();
       }
 
       ctx.fillStyle = "#00ff66";
       ctx.font = `${canvas.width / 20}px Orbitron`;
-      ctx.fillText(`Score: ${score}`, 10, 40);
+      ctx.fillText(`Score: ${score}`, 10, 50);
 
       score++;
       frame++;
       requestAnimationFrame(updateGame);
     }
 
-    function gameOver() {
-      gameOverFlag = true;
-      ctx.shadowBlur = 25;
-      ctx.shadowColor = "red";
-      ctx.fillStyle = "red";
-      ctx.font = `${canvas.width / 10}px Orbitron`;
-      ctx.fillText("GAME OVER", canvas.width / 6, canvas.height / 2);
-      setTimeout(() => location.reload(), 2000);
+    function jumpBird() {
+      if (!gameOverFlag) {
+        bird.velocity = jump;
+        jumpSound.currentTime = 0;
+        jumpSound.play();
+      }
     }
 
-    // Controle por toque e espaço
-    window.addEventListener("keydown", e => { if (e.code === "Space") bird.velocity = jump; });
-    window.addEventListener("touchstart", () => bird.velocity = jump);
+    function gameOver() {
+      gameOverFlag = true;
+      hitSound.play();
+      setTimeout(() => {
+        menu.innerHTML = `<p>💀 GAME OVER 💀<br>Score: ${score}</p>
+                          <button class="btn" id="restartBtn">🔁 Jogar Novamente</button>`;
+        menu.style.display = "flex";
+        document.getElementById("restartBtn").onclick = () => startGame();
+      }, 500);
+    }
 
-    updateGame();
+    function startGame() {
+      resetGame();
+      menu.style.display = "none";
+      updateGame();
+    }
+
+    // Controles
+    window.addEventListener("keydown", e => { if (e.code === "Space") jumpBird(); });
+    window.addEventListener("touchstart", jumpBird);
+    startBtn.onclick = startGame;
+
+    resetGame();
   </script>
 </body>
 </html>
