@@ -3,78 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🎮 Bird Runner 3D | Turma 1A IFRO</title>
+  <title>🎮 Bird Runner 3D Turbo | Neon Futurista</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Orbitron', sans-serif;
-      background: radial-gradient(circle at center, #002200 0%, #000 80%);
-      color: #00ff66;
+      background: radial-gradient(circle at center, #001900 0%, #000 80%);
+      color: #00ffcc;
       height: 100vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      animation: fadeIn 2s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.98); }
-      to { opacity: 1; transform: scale(1); }
+      user-select: none;
     }
 
     h1 {
       margin-bottom: 10px;
-      font-size: 2.2em;
-      text-align: center;
+      font-size: 2em;
       letter-spacing: 3px;
-      text-shadow: 0 0 25px #00ff66, 0 0 50px #00ffaa;
-      animation: floatTitle 3s ease-in-out infinite alternate;
+      text-shadow: 0 0 30px #00ffff;
+      animation: glow 2s infinite alternate;
     }
 
-    @keyframes floatTitle {
-      from { transform: translateY(0); }
-      to { transform: translateY(-8px); }
-    }
-
-    .btn-voltar {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: linear-gradient(90deg, #00ff66, #00cc55);
-      color: #000;
-      text-decoration: none;
-      font-weight: bold;
-      padding: 8px 15px;
-      border-radius: 8px;
-      font-size: 0.9em;
-      box-shadow: 0 0 15px #00ff66;
-      transition: 0.3s;
-      z-index: 10;
-    }
-
-    .btn-voltar:hover {
-      background: linear-gradient(90deg, #00ffaa, #00cc55);
-      transform: scale(1.05);
-      box-shadow: 0 0 25px #00ffaa;
+    @keyframes glow {
+      0% { text-shadow: 0 0 20px #00ffcc; transform: scale(1); }
+      100% { text-shadow: 0 0 40px #00ffff; transform: scale(1.05); }
     }
 
     canvas {
-      border: 2px solid #00ff66;
-      box-shadow: 0 0 30px #00ff66;
-      background: linear-gradient(to bottom, #000, #001900);
-      border-radius: 25px;
+      border: 2px solid #00ffcc;
+      box-shadow: 0 0 25px #00ffff;
+      background: radial-gradient(circle at bottom, #000, #001900);
+      border-radius: 20px;
       max-width: 95vw;
       max-height: 75vh;
-      animation: appearCanvas 1.2s ease;
-    }
-
-    @keyframes appearCanvas {
-      from { opacity: 0; transform: scale(0.9); }
-      to { opacity: 1; transform: scale(1); }
     }
 
     .overlay {
@@ -83,51 +49,44 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.85);
       top: 0; left: 0; right: 0; bottom: 0;
-      border-radius: 25px;
-      color: #00ff66;
-      font-size: 1.4em;
+      border-radius: 20px;
+      color: #00ffcc;
+      font-size: 1.3em;
       text-align: center;
-      text-shadow: 0 0 20px #00ff66;
-      backdrop-filter: blur(10px);
-      transition: opacity 0.6s ease;
+      text-shadow: 0 0 20px #00ffff;
+      backdrop-filter: blur(8px);
+      transition: opacity 0.5s ease;
     }
 
     .btn {
-      background: linear-gradient(90deg, #00ff66, #00cc55);
+      background: #00ffcc;
       color: #000;
       border: none;
       font-weight: bold;
       margin-top: 20px;
-      padding: 12px 28px;
-      border-radius: 12px;
+      padding: 10px 25px;
+      border-radius: 10px;
       cursor: pointer;
-      font-size: 1.1em;
-      box-shadow: 0 0 25px #00ff66;
-      transition: all 0.3s ease;
-      animation: pulseGlow 2s infinite alternate;
-    }
-
-    @keyframes pulseGlow {
-      from { box-shadow: 0 0 10px #00ff66; }
-      to { box-shadow: 0 0 30px #00ffaa; }
+      font-size: 1em;
+      box-shadow: 0 0 15px #00ffff;
+      transition: 0.3s;
     }
 
     .btn:hover {
-      transform: scale(1.08);
-      background: linear-gradient(90deg, #00ffaa, #00ff66);
+      background: #00e6b8;
+      box-shadow: 0 0 25px #00ffff;
+      transform: scale(1.05);
     }
 
     @media (max-width: 600px) {
-      h1 { font-size: 1.5em; }
-      .btn-voltar { padding: 6px 12px; font-size: 0.8em; }
+      h1 { font-size: 1.4em; }
     }
   </style>
 </head>
 <body>
-  <a href="index.html" class="btn-voltar">⬅ Voltar</a>
-  <h1>Bird Runner 3D 🕹️</h1>
+  <h1>Bird Runner 3D Turbo 🕹️</h1>
   <canvas id="gameCanvas"></canvas>
 
   <div id="menu" class="overlay">
@@ -141,6 +100,13 @@
     const menu = document.getElementById("menu");
     const startBtn = document.getElementById("startBtn");
 
+    const bgMusic = new Audio("https://actions.google.com/sounds/v1/ambiences/electronic_drone.ogg");
+    bgMusic.loop = true;
+    bgMusic.volume = 0.3;
+
+    const jumpSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+    const hitSound = new Audio("https://actions.google.com/sounds/v1/impacts/crash.ogg");
+
     function resizeCanvas() {
       canvas.width = window.innerWidth * 0.9;
       canvas.height = window.innerHeight * 0.7;
@@ -148,50 +114,81 @@
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    const jumpSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
-    const hitSound = new Audio("https://actions.google.com/sounds/v1/impacts/crash.ogg");
-
-    let bird, gravity, jump, obstacles, frame, score, gameOverFlag, stars;
+    let bird, gravity, jump, obstacles, frame, score, gameOverFlag, stars, lasers, trail, bestScore;
 
     function resetGame() {
-      bird = { x: 80, y: canvas.height / 2, size: 20, velocity: 0 };
-      gravity = 0.6; jump = -10;
+      bird = { x: 100, y: canvas.height / 2, size: 18, velocity: 0 };
+      gravity = 0.5; jump = -9;
       obstacles = []; frame = 0; score = 0; gameOverFlag = false;
-      stars = Array.from({ length: 70 }, () => ({
+      stars = Array.from({ length: 80 }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         size: Math.random() * 2,
         speed: Math.random() * 2 + 0.5
       }));
+      lasers = Array.from({ length: 8 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        width: Math.random() * 2 + 1,
+        speed: Math.random() * 3 + 1
+      }));
+      trail = [];
+      bestScore = localStorage.getItem("bestScore") || 0;
     }
 
     function drawBackground() {
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, "#002200");
-      gradient.addColorStop(1, "#000");
-      ctx.fillStyle = gradient;
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      grad.addColorStop(0, "#001a00");
+      grad.addColorStop(1, "#000");
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "#00ff66";
+      // Stars
+      ctx.fillStyle = "#00ffcc";
       stars.forEach(star => {
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         ctx.fill();
         star.y += star.speed;
-        if (star.y > canvas.height) {
-          star.y = 0;
-          star.x = Math.random() * canvas.width;
+        if (star.y > canvas.height) star.y = 0;
+      });
+
+      // Neon lasers (depth effect)
+      ctx.strokeStyle = "#00ffff44";
+      lasers.forEach(l => {
+        ctx.beginPath();
+        ctx.moveTo(l.x, l.y);
+        ctx.lineTo(l.x, l.y + 50);
+        ctx.lineWidth = l.width;
+        ctx.stroke();
+        l.y += l.speed;
+        if (l.y > canvas.height) {
+          l.y = 0;
+          l.x = Math.random() * canvas.width;
         }
       });
     }
 
     function drawBird() {
-      const gradient = ctx.createRadialGradient(bird.x, bird.y, 5, bird.x, bird.y, bird.size);
-      gradient.addColorStop(0, "#00ffcc");
-      gradient.addColorStop(1, "#003300");
+      // Trail (rastro luminoso)
+      trail.push({ x: bird.x, y: bird.y });
+      if (trail.length > 15) trail.shift();
+
+      for (let i = 0; i < trail.length; i++) {
+        const t = trail[i];
+        ctx.fillStyle = `rgba(0,255,200,${i / trail.length / 1.5})`;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, bird.size * 0.6 * (i / trail.length), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Bird
+      const gradient = ctx.createRadialGradient(bird.x, bird.y, 3, bird.x, bird.y, bird.size);
+      gradient.addColorStop(0, "#00ffff");
+      gradient.addColorStop(1, "#004444");
       ctx.fillStyle = gradient;
-      ctx.shadowBlur = 25;
-      ctx.shadowColor = "#00ff99";
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#00ffcc";
       ctx.beginPath();
       ctx.arc(bird.x, bird.y, bird.size, 0, Math.PI * 2);
       ctx.fill();
@@ -201,10 +198,13 @@
     function drawObstacles() {
       obstacles.forEach(obs => {
         const grad = ctx.createLinearGradient(obs.x, obs.y, obs.x + obs.w, obs.y + obs.h);
-        grad.addColorStop(0, "#00ff66");
-        grad.addColorStop(1, "#003300");
+        grad.addColorStop(0, "#00ffff");
+        grad.addColorStop(1, "#004444");
         ctx.fillStyle = grad;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#00ffff";
         ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        ctx.shadowBlur = 0;
       });
     }
 
@@ -220,11 +220,11 @@
       if (frame % 90 === 0) {
         const top = Math.random() * (canvas.height / 2) + 50;
         const gap = 160;
-        obstacles.push({ x: canvas.width, y: 0, w: 40, h: top });
-        obstacles.push({ x: canvas.width, y: top + gap, w: 40, h: canvas.height - top - gap });
+        obstacles.push({ x: canvas.width, y: 0, w: 45, h: top });
+        obstacles.push({ x: canvas.width, y: top + gap, w: 45, h: canvas.height - top - gap });
       }
 
-      obstacles.forEach(obs => obs.x -= 4);
+      obstacles.forEach(obs => obs.x -= 5);
       obstacles = obstacles.filter(obs => obs.x + obs.w > 0);
       drawObstacles();
 
@@ -240,9 +240,10 @@
         gameOver();
       }
 
-      ctx.fillStyle = "#00ff66";
+      ctx.fillStyle = "#00ffcc";
       ctx.font = `${canvas.width / 20}px Orbitron`;
-      ctx.fillText(`Score: ${score}`, 15, 60);
+      ctx.fillText(`Score: ${score}`, 20, 60);
+      ctx.fillText(`Recorde: ${bestScore}`, 20, 100);
 
       score++;
       frame++;
@@ -260,19 +261,22 @@
     function gameOver() {
       gameOverFlag = true;
       hitSound.play();
+      bgMusic.pause();
+      if (score > bestScore) {
+        localStorage.setItem("bestScore", score);
+      }
       setTimeout(() => {
-        menu.innerHTML = `<p style="font-size:1.5em;">💀 GAME OVER 💀<br><br>Score: <b>${score}</b></p>
+        menu.innerHTML = `<p style="font-size:1.4em;">💀 GAME OVER 💀<br><br>Score: <b>${score}</b><br>Recorde: <b>${Math.max(score, bestScore)}</b></p>
                           <button class="btn" id="restartBtn">🔁 Jogar Novamente</button>`;
-        menu.style.opacity = 1;
         menu.style.display = "flex";
-        document.getElementById("restartBtn").onclick = () => startGame();
-      }, 600);
+        document.getElementById("restartBtn").onclick = startGame;
+      }, 800);
     }
 
     function startGame() {
       resetGame();
-      menu.style.opacity = 0;
-      setTimeout(() => menu.style.display = "none", 400);
+      menu.style.display = "none";
+      bgMusic.play();
       updateGame();
     }
 
