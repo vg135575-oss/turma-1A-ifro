@@ -1,35 +1,142 @@
-body { margin: 0; overflow: hidden; font-family: sans-serif; user-select: none; touch-action: none; }
-#game-container { position: absolute; top: 0; width: 100%; height: 100%; }
+/* Configurações básicas da tela */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Arial', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none; /* Bloqueia zoom e rolagem do navegador */
+}
 
+/* Onde o jogo 3D aparece */
+#game-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* Fica no fundo */
+}
+
+/* Interface de Usuário (Botões e Hotbar) */
+.ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Deixa os cliques passarem para o jogo quando não for no botão */
+    z-index: 10; /* Fica na frente do mapa */
+}
+
+/* Estilo geral dos botões e slots */
+.mc-btn, .slot {
+    pointer-events: auto; /* Reativa o clique para os botões */
+    background: rgba(0, 0, 0, 0.5);
+    border: 3px solid #ffffff;
+    color: white;
+    box-shadow: 2px 2px 0px #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+}
+
+.mc-btn:active {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(0.95);
+}
+
+/* Controles de Direção (Lado Esquerdo) */
+.controls {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.side-btns {
+    display: flex;
+    gap: 50px;
+}
+
+.mc-btn {
+    width: 65px;
+    height: 65px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* Botões de Ação (Lado Direito) */
+.action-btns {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.action-btns .mc-btn {
+    width: 80px;
+    height: 60px;
+    font-size: 16px;
+}
+
+/* Hotbar (Seleção de Blocos) */
+.hotbar {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+}
+
+.slot {
+    width: 55px;
+    height: 55px;
+    font-size: 30px;
+    cursor: pointer;
+    transition: 0.1s;
+}
+
+.slot.selected {
+    border: 4px solid #ffff00;
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 15px #ffff00;
+}
+
+/* Barra de Quebra de Bloco */
 #breaking-bar-container {
     position: fixed;
-    top: 60%;
+    top: 55%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 120px;
-    height: 8px;
+    width: 140px;
+    height: 12px;
     border: 2px solid #000;
-    background: rgba(0,0,0,0.5);
-    display: none;
-    z-index: 100;
+    background: #333;
+    display: none; /* Só aparece via JavaScript */
+    z-index: 20;
 }
+
 #breaking-bar-progress {
     width: 0%;
     height: 100%;
     background: #ffff00;
 }
 
-.ui { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-.mc-btn, .slot { pointer-events: auto; background: rgba(0,0,0,0.4); border: 2px solid #fff; color: white; }
-
-.controls { position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; align-items: center; }
-.side-btns { display: flex; gap: 40px; }
-.mc-btn { width: 55px; height: 55px; font-size: 20px; border-radius: 5px; }
-.mc-btn:active { background: rgba(255, 255, 255, 0.4); }
-.mc-btn.active { background: rgba(255, 255, 255, 0.6); color: black; }
-
-.action-btns { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
-
-.hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
-.slot { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border-radius: 3px; }
-.slot.selected { border-color: #ffff00; background: rgba(255,255,255,0.2); box-shadow: 0 0 10px #ffff00; }
+/* Estilo do botão Sneak ativado */
+.mc-btn.active {
+    background: rgba(255, 255, 255, 0.6);
+    color: #000;
+    border-color: #000;
+}
