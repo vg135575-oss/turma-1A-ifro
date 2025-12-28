@@ -1,0 +1,117 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #000;
+    touch-action: none;
+}
+
+#game-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+#crosshair {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 24px;
+    z-index: 5;
+}
+
+#ui-overlay {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* DPAD */
+#dpad {
+    position: absolute;
+    bottom: 40px;
+    left: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: auto;
+}
+
+.dpad-horizontal {
+    display: flex;
+    gap: 40px;
+}
+
+/* BOTÕES */
+#action-btns {
+    position: absolute;
+    bottom: 40px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    pointer-events: auto;
+}
+
+.action-row {
+    display: flex;
+    gap: 15px;
+}
+
+.dbtn, .act-btn, #btn-jump {
+    width: 65px;
+    height: 65px;
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 12px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    user-select: none;
+}
+
+#btn-jump {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+}
+
+.dbtn:active, .act-btn:active, #btn-jump:active {
+    transform: scale(0.9);
+    background: rgba(255,255,255,0.35);
+}
+
+/* HOTBAR */
+#hotbar {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    background: rgba(0,0,0,0.5);
+    padding: 5px;
+    border-radius: 5px;
+    z-index: 15;
+}
+
+.slot {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+}
+
+.slot.selected {
+    border-color: white;
+    background: rgba(255,255,255,0.2);
+}
