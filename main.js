@@ -1,15 +1,18 @@
 import * as THREE from 'three';
 
-// --- SETUP ---
+// --- 1. SETUP OTIMIZADO ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: false });
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500); // Reduzi o campo de visão (Far) para diminuir lag
+const renderer = new THREE.WebGLRenderer({ 
+    antialias: false, // Desativar antialias aumenta muito o FPS no celular
+    powerPreference: "high-performance" 
+});
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(1); // Forçar 1 em vez de window.devicePixelRatio economiza GPU
 document.getElementById('game-container').appendChild(renderer.domElement);
 
-// --- TEXTURAS ---
+// --- 2. TEXTURAS ---
 const loader = new THREE.TextureLoader();
 function loadT(f) {
     const t = loader.load(`./textures/${f}`);
@@ -29,44 +32,75 @@ const mats = {
     leaf: new THREE.MeshBasicMaterial({ map: loadT('leaf.png'), transparent: true, alphaTest: 0.5 })
 };
 
-// --- MUNDO (CAMADAS E ÁRVORES) ---
+// --- 3. CLASSE MOB (Zumbi/Animal) ---
+class Mob {
+    constructor(x, y, z, color, isHostile = false) {
+        this.mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.7, 1.2, 0.7), 
+            new THREE.MeshBasicMaterial({ color: color })
+        );
+        this.mesh.position.set(x, y, z);
+        scene.add(this.mesh);
+        this.vY = 0;
+        this.dir = new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize();
+        this.timer = 0;
+        this.isHostile = isHostile;
+    }
+
+    update(blocks, playerPos) {
+        this.timer++;
+        if(this.timer > 120) {
+            if(this.isHostile && this.mesh.position.distanceTo(playerPos) < 10) {
+                // Persegue o jogador
+                this.dir.subVectors(playerPos, this.mesh.position).normalize();
+            } else {
+                this.dir.set(Math.random()-0.5, 0, Math.random()-0.5).normalize();
+            }
+            this.timer = 0;
+        }
+
+        const speed = this.isHostile ? 0.04 : 0.02;
+        this.mesh.position.x += this.dir.x * speed;
+        this.mesh.position.z += this.dir.z * speed;
+
+        this.vY -= 0.01;
+        this.mesh.position.y += this.vY;
+
+        // Colisão simples do Mob com o chão
+        if(this.mesh.position.y < 1.1) {
+            this.mesh.position.y = 1.1;
+            this.vY = 0;
+            if(Math.random() < 0.01) this.vY = 0.15; // Pulo aleatório
+        }
+        this.mesh.lookAt(this.mesh.position.clone().add(this.dir));
+    }
+}
+
+const mobs = [];
+
+// --- 4. MUNDO ---
 const blocks = [];
 function addB(x, y, z, type) {
-    const geo = new THREE.BoxGeometry(1, 1, 1);
-    const b = new THREE.Mesh(geo, type === 'grass' ? mats.grass : mats[type]);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), type === 'grass' ? mats.grass : mats[type]);
     b.position.set(x, y, z);
     scene.add(b);
     blocks.push(b);
 }
 
-// Criar plataforma 20x20 com camadas
-for(let x=-10; x<=10; x++) {
-    for(let z=-10; z<=10; z++) {
-        addB(x, 0, z, 'grass');   // Camada 0: Relva
-        addB(x, -1, z, 'dirt');   // Camada -1: Terra
-        addB(x, -2, z, 'stone');  // Camada -2: Pedra
+// Chão Otimizado (Plataforma 15x15)
+for(let x=-7; x<=7; x++) {
+    for(let z=-7; z<=7; z++) {
+        addB(x, 0, z, 'grass');
+        addB(x, -1, z, 'dirt');
+        addB(x, -2, z, 'stone');
     }
 }
 
-// Função para criar uma árvore
-function createTree(x, z) {
-    for(let y=1; y<=3; y++) addB(x, y, z, 'wood'); // Tronco
-    // Copa de folhas
-    for(let lx=-1; lx<=1; lx++) {
-        for(let lz=-1; lz<=1; lz++) {
-            for(let ly=3; ly<=4; ly++) {
-                if(lx === 0 && lz === 0 && ly === 3) continue;
-                addB(x+lx, ly, z+lz, 'leaf');
-            }
-        }
-    }
-}
-// Árvores de teste
-createTree(5, 5);
-createTree(-5, -7);
-createTree(3, -4);
+// Adicionar Mobs de teste
+mobs.push(new Mob(3, 2, 3, 0x00ff00, true)); // Zumbi Verde
+mobs.push(new Mob(-3, 2, -3, 0xffcccc, false)); // Porco Rosa
 
-// --- PERSONAGEM ---
+// --- 5. JOGADOR ---
 const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.8), new THREE.MeshBasicMaterial({ color: 0xffdbac }));
 arm.position.set(0.5, -0.6, -0.7);
 camera.add(arm);
@@ -76,7 +110,7 @@ const crackMesh = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new TH
 crackMesh.visible = false;
 scene.add(crackMesh);
 
-// --- CONTROLOS ---
+// --- 6. CONTROLES ---
 let input = { f:0, b:0, l:0, r:0, sneak: false };
 let yaw = 0, pitch = 0, vY = 0, onG = false, selBlock = 'none';
 
@@ -85,77 +119,63 @@ const bind = (id, k) => {
     if(!el) return;
     el.onpointerdown = (e) => {
         e.preventDefault();
-        if(k === 'sneak') {
-            input.sneak = !input.sneak;
-            el.classList.toggle('active', input.sneak);
-        } else input[k] = 1;
+        if(k === 'sneak') { input.sneak = !input.sneak; el.classList.toggle('active'); }
+        else input[k] = 1;
     };
     el.onpointerup = () => { if(k !== 'sneak') input[k] = 0; };
 };
 bind('btn-up','f'); bind('btn-down','b'); bind('btn-left','l'); bind('btn-right','r'); bind('btn-shift','sneak');
 document.getElementById('btn-jump').onpointerdown = () => { if(onG) vY = 0.22; };
 
-// --- FÍSICA ---
+// --- 7. FÍSICA E LOOP ---
 function updatePhysics() {
     const speed = input.sneak ? 0.05 : 0.13;
     const h = input.sneak ? 1.4 : 1.7;
     let move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     move.applyEuler(new THREE.Euler(0, yaw, 0));
 
-    let nextX = camera.position.x + move.x * speed;
-    let nextZ = camera.position.z + move.z * speed;
+    let nx = camera.position.x + move.x * speed;
+    let nz = camera.position.z + move.z * speed;
 
-    // Trava de Sneak (não cair)
     if (input.sneak && onG) {
-        let hasFloor = false;
+        let safe = false;
         for (let b of blocks) {
-            if (Math.abs(nextX - b.position.x) < 0.6 && Math.abs(nextZ - b.position.z) < 0.6 && Math.abs(camera.position.y - 1.4 - (b.position.y + 0.5)) < 0.2) {
-                hasFloor = true; break;
+            if (Math.abs(nx - b.position.x) < 0.6 && Math.abs(nz - b.position.z) < 0.6 && Math.abs(camera.position.y - 1.4 - (b.position.y + 0.5)) < 0.2) {
+                safe = true; break;
             }
         }
-        if (!hasFloor) { nextX = camera.position.x; nextZ = camera.position.z; }
+        if (!safe) { nx = camera.position.x; nz = camera.position.z; }
     }
 
-    camera.position.x = nextX;
-    camera.position.z = nextZ;
-    vY -= 0.01;
-    camera.position.y += vY;
+    camera.position.x = nx; camera.position.z = nz;
+    vY -= 0.01; camera.position.y += vY;
     onG = false;
 
-    for (let b of blocks) {
+    blocks.forEach(b => {
         if (Math.abs(camera.position.x - b.position.x) < 0.6 && Math.abs(camera.position.z - b.position.z) < 0.6) {
             if (camera.position.y - h < b.position.y + 0.5 && camera.position.y - h > b.position.y - 0.5) {
                 camera.position.y = b.position.y + 0.5 + h;
                 vY = 0; onG = true;
             }
         }
-    }
+    });
 }
 
-// --- INTERAÇÃO (CLIQUE ÚNICO E VISÃO) ---
+// --- INTERAÇÃO ---
 let lookId = null, lastX, lastY, bBlock = null, bProg = 0, tStart = 0, moved = false;
 
 window.addEventListener('pointerdown', e => {
     if(e.target.closest('.mc-btn') || e.target.closest('.slot')) return;
-    lookId = e.pointerId;
-    lastX = e.clientX; lastY = e.clientY;
-    moved = false; // Resetar detecção de movimento de câmara
-
+    lookId = e.pointerId; lastX = e.clientX; lastY = e.clientY; moved = false;
     const ray = new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2(0,0), camera);
     const hits = ray.intersectObjects(blocks);
-    if(hits.length > 0 && hits[0].distance < 4) {
-        bBlock = hits[0].object;
-        tStart = Date.now();
-    }
+    if(hits.length > 0 && hits[0].distance < 4) { bBlock = hits[0].object; tStart = Date.now(); }
 });
 
 window.addEventListener('pointermove', e => {
     if(e.pointerId === lookId) {
-        const dx = Math.abs(e.clientX - lastX);
-        const dy = Math.abs(e.clientY - lastY);
-        if(dx > 5 || dy > 5) moved = true; // Se arrastou mais de 5px, é movimento de câmara
-
+        if(Math.abs(e.clientX - lastX) > 5 || Math.abs(e.clientY - lastY) > 5) moved = true;
         yaw -= (e.clientX - lastX) * 0.005;
         pitch = Math.max(-1.5, Math.min(1.5, pitch - (e.clientY - lastY) * 0.005));
         camera.rotation.set(pitch, yaw, 0, 'YXZ');
@@ -165,7 +185,6 @@ window.addEventListener('pointermove', e => {
 
 window.addEventListener('pointerup', e => {
     if (lookId === e.pointerId) {
-        // Se NÃO moveu a câmara e foi um clique rápido, coloca bloco
         if (!moved && bBlock && Date.now() - tStart < 250 && selBlock !== 'none') {
             const ray = new THREE.Raycaster();
             ray.setFromCamera(new THREE.Vector2(0,0), camera);
@@ -180,15 +199,16 @@ window.addEventListener('pointerup', e => {
     }
 });
 
-function animate()
-mobs.forEach(m => m.update());
- {
+function animate() {
     requestAnimationFrame(animate);
     updatePhysics();
+    
+    // Mobs
+    mobs.forEach(m => m.update(blocks, camera.position));
 
-    // Quebrar bloco (só se não estiver a mover a câmara)
+    // Quebra
     if(!moved && bBlock && Date.now() - tStart > 250) {
-        bProg += 2;
+        bProg += 2.5;
         crackMesh.visible = true;
         crackMesh.position.copy(bBlock.position);
         crackMesh.material.map = crackTexs[Math.min(Math.floor(bProg/10), 9)];
@@ -209,51 +229,6 @@ document.querySelectorAll('.slot').forEach(s => {
         selBlock = s.dataset.block;
     };
 });
-class Mob {
-    constructor(x, y, z, color) {
-        this.mesh = new THREE.Mesh(
-            new THREE.BoxGeometry(0.8, 0.8, 0.8), 
-            new THREE.MeshBasicMaterial({ color: color })
-        );
-        this.mesh.position.set(x, y, z);
-        scene.add(this.mesh);
-        
-        this.vY = 0;
-        this.dir = new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize();
-        this.timer = 0;
-    }
-
-    update() {
-        // Mudar direção de vez em quando
-        this.timer++;
-        if(this.timer > 100) {
-            this.dir.set(Math.random()-0.5, 0, Math.random()-0.5).normalize();
-            this.timer = 0;
-        }
-
-        // Movimento
-        const speed = 0.03;
-        this.mesh.position.x += this.dir.x * speed;
-        this.mesh.position.z += this.dir.z * speed;
-
-        // Gravidade do Mob
-        this.vY -= 0.01;
-        this.mesh.position.y += this.vY;
-
-        // Colisão simples com o chão
-        if(this.mesh.position.y < 0.9) {
-            this.mesh.position.y = 0.9;
-            this.vY = 0;
-            // Chance de pular
-            if(Math.random() < 0.01) this.vY = 0.15;
-        }
-    }
-}
-
-// Lista para guardar os mobs
-const mobs = [];
-mobs.push(new Mob(2, 2, 2, 0x00ff00)); // Um slime verde
-mobs.push(new Mob(-3, 2, 5, 0xffcccc)); // Um porquinho rosa
 
 camera.position.set(0, 5, 5);
 animate();
