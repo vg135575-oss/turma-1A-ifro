@@ -37,6 +37,7 @@ const blocks = [];
 const geo = new THREE.BoxGeometry(1, 1, 1);
 
 function addBlock(x, y, z, type) {
+    if (type === 'none') return; // Segurança: não adiciona bloco "vazio"
     const b = new THREE.Mesh(geo, type === 'grass' ? mats.grass : mats[type]);
     b.position.set(Math.round(x), Math.round(y), Math.round(z));
     b.userData.type = type;
@@ -44,36 +45,35 @@ function addBlock(x, y, z, type) {
     blocks.push(b);
 }
 
+// Chão inicial
 for(let x = -8; x <= 8; x++) {
     for(let z = -8; z <= 8; z++) {
         addBlock(x, 0, z, 'grass');
     }
 }
-// Degraus de teste
-addBlock(2, 1, 0, 'stone');
-addBlock(3, 2, 0, 'stone');
 
 // ─── 5. INTERAÇÃO (QUEBRAR/COLOCAR) ───────────────────
 const raycaster = new THREE.Raycaster();
-let selectedBlock = 'none'; // Começa com a "Mão"
+let selectedBlock = 'none'; // Começa com a Mão selecionada
 
 function handleAction(isPlacing) {
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const intersects = raycaster.intersectObjects(blocks);
 
-    // Animação de soco sempre acontece
+    // Animação de soco (Sempre acontece ao tocar)
     arm.position.z += 0.2;
     setTimeout(() => arm.position.z -= 0.2, 100);
 
     if (intersects.length > 0 && intersects[0].distance < 5) {
         const hit = intersects[0];
         if (isPlacing) {
-            // Só coloca se não for o slot "none" (Mão)
+            // SÓ COLOCA SE TIVER UM BLOCO NA MÃO (diferente de 'none')
             if (selectedBlock !== 'none') {
                 const pos = hit.object.position.clone().add(hit.face.normal);
                 addBlock(pos.x, pos.y, pos.z, selectedBlock);
             }
         } else {
+            // QUEBRAR funciona sempre, mesmo com a mão vazia
             scene.remove(hit.object);
             blocks.splice(blocks.indexOf(hit.object), 1);
         }
@@ -83,7 +83,6 @@ function handleAction(isPlacing) {
 // ─── 6. MOVIMENTO E FÍSICA SUAVE ──────────────────────
 const input = { f: 0, b: 0, l: 0, r: 0, shift: false };
 let yaw = 0, pitch = 0, velocityY = 0, onGround = false;
-let currentVisualY = 5; // Para suavizar a subida de degraus
 
 function bindBtn(id, key) {
     const el = document.getElementById(id);
@@ -129,7 +128,7 @@ function animate() {
     let nextX = camera.position.x + dir.x * moveSpeed;
     let nextZ = camera.position.z + dir.z * moveSpeed;
 
-    // LÓGICA DE SNEAK
+    // SNEAK (Não cair de bordas)
     if (input.shift && onGround) {
         const currentFloor = getGroundAt(camera.position.x, camera.position.z);
         if (currentFloor - getGroundAt(nextX, camera.position.z) > 0.1) nextX = camera.position.x;
@@ -143,13 +142,12 @@ function animate() {
     velocityY -= 0.012;
     camera.position.y += velocityY;
 
-    // Colisão e Subida de Degrau Suave
+    // Colisão e Subida Suave
     const floorY = getGroundAt(camera.position.x, camera.position.z);
     const targetY = floorY + eyeHeight;
 
     if (camera.position.y < targetY) {
-        // Interpolação para evitar o "teleporte"
-        camera.position.y += (targetY - camera.position.y) * 0.2; 
+        camera.position.y += (targetY - camera.position.y) * 0.2; // Suavização
         velocityY = 0;
         onGround = true;
     } else {
@@ -185,22 +183,22 @@ window.addEventListener('pointermove', e => {
 
 window.addEventListener('pointerup', e => {
     if (e.pointerId === lookId) {
-        if (totalMoved < 15) { // Filtro de movimento para não bugar ao virar
+        if (totalMoved < 15) { // Só interage se não moveu muito a câmera
             const duration = Date.now() - touchStart;
-            if (duration < 250) handleAction(true);
-            else if (duration > 600) handleAction(false);
+            if (duration < 250) handleAction(true); // Toque rápido: Coloca
+            else if (duration > 600) handleAction(false); // Toque longo: Quebra
         }
         lookId = null;
     }
 });
 
-// Seleção de Blocos (Incluindo a Mão)
+// Seleção de Hotbar
 document.querySelectorAll('.slot').forEach(s => {
     s.onpointerdown = (e) => {
         e.stopPropagation();
         document.querySelectorAll('.slot').forEach(x => x.classList.remove('selected'));
         s.classList.add('selected');
-        selectedBlock = s.dataset.block;
+        selectedBlock = s.dataset.block; // 'none', 'stone' ou 'grass'
     };
 });
 
