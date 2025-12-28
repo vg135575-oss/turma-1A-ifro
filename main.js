@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 
+// 1. CENA E CÂMERA
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -8,6 +9,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.getElementById('game-container').appendChild(renderer.domElement);
 
+// 2. TEXTURAS
 const textureLoader = new THREE.TextureLoader();
 textureLoader.setCrossOrigin('anonymous');
 
@@ -33,6 +35,7 @@ const mats = {
     leaf: new THREE.MeshBasicMaterial({ map: loadTex('leaf.png'), transparent: true, alphaTest: 0.5 })
 };
 
+// 3. JOGADOR (BRAÇO)
 const armPivot = new THREE.Group();
 const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.8), new THREE.MeshBasicMaterial({ color: 0xffdbac }));
 arm.position.set(0.6, -0.5, -0.7);
@@ -40,6 +43,7 @@ armPivot.add(arm);
 camera.add(armPivot);
 scene.add(camera);
 
+// 4. MUNDO (BLOCOS)
 const blocks = [];
 const geo = new THREE.BoxGeometry(1, 1, 1);
 
@@ -52,12 +56,14 @@ function addBlock(x, y, z, type) {
     blocks.push(b);
 }
 
+// Chão inicial
 for(let x = -8; x < 8; x++) {
     for(let z = -8; z < 8; z++) {
         addBlock(x, 0, z, 'grass');
     }
 }
 
+// 5. INTERAÇÃO (QUEBRAR/COLOCAR)
 const raycaster = new THREE.Raycaster();
 let selectedBlock = 'stone';
 
@@ -80,24 +86,30 @@ function handleAction(isPlacing) {
     }
 }
 
+// 6. CONTROLES (BOTÕES E TOQUE)
 const input = { f: 0, b: 0, l: 0, r: 0, shift: false };
 let pitch = 0, yaw = 0, lookId = null, lastX = 0, lastY = 0;
 let isMovingFinger = false, touchStartTime = 0;
 
-// Lógica de Bind com TOGGLE SNEAK
+// Configuração dos Botões
 function bindBtn(id, key) {
     const el = document.getElementById(id);
     if(!el) return;
 
     if (key === 'shift') {
+        // Lógica de TOGGLE (Liga/Desliga)
         el.onpointerdown = e => {
             e.stopPropagation();
-            input.shift = !input.shift; // Alterna entre ligado/desligado
+            input.shift = !input.shift; // Inverte
+            
+            // Visual do botão
             if (input.shift) el.classList.add('active');
             else el.classList.remove('active');
+            
             if(navigator.vibrate) navigator.vibrate(30);
         };
     } else {
+        // Lógica normal (segurar para andar)
         el.onpointerdown = e => { e.stopPropagation(); input[key] = 1; };
         el.onpointerup = el.onpointerleave = e => { e.stopPropagation(); input[key] = 0; };
     }
@@ -112,6 +124,7 @@ document.getElementById('btn-jump').onpointerdown = e => {
     if(onGround) velocityY = 0.22; 
 };
 
+// Seleção de Blocos
 document.querySelectorAll('.slot').forEach(slot => {
     slot.onpointerdown = e => {
         e.stopPropagation();
@@ -121,6 +134,7 @@ document.querySelectorAll('.slot').forEach(slot => {
     };
 });
 
+// Controles da Câmera e Clique na Tela
 window.addEventListener('pointerdown', e => {
     if (e.target.closest('.mc-btn') || e.target.closest('.slot')) return;
     if (e.clientX > window.innerWidth / 2) {
@@ -144,16 +158,18 @@ window.addEventListener('pointerup', e => {
     if (e.pointerId === lookId) {
         if (!isMovingFinger) {
             const duration = Date.now() - touchStartTime;
-            if (duration < 250) handleAction(true);
-            else handleAction(false);
+            if (duration < 250) handleAction(true); // Toque rápido: Coloca
+            else handleAction(false);              // Toque longo: Quebra
         }
         lookId = null;
     }
 });
 
+// 7. FÍSICA E LOOP DO JOGO
 let velocityY = 0, onGround = false, currentHeight = 1.8;
 camera.position.set(0, 5, 5);
 
+// Função para verificar se tem chão (Sneak Logic)
 function hasFloorAt(x, z) {
     for (const b of blocks) {
         if (Math.abs(b.position.x - x) < 0.65 && Math.abs(b.position.z - z) < 0.65) {
@@ -165,27 +181,34 @@ function hasFloorAt(x, z) {
 
 function animate() {
     requestAnimationFrame(animate);
+
+    // Velocidade e Altura da Câmera
     const moveSpeed = input.shift ? 0.05 : 0.12;
     const targetHeight = input.shift ? 1.4 : 1.8;
     currentHeight += (targetHeight - currentHeight) * 0.15;
 
+    // Calcular próximo passo
     const direction = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     direction.applyEuler(new THREE.Euler(0, yaw, 0));
     
-    let nX = camera.position.x + direction.x * moveSpeed;
-    let nZ = camera.position.z + direction.z * moveSpeed;
+    let nextX = camera.position.x + direction.x * moveSpeed;
+    let nextZ = camera.position.z + direction.z * moveSpeed;
 
+    // LÓGICA DE BORDA (EAGLE/SNEAK)
     if (input.shift && onGround) {
-        if (!hasFloorAt(nX, camera.position.z)) nX = camera.position.x;
-        if (!hasFloorAt(camera.position.x, nZ)) nZ = camera.position.z;
+        // Se onde eu vou pisar não tem chão, cancela o movimento
+        if (!hasFloorAt(nextX, camera.position.z)) nextX = camera.position.x;
+        if (!hasFloorAt(camera.position.x, nextZ)) nextZ = camera.position.z;
     }
 
-    camera.position.x = nX;
-    camera.position.z = nZ;
+    camera.position.x = nextX;
+    camera.position.z = nextZ;
 
+    // Gravidade
     velocityY -= 0.012;
     camera.position.y += velocityY;
 
+    // Colisão com o chão
     let groundHeight = -10;
     for (const b of blocks) {
         if (Math.abs(b.position.x - camera.position.x) < 0.6 && Math.abs(b.position.z - camera.position.z) < 0.6) {
