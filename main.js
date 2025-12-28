@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+Import * as THREE from 'three';
 
 // ─── CENA E CONFIGURAÇÃO ──────────────────────────────
 const scene = new THREE.Scene();
@@ -140,7 +140,7 @@ document.querySelectorAll('.slot').forEach(s => {
 function action(place) {
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const hits = raycaster.intersectObjects(blocks);
-    
+
     // Animação do Braço
     armPivot.rotation.x = -0.5;
     setTimeout(() => armPivot.rotation.x = 0, 100);
