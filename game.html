@@ -3,58 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CYBER DRIFT 2077 | Neon Ultra</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
+  <title>HYPERSPACE SURREAL | Vortex</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      margin: 0; padding: 0; overflow: hidden;
-      background: #000; font-family: 'Orbitron', sans-serif;
-    }
-    #ui {
-      position: absolute; top: 20px; left: 0; width: 100%;
-      display: flex; justify-content: space-around;
-      pointer-events: none; color: #0ff; text-shadow: 0 0 10px #0ff;
-    }
-    .stat { background: rgba(0,0,0,0.5); padding: 10px 20px; border: 1px solid #0ff; }
+    body { margin: 0; background: #000; overflow: hidden; font-family: 'Syncopate', sans-serif; }
+    canvas { display: block; filter: contrast(1.2) saturate(1.5); }
     
+    #ui {
+      position: absolute; bottom: 40px; width: 100%;
+      display: flex; justify-content: center; gap: 50px;
+      color: rgba(0, 255, 255, 0.7); pointer-events: none;
+      letter-spacing: 4px; font-size: 0.8em;
+    }
+
     #overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
-      align-items: center; justify-content: center; z-index: 10;
+      position: absolute; inset: 0; background: radial-gradient(circle, transparent 0%, #000 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10;
     }
-    h1 { color: #0ff; font-size: 4em; margin: 0; text-shadow: 0 0 30px #0ff; letter-spacing: 10px; }
+
+    .title { color: #fff; font-size: 3em; font-weight: 700; text-shadow: 0 0 20px #0ff; margin-bottom: 5px; }
     .btn {
-      background: transparent; color: #0ff; border: 2px solid #0ff;
-      padding: 15px 40px; font-size: 1.5em; cursor: pointer; margin-top: 30px;
-      font-family: 'Orbitron'; transition: 0.3s;
+      background: none; border: 1px solid #fff; color: #fff;
+      padding: 15px 60px; cursor: pointer; font-family: inherit;
+      transition: 0.4s; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
     }
-    .btn:hover { background: #0ff; color: #000; box-shadow: 0 0 50px #0ff; }
+    .btn:hover { background: #fff; color: #000; box-shadow: 0 0 40px #fff; transform: scale(1.1); }
+    
+    .danger { color: #ff0055; display: none; margin-bottom: 20px; }
   </style>
 </head>
 <body>
 
 <div id="ui">
-  <div class="stat">SCORE: <span id="scoreVal">0</span></div>
-  <div class="stat">BEST: <span id="bestVal">0</span></div>
+  <div>VELOCITY: <span id="vel">0</span></div>
+  <div>SCORE: <span id="score">0</span></div>
+  <div>HIGH: <span id="best">0</span></div>
 </div>
 
 <div id="overlay">
-  <h1 id="title">CYBER DRIFT</h1>
-  <p style="color: #f0f;">Sobreviva à rodovia de néon</p>
-  <button class="btn" onclick="startGame()">INICIAR ENGINE</button>
-  <p style="color: #666; margin-top: 20px;">Use o MOUSE ou TOQUE para deslizar</p>
+  <div id="death-msg" class="danger">SYSTEM CRITICAL: COLLISION DETECTED</div>
+  <div class="title">VORTEX</div>
+  <p style="color: #444; margin-bottom: 30px;">LIMIT-BREAK PROTOCOL</p>
+  <button class="btn" onclick="init()">START LINK</button>
 </div>
 
-<canvas id="canvas"></canvas>
+<canvas id="vortex"></canvas>
 
 <script>
-const canvas = document.getElementById('canvas');
+const canvas = document.getElementById('vortex');
 const ctx = canvas.getContext('2d');
-const scoreDisplay = document.getElementById('scoreVal');
-const bestDisplay = document.getElementById('bestVal');
 const overlay = document.getElementById('overlay');
+const scoreEl = document.getElementById('score');
+const velEl = document.getElementById('vel');
+const bestEl = document.getElementById('best');
 
-let w, h, player, obstacles, particles, score, gameActive, speed, frame;
+let w, h, player, stars, cubes, active, frame, speed, score, highscore;
+
+highscore = localStorage.getItem('vortex_high') || 0;
+bestEl.innerText = highscore;
 
 function resize() {
   w = canvas.width = window.innerWidth;
@@ -63,157 +70,144 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Gerenciamento de recorde
-let bestScore = localStorage.getItem('bestDrift') || 0;
-bestDisplay.innerText = bestScore;
+// Input
+const mouse = { x: 0, y: 0 };
+window.addEventListener('mousemove', e => {
+  mouse.x = (e.clientX - w/2) / (w/2);
+  mouse.y = (e.clientY - h/2) / (h/2);
+});
 
-function startGame() {
-  player = { x: w/2, targetX: w/2, y: h * 0.8, size: 20 };
-  obstacles = [];
-  particles = [];
-  score = 0;
-  speed = 8;
-  frame = 0;
-  gameActive = true;
-  overlay.style.display = 'none';
-  animate();
+class Star {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = (Math.random() - 0.5) * 3000;
+    this.y = (Math.random() - 0.5) * 3000;
+    this.z = Math.random() * 2000;
+  }
+  update() {
+    this.z -= speed * 1.5;
+    if (this.z < 1) this.reset();
+  }
+  draw() {
+    const s = 600 / this.z;
+    const px = w/2 + this.x * s;
+    const py = h/2 + this.y * s;
+    const size = (1 - this.z / 2000) * 3;
+    
+    ctx.fillStyle = `rgba(255, 255, 255, ${1 - this.z/2000})`;
+    // Efeito de rastro (streak)
+    const stretch = speed * 0.2;
+    ctx.fillRect(px, py, size, size * stretch);
+  }
 }
 
-// Controles
-window.addEventListener('mousemove', (e) => player.targetX = e.clientX);
-window.addEventListener('touchmove', (e) => {
-  player.targetX = e.touches[0].clientX;
-  e.preventDefault();
-}, {passive: false});
-
-class Obstacle {
+class Cube {
   constructor() {
-    this.lane = Math.floor(Math.random() * 5) - 2; // -2 a 2
-    this.z = 1000; // Distância inicial
-    this.w = 150;
-    this.h = 40;
-    this.color = Math.random() > 0.5 ? '#0ff' : '#f0f';
+    this.reset();
+    this.z = 2000;
   }
-
+  reset() {
+    this.x = (Math.random() - 0.5) * 1500;
+    this.y = (Math.random() - 0.5) * 1500;
+    this.z = 2000;
+    this.size = Math.random() * 50 + 20;
+    this.rot = Math.random() * Math.PI;
+  }
   update() {
     this.z -= speed;
-  }
-
-  draw() {
-    const scale = 400 / (this.z + 1);
-    const x = w/2 + (this.lane * 200 * scale);
-    const y = h/2 + (200 * scale);
-    const drawW = this.w * scale;
-    const drawH = this.h * scale;
-
-    ctx.fillStyle = this.color;
-    ctx.shadowBlur = 20 * scale;
-    ctx.shadowColor = this.color;
-    ctx.fillRect(x - drawW/2, y - drawH/2, drawW, drawH);
-    
-    // Detecção de colisão (quando z está perto de 0)
-    if (this.z < 20 && this.z > -20) {
-      const playerPos = (player.x - w/2) / (200 * (400 / 21)); // Normalização aproximada
-      const obsLanePos = this.lane;
-      
-      // Checagem simplificada de proximidade
-      const dist = Math.abs((player.x - x));
-      if (dist < drawW/2 + player.size) {
-        endGame();
+    this.rot += 0.02;
+    if (this.z < 1) {
+      if (Math.abs(this.x * (600/10) - player.x*150) < 100 && 
+          Math.abs(this.y * (600/10) - player.y*150) < 100) {
+        gameOver();
       }
-    }
-  }
-}
-
-function drawGrid() {
-  ctx.strokeStyle = '#044';
-  ctx.lineWidth = 1;
-  ctx.shadowBlur = 0;
-  
-  const offset = (frame * speed) % 100;
-  
-  // Linhas horizontais (profundidade)
-  for (let i = 0; i < 20; i++) {
-    const z = i * 50 - offset;
-    if (z <= 0) continue;
-    const scale = 400 / z;
-    const y = h/2 + (200 * scale);
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-  }
-
-  // Linhas verticais (perspectiva)
-  for (let i = -10; i <= 10; i++) {
-    const xStart = w/2;
-    const yStart = h/2;
-    const xEnd = w/2 + i * 500;
-    const yEnd = h;
-    ctx.beginPath();
-    ctx.moveTo(xStart, yStart);
-    ctx.lineTo(xEnd, yEnd);
-    ctx.stroke();
-  }
-}
-
-function endGame() {
-  gameActive = false;
-  overlay.style.display = 'flex';
-  document.getElementById('title').innerText = "WASTED";
-  document.getElementById('title').style.color = "#f05";
-  if (score > bestScore) {
-    bestScore = Math.floor(score);
-    localStorage.setItem('bestDrift', bestScore);
-    bestDisplay.innerText = bestScore;
-  }
-}
-
-function animate() {
-  if (!gameActive) return;
-
-  // Background
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, w, h);
-
-  drawGrid();
-
-  // Movimento Suave do Jogador
-  player.x += (player.targetX - player.x) * 0.15;
-
-  // Gerar Obstáculos
-  if (frame % 30 === 0) obstacles.push(new Obstacle());
-
-  // Atualizar Obstáculos
-  obstacles.forEach((obs, i) => {
-    obs.update();
-    obs.draw();
-    if (obs.z < -100) {
-      obstacles.splice(i, 1);
+      this.reset();
       score += 10;
     }
-  });
+  }
+  draw() {
+    const s = 600 / this.z;
+    const px = w/2 + this.x * s;
+    const py = h/2 + this.y * s;
+    const sz = this.size * s;
 
-  // Desenhar Jogador (Nave)
-  ctx.shadowBlur = 25;
-  ctx.shadowColor = '#0ff';
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.moveTo(player.x, player.y - 20);
-  ctx.lineTo(player.x - 25, player.y + 20);
-  ctx.lineTo(player.x + 25, player.y + 20);
-  ctx.closePath();
-  ctx.fill();
-
-  // HUD
-  score += 0.1;
-  scoreDisplay.innerText = Math.floor(score);
-  speed += 0.002;
-  frame++;
-
-  requestAnimationFrame(animate);
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(this.rot);
+    ctx.strokeStyle = `hsl(${(frame + this.z/5)%360}, 100%, 70%)`;
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.strokeRect(-sz/2, -sz/2, sz, sz);
+    ctx.restore();
+  }
 }
 
+function init() {
+  player = { x: 0, y: 0 };
+  stars = Array.from({length: 400}, () => new Star());
+  cubes = Array.from({length: 12}, () => new Cube());
+  speed = 10;
+  score = 0;
+  frame = 0;
+  active = true;
+  overlay.style.opacity = '0';
+  overlay.style.pointerEvents = 'none';
+  document.getElementById('death-msg').style.display = 'none';
+  loop();
+}
+
+function gameOver() {
+  active = false;
+  overlay.style.opacity = '1';
+  overlay.style.pointerEvents = 'auto';
+  document.getElementById('death-msg').style.display = 'block';
+  if (score > highscore) {
+    highscore = score;
+    localStorage.setItem('vortex_high', highscore);
+    bestEl.innerText = highscore;
+  }
+}
+
+function loop() {
+  if (!active) return;
+
+  // Fade surreal para rastro
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+  ctx.fillRect(0, 0, w, h);
+
+  // Suavização da nave
+  player.x += (mouse.x - player.x) * 0.1;
+  player.y += (mouse.y - player.y) * 0.1;
+
+  // Movimento de câmera surreal
+  ctx.save();
+  ctx.translate(-player.x * 50, -player.y * 50);
+
+  stars.forEach(s => { s.update(); s.draw(); });
+  cubes.forEach(c => { c.update(); c.draw(); });
+
+  ctx.restore();
+
+  // Crosshair (Mira)
+  ctx.strokeStyle = '#0ff';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  const mx = w/2 + mouse.x * 100;
+  const my = h/2 + mouse.y * 100;
+  ctx.arc(mx, my, 20, 0, Math.PI*2);
+  ctx.moveTo(mx - 30, my); ctx.lineTo(mx + 30, my);
+  ctx.moveTo(mx, my - 30); ctx.lineTo(mx, my + 30);
+  ctx.stroke();
+
+  // Update UI
+  scoreEl.innerText = score;
+  velEl.innerText = Math.floor(speed * 20) + " KM/S";
+  speed += 0.005;
+  frame++;
+
+  requestAnimationFrame(loop);
+}
 </script>
 </body>
 </html>
