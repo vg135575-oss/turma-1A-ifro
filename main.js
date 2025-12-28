@@ -5,11 +5,11 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 scene.fog = new THREE.FogExp2(0x87CEEB, 0.02);
 
-const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 5, 5);
 
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
-renderer.setSize(innerWidth, innerHeight);
+renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.getElementById('game-container').appendChild(renderer.domElement);
 
@@ -19,44 +19,39 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.0);
 sun.position.set(10, 20, 10);
 scene.add(sun);
 
-// ─── CARREGADOR DE TEXTURAS ───────────────────────────
+// ─── CARREGADOR DE TEXTURAS (PARA GITHUB) ──────────────
 const textureLoader = new THREE.TextureLoader();
 
-function loadTex(url) {
-    const tex = textureLoader.load(url, 
-        undefined, // onProgress
-        undefined, // onError
-        (err) => console.error("Erro ao carregar textura:", url)
+function loadTex(fileName) {
+    // Carrega da sua pasta local que você vai subir para o GitHub
+    const tex = textureLoader.load(`./textures/${fileName}`, 
+        undefined, 
+        undefined, 
+        (err) => console.error("Erro ao carregar:", fileName)
     );
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.NearestFilter;
     return tex;
 }
 
-// Novos links mais estáveis (Texturas estilo Minecraft)
-const texUrls = {
-    grassSide: 'https://raw.githubusercontent.com/niteshsharma500/Minecraft-Clone/master/textures/grass_side.png',
-    grassTop: 'https://raw.githubusercontent.com/niteshsharma500/Minecraft-Clone/master/textures/grass_top.png',
-    dirt: 'https://raw.githubusercontent.com/niteshsharma500/Minecraft-Clone/master/textures/dirt.png',
-    stone: 'https://raw.githubusercontent.com/niteshsharma500/Minecraft-Clone/master/textures/stone.png',
-    wood: 'https://raw.githubusercontent.com/niteshsharma500/Minecraft-Clone/master/textures/wood.png',
-    glass: 'https://raw.githubusercontent.com/niteshsharma500/Minecraft-Clone/master/textures/glass.png'
-};
-
-// ─── MATERIAIS ────────────────────────────────────────
+// ─── MATERIAIS USANDO SEUS ARQUIVOS ───────────────────
 const mats = {
     grass: [
-        new THREE.MeshStandardMaterial({ map: loadTex(texUrls.grassSide) }),
-        new THREE.MeshStandardMaterial({ map: loadTex(texUrls.grassSide) }),
-        new THREE.MeshStandardMaterial({ map: loadTex(texUrls.grassTop) }),
-        new THREE.MeshStandardMaterial({ map: loadTex(texUrls.dirt) }),
-        new THREE.MeshStandardMaterial({ map: loadTex(texUrls.grassSide) }),
-        new THREE.MeshStandardMaterial({ map: loadTex(texUrls.grassSide) })
+        new THREE.MeshStandardMaterial({ map: loadTex('grass_side.png') }),
+        new THREE.MeshStandardMaterial({ map: loadTex('grass_side.png') }),
+        new THREE.MeshStandardMaterial({ map: loadTex('grass_top.png') }),
+        new THREE.MeshStandardMaterial({ map: loadTex('dirt.png') }),
+        new THREE.MeshStandardMaterial({ map: loadTex('grass_side.png') }),
+        new THREE.MeshStandardMaterial({ map: loadTex('grass_side.png') })
     ],
-    dirt: new THREE.MeshStandardMaterial({ map: loadTex(texUrls.dirt) }),
-    stone: new THREE.MeshStandardMaterial({ map: loadTex(texUrls.stone) }),
-    wood: new THREE.MeshStandardMaterial({ map: loadTex(texUrls.wood) }),
-    leaf: new THREE.MeshStandardMaterial({ color: 0x3a6324, transparent: true, opacity: 0.9 })
+    dirt: new THREE.MeshStandardMaterial({ map: loadTex('dirt.png') }),
+    stone: new THREE.MeshStandardMaterial({ map: loadTex('stone.png') }),
+    wood: new THREE.MeshStandardMaterial({ map: loadTex('wood.png') }),
+    leaf: new THREE.MeshStandardMaterial({ 
+        map: loadTex('leaf.png'), 
+        transparent: true, 
+        alphaTest: 0.5 
+    })
 };
 
 // ─── BRAÇO ────────────────────────────────────────────
@@ -96,6 +91,7 @@ for(let x = -8; x < 8; x++) {
 const input = { f: 0, b: 0, l: 0, r: 0 };
 function bind(id, key) {
     const el = document.getElementById(id);
+    if(!el) return;
     el.onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); input[key] = 1; };
     el.onpointerup = el.onpointerleave = () => { input[key] = 0; };
 }
@@ -103,18 +99,21 @@ bind('btn-up', 'f'); bind('btn-down', 'b');
 bind('btn-left', 'l'); bind('btn-right', 'r');
 
 let vy = 0, onGround = false;
-document.getElementById('btn-jump').onpointerdown = (e) => {
-    e.preventDefault(); if (onGround) { vy = 0.22; onGround = false; }
-};
+const jumpBtn = document.getElementById('btn-jump');
+if(jumpBtn) {
+    jumpBtn.onpointerdown = (e) => {
+        e.preventDefault(); if (onGround) { vy = 0.22; onGround = false; }
+    };
+}
 
-// ─── OLHAR ────────────────────────────────────────────
+// ─── OLHAR (TOUCH) ────────────────────────────────────
 let pitch = 0, yaw = 0, lookId = null, lastX = 0, lastY = 0;
-addEventListener('pointerdown', e => {
-    if (e.clientX > innerWidth / 2 && lookId === null) {
+window.addEventListener('pointerdown', e => {
+    if (e.clientX > window.innerWidth / 2 && lookId === null) {
         lookId = e.pointerId; lastX = e.clientX; lastY = e.clientY;
     }
 });
-addEventListener('pointermove', e => {
+window.addEventListener('pointermove', e => {
     if (e.pointerId === lookId) {
         yaw -= (e.clientX - lastX) * 0.005;
         pitch -= (e.clientY - lastY) * 0.005;
@@ -123,7 +122,7 @@ addEventListener('pointermove', e => {
         lastX = e.clientX; lastY = e.clientY;
     }
 });
-addEventListener('pointerup', e => { if (e.pointerId === lookId) lookId = null; });
+window.addEventListener('pointerup', e => { if (e.pointerId === lookId) lookId = null; });
 
 // ─── AÇÕES ────────────────────────────────────────────
 const raycaster = new THREE.Raycaster();
@@ -141,8 +140,11 @@ document.querySelectorAll('.slot').forEach(s => {
 function action(place) {
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const hits = raycaster.intersectObjects(blocks);
+    
+    // Animação do Braço
     armPivot.rotation.x = -0.5;
     setTimeout(() => armPivot.rotation.x = 0, 100);
+
     if (hits.length > 0 && hits[0].distance < 5) {
         const hit = hits[0];
         if (place && selected !== 'none') {
@@ -154,6 +156,7 @@ function action(place) {
         }
     }
 }
+
 document.getElementById('btn-break').onpointerdown = e => { e.preventDefault(); action(false); };
 document.getElementById('btn-place').onpointerdown = e => { e.preventDefault(); action(true); };
 
@@ -171,6 +174,7 @@ function animate() {
     const moveDir = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     moveDir.applyEuler(new THREE.Euler(0, yaw, 0));
     const speed = 0.12;
+
     if (!checkCollision(camera.position.x + moveDir.x * speed, camera.position.y, camera.position.z)) 
         camera.position.x += moveDir.x * speed;
     if (!checkCollision(camera.position.x, camera.position.y, camera.position.z + moveDir.z * speed)) 
@@ -190,8 +194,8 @@ function animate() {
 }
 animate();
 
-onresize = () => {
-    camera.aspect = innerWidth / innerHeight;
+window.onresize = () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
+    renderer.setSize(window.innerWidth, window.innerHeight);
 };
