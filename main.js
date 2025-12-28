@@ -8,17 +8,23 @@ scene.fog = new THREE.FogExp2(0x87CEEB, 0.02);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ 
     antialias: false, 
-    powerPreference: "high-performance",
-    precision: "mediump" 
+    powerPreference: "high-performance"
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.getElementById('game-container').appendChild(renderer.domElement);
 
-// ─── 2. CARREGAMENTO DE TEXTURAS ──────────────────────
+// ─── 2. CARREGAMENTO DE TEXTURAS (CORRIGIDO) ──────────
 const textureLoader = new THREE.TextureLoader();
+textureLoader.setCrossOrigin('anonymous'); // Ajuda a carregar do GitHub Pages
+
 function loadTex(file) {
-    const tex = textureLoader.load(`./textures/${file}`);
+    // IMPORTANTE: Verifique se o nome do arquivo no GitHub é igual a este!
+    const tex = textureLoader.load(`./textures/${file}`, 
+        undefined, 
+        undefined, 
+        (err) => console.error('Erro ao carregar textura:', file)
+    );
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.NearestFilter;
     return tex;
@@ -68,7 +74,6 @@ function addBlock(x, y, z, type) {
     const b = new THREE.Mesh(geo, type === 'grass' ? mats.grass : mats[type]);
     b.position.set(Math.round(x), Math.round(y), Math.round(z));
     b.userData.type = type;
-    // Define dureza (folhas quebram rápido, pedra demora)
     b.userData.hardness = (type === 'leaf') ? 200 : (type === 'stone') ? 1000 : 600;
     scene.add(b);
     blocks.push(b);
@@ -102,6 +107,11 @@ for(let x = -6; x < 6; x++) {
     }
 }
 
+const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+sun.position.set(10, 20, 10);
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
 // ─── 5. AÇÕES ─────────────────────────────────────────
 const raycaster = new THREE.Raycaster();
 let selected = 'stone';
@@ -119,12 +129,12 @@ function action(place) {
             const pos = hit.object.position.clone().add(hit.face.normal);
             addBlock(pos.x, pos.y, pos.z, selected);
         } else {
-            const color = hit.object.material.color || 0x55aa55;
+            const color = 0x888888;
             spawnParticles(hit.object.position, color);
             spawnDrop(hit.object.position, hit.object.userData.type);
             
             scene.remove(hit.object);
-            hit.object.geometry.dispose(); // Limpa memória
+            if(hit.object.geometry) hit.object.geometry.dispose();
             blocks.splice(blocks.indexOf(hit.object), 1);
             if(navigator.vibrate) navigator.vibrate(40);
         }
@@ -258,7 +268,6 @@ function animate() {
     if (camera.position.y <= groundHeight) { camera.position.y = groundHeight; vy = 0; onGround = true; }
     else onGround = false;
 
-    // Partículas
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.position.add(p.userData.vel);
@@ -268,7 +277,6 @@ function animate() {
         if (p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); }
     }
 
-    // Drops
     for (let i = droppedItems.length - 1; i >= 0; i--) {
         const item = droppedItems[i];
         item.userData.time += 0.05;
