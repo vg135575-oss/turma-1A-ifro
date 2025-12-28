@@ -54,10 +54,7 @@ scene.add(crackMesh);
 
 // ─── 4. GESTÃO DO MUNDO ──────────────────────────────
 const blocks = [];
-const particles = [];
-const droppedItems = [];
 const geo = new THREE.BoxGeometry(1, 1, 1);
-const itemGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
 
 function addBlock(x, y, z, type) {
     if (!mats[type]) return;
@@ -68,8 +65,8 @@ function addBlock(x, y, z, type) {
     blocks.push(b);
 }
 
-for(let x = -5; x < 5; x++) {
-    for(let z = -5; z < 5; z++) {
+for(let x = -6; x < 6; x++) {
+    for(let z = -6; z < 6; z++) {
         addBlock(x, 0, z, 'grass');
     }
 }
@@ -92,15 +89,14 @@ function action(place) {
         } else {
             scene.remove(hit.object);
             blocks.splice(blocks.indexOf(hit.object), 1);
-            if(navigator.vibrate) navigator.vibrate(40);
         }
     }
 }
 
-// ─── 6. CONTROLOS E NOVO SISTEMA DE SHIFT ─────────────
+// ─── 6. CONTROLOS E SHIFT ─────────────────────────────
 const input = { f: 0, b: 0, l: 0, r: 0, shift: false };
 let pitch = 0, yaw = 0, lookId = null, lastX = 0, lastY = 0;
-let touchTimer = null, isMovingDedo = false, touchStart = 0;
+let isMovingDedo = false, touchStart = 0;
 
 function bind(id, k) {
     const el = document.getElementById(id);
@@ -111,17 +107,11 @@ function bind(id, k) {
 }
 bind('btn-up','f'); bind('btn-down','b'); bind('btn-left','l'); bind('btn-right','r');
 
-// BOTÃO DE PULO
-document.getElementById('btn-jump').onpointerdown = e => {
-    e.stopPropagation(); if(onGround) vy = 0.22;
-};
+// Pulo e Shift
+document.getElementById('btn-jump').onpointerdown = e => { e.stopPropagation(); if(onGround) vy = 0.22; };
 
-// NOVO: BOTÃO DE SHIFT (Adicione um botão no seu HTML com id="btn-shift" se quiser usar no mobile)
-const shiftBtn = document.getElementById('btn-shift');
-if(shiftBtn) {
-    shiftBtn.onpointerdown = e => { e.stopPropagation(); input.shift = true; };
-    shiftBtn.onpointerup = e => { e.stopPropagation(); input.shift = false; };
-}
+document.getElementById('btn-shift').onpointerdown = e => { e.stopPropagation(); input.shift = true; };
+document.getElementById('btn-shift').onpointerup = e => { e.stopPropagation(); input.shift = false; };
 
 document.querySelectorAll('.slot').forEach(s => {
     s.onpointerdown = e => {
@@ -131,9 +121,8 @@ document.querySelectorAll('.slot').forEach(s => {
     };
 });
 
-// Movimentação da câmera
 window.addEventListener('pointerdown', e => {
-    if (e.target.closest('.dbtn') || e.target.closest('.slot') || e.target.id === 'btn-jump' || e.target.id === 'btn-shift') return;
+    if (e.target.closest('.dbtn') || e.target.closest('.slot') || e.target.closest('.action-btn')) return;
     if (e.clientX > window.innerWidth / 2 && lookId === null) {
         lookId = e.pointerId; lastX = e.clientX; lastY = e.clientY;
         touchStart = Date.now(); isMovingDedo = false;
@@ -158,9 +147,9 @@ window.addEventListener('pointerup', e => {
     }
 });
 
-// ─── 7. FÍSICA E ANIMAÇÃO (COM SHIFT) ──────────────────
+// ─── 7. FÍSICA E ANIMAÇÃO ─────────────────────────────
 let vy = 0, onGround = false, walkTime = 0;
-let currentHeight = 1.8; // Altura normal dos olhos
+let currentHeight = 1.8;
 
 function checkCollision(x, y, z) {
     for (const b of blocks) {
@@ -175,10 +164,10 @@ camera.position.set(0, 4, 4);
 function animate() {
     requestAnimationFrame(animate);
     
-    // LÓGICA DO SHIFT
-    const speed = input.shift ? 0.05 : 0.12; // Velocidade reduzida no shift
-    const targetHeight = input.shift ? 1.4 : 1.8; // Câmera abaixa no shift
-    currentHeight += (targetHeight - currentHeight) * 0.2; // Suaviza a transição da altura
+    // Lógica Shift
+    const speed = input.shift ? 0.05 : 0.12;
+    const targetHeight = input.shift ? 1.4 : 1.8;
+    currentHeight += (targetHeight - currentHeight) * 0.15;
 
     const move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     move.applyEuler(new THREE.Euler(0, yaw, 0));
@@ -186,13 +175,6 @@ function animate() {
     if (!checkCollision(camera.position.x + move.x * speed, camera.position.y, camera.position.z)) camera.position.x += move.x * speed;
     if (!checkCollision(camera.position.x, camera.position.y, camera.position.z + move.z * speed)) camera.position.z += move.z * speed;
 
-    // Balanço da câmera (Bobbing) - reduzido no shift
-    if ((input.f || input.b || input.l || input.r) && onGround) {
-        walkTime += input.shift ? 0.08 : 0.15;
-        camera.position.y += Math.sin(walkTime) * (input.shift ? 0.005 : 0.015);
-    }
-
-    // Gravidade
     vy -= 0.012; camera.position.y += vy;
     let gh = -10;
     for (const b of blocks) {
