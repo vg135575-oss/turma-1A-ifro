@@ -3,365 +3,279 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🎮 Bird Runner 3D Turbo | Neon Futurista</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+  <title>NEON VORTEX 3D | Cyber Runner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
       font-family: 'Orbitron', sans-serif;
-      background: radial-gradient(circle at center, #001900 0%, #000 80%);
-      color: #00ffcc;
+      background: #000;
+      color: #fff;
       height: 100vh;
       overflow: hidden;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      user-select: none;
+    }
+    #game-container { position: relative; width: 100vw; height: 100vh; }
+    canvas { width: 100%; height: 100%; display: block; }
+    
+    .ui-layer {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 30px;
     }
 
-    h1 {
-      margin-bottom: 10px;
-      font-size: 2em;
-      letter-spacing: 3px;
-      text-shadow: 0 0 30px #00ffff;
-      animation: glow 2s infinite alternate;
+    .stats { display: flex; justify-content: space-between; pointer-events: auto; }
+    .stat-box { 
+      background: rgba(0, 255, 200, 0.1); 
+      padding: 15px 25px; 
+      border-left: 5px solid #00ffcc;
+      backdrop-filter: blur(5px);
     }
-
-    @keyframes glow {
-      0% { text-shadow: 0 0 20px #00ffcc; transform: scale(1); }
-      100% { text-shadow: 0 0 40px #00ffff; transform: scale(1.05); }
-    }
-
-    canvas {
-      border: 2px solid #00ffcc;
-      box-shadow: 0 0 25px #00ffff;
-      background: radial-gradient(circle at bottom, #000, #001900);
-      border-radius: 20px;
-      max-width: 95vw;
-      max-height: 75vh;
-    }
+    .score-val { font-size: 2em; font-weight: 900; color: #00ffcc; text-shadow: 0 0 15px #00ffcc; }
 
     .overlay {
       position: absolute;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.85);
-      top: 0; left: 0; right: 0; bottom: 0;
-      border-radius: 20px;
-      color: #00ffcc;
-      font-size: 1.3em;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
       text-align: center;
-      text-shadow: 0 0 20px #00ffff;
-      backdrop-filter: blur(8px);
-      transition: opacity 0.5s ease;
+      background: rgba(0,0,0,0.9);
+      padding: 50px;
+      border: 1px solid #00ffcc;
+      box-shadow: 0 0 50px rgba(0,255,204,0.3);
+      pointer-events: auto;
+      border-radius: 10px;
     }
 
     .btn {
-      background: #00ffcc;
-      color: #000;
-      border: none;
-      font-weight: bold;
-      margin-top: 20px;
-      padding: 10px 25px;
-      border-radius: 10px;
+      background: transparent;
+      color: #00ffcc;
+      border: 2px solid #00ffcc;
+      padding: 15px 40px;
+      font-family: 'Orbitron';
+      font-size: 1.2em;
       cursor: pointer;
-      font-size: 1em;
-      box-shadow: 0 0 15px #00ffff;
+      margin-top: 20px;
       transition: 0.3s;
     }
-
-    .btn:hover {
-      background: #00e6b8;
-      box-shadow: 0 0 25px #00ffff;
-      transform: scale(1.05);
-    }
-
-    @media (max-width: 600px) {
-      h1 { font-size: 1.4em; }
-    }
+    .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 30px #00ffcc; }
+    
+    #tutorial { font-size: 0.8em; color: #666; margin-top: 15px; }
   </style>
 </head>
 <body>
-  <h1>Bird Runner 3D Turbo 🕹️</h1>
-  <canvas id="gameCanvas"></canvas>
 
-  <div id="menu" class="overlay">
-    <p>Toque ou pressione <b>Espaço</b> para voar!</p>
-    <button class="btn" id="startBtn">🚀 Iniciar Jogo</button>
+<div id="game-container">
+  <canvas id="c"></canvas>
+  
+  <div class="ui-layer">
+    <div class="stats">
+      <div class="stat-box">
+        <div>SCORE</div>
+        <div id="score" class="score-val">0</div>
+      </div>
+      <div class="stat-box" style="border-left-color: #ff00ff;">
+        <div>BEST</div>
+        <div id="best" class="score-val" style="color: #ff00ff;">0</div>
+      </div>
+    </div>
   </div>
 
-  <script>
-  const canvas = document.getElementById("gameCanvas");
-  const ctx = canvas.getContext("2d");
-  const menu = document.getElementById("menu");
-  const startBtn = document.getElementById("startBtn");
+  <div id="menu" class="overlay">
+    <h1 style="font-size: 3em; margin-bottom: 10px; letter-spacing: 5px;">NEON VORTEX</h1>
+    <p>Sobreviva ao túnel hiperespacial</p>
+    <button class="btn" id="startBtn">INICIAR SALTO</button>
+    <div id="tutorial">Use MOUSE ou TOQUE para girar no túnel</div>
+  </div>
+</div>
 
-  // 🎵 Sons
-  const bgMusic = new Audio("https://actions.google.com/sounds/v1/ambiences/electronic_drone.ogg");
-  bgMusic.loop = true; bgMusic.volume = 0.3;
-  const jumpSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
-  const hitSound = new Audio("https://actions.google.com/sounds/v1/impacts/crash.ogg");
-  const powerSound = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+<script>
+/** @type {HTMLCanvasElement} */
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+const menu = document.getElementById("menu");
 
-  function resizeCanvas() {
-    canvas.width = window.innerWidth * 0.9;
-    canvas.height = window.innerHeight * 0.7;
-  }
-  resizeCanvas();
-  window.addEventListener("resize", resizeCanvas);
+let w, h, centerX, centerY;
+let score = 0, gameActive = false, frame = 0;
+let obstacles = [], particles = [];
+let playerAngle = 0, targetAngle = 0;
+let speed = 0.05, tunnelZ = 0;
 
-  let bird, gravity, jump, obstacles, frame, score, gameOverFlag, stars, lasers, trail, bestScore, speed, powerups, combo, bgHue;
+function resize() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+  centerX = w / 2;
+  centerY = h / 2;
+}
+window.addEventListener("resize", resize);
+resize();
 
-  function resetGame() {
-    bird = { x: 120, y: canvas.height / 2, size: 18, velocity: 0, boost: 0, dash: 2, shield: false };
-    gravity = 0.4; jump = -8;
-    obstacles = []; frame = 0; score = 0; gameOverFlag = false; combo = 0;
-    stars = Array.from({ length: 100 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      size: Math.random() * 2,
-      speed: Math.random() * 2 + 0.5
-    }));
-    lasers = Array.from({ length: 8 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      width: Math.random() * 2 + 1,
-      speed: Math.random() * 3 + 1
-    }));
-    trail = [];
-    powerups = [];
-    speed = 4;
-    bestScore = localStorage.getItem("bestScore") || 0;
-    bgHue = 160;
-  }
+// Mouse/Touch Control
+window.addEventListener("mousemove", (e) => {
+  targetAngle = (e.clientX / w) * Math.PI * 2;
+});
+window.addEventListener("touchmove", (e) => {
+  targetAngle = (e.touches[0].clientX / w) * Math.PI * 2;
+});
 
-  function drawBackground() {
-    bgHue = (bgHue + 0.15 + score / 20000) % 360;
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, `hsl(${bgHue}, 100%, 10%)`);
-    grad.addColorStop(1, "#000");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = `hsl(${bgHue}, 100%, 60%)`;
-    stars.forEach(star => {
-      ctx.beginPath();
-      ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-      ctx.fill();
-      star.y += star.speed;
-      if (star.y > canvas.height) star.y = 0;
-    });
-
-    ctx.strokeStyle = `hsla(${bgHue}, 100%, 60%, 0.3)`;
-    lasers.forEach(l => {
-      ctx.beginPath();
-      ctx.moveTo(l.x, l.y);
-      ctx.lineTo(l.x, l.y + 60);
-      ctx.lineWidth = l.width;
-      ctx.stroke();
-      l.y += l.speed;
-      if (l.y > canvas.height) {
-        l.y = 0;
-        l.x = Math.random() * canvas.width;
-      }
-    });
+class Obstacle {
+  constructor() {
+    this.z = 100; // Distância (100 = longe, 0 = colisão)
+    this.angle = Math.random() * Math.PI * 2;
+    this.width = Math.PI * 0.5; // Tamanho do arco do obstáculo
+    this.color = `hsl(${Math.random() * 360}, 100%, 60%)`;
   }
 
-  function drawBird() {
-    trail.push({ x: bird.x, y: bird.y });
-    if (trail.length > 30) trail.shift();
+  update() {
+    this.z -= speed * 40; // Aproxima-se do jogador
+  }
 
-    for (let i = 0; i < trail.length; i++) {
-      const t = trail[i];
-      ctx.fillStyle = `hsla(${bgHue}, 100%, 60%, ${i / trail.length / 1.2})`;
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, bird.size * 0.5 * (i / trail.length), 0, Math.PI * 2);
-      ctx.fill();
-    }
+  draw() {
+    let scale = 1000 / (this.z + 1);
+    let x = centerX;
+    let y = centerY;
+    let radius = scale * 0.5;
 
-    const gradient = ctx.createRadialGradient(bird.x, bird.y, 3, bird.x, bird.y, bird.size + bird.boost);
-    gradient.addColorStop(0, "#fff");
-    gradient.addColorStop(1, `hsl(${bgHue}, 100%, 50%)`);
-    ctx.fillStyle = gradient;
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = `hsl(${bgHue}, 100%, 60%)`;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 10 * (scale / 50);
     ctx.beginPath();
-    ctx.arc(bird.x, bird.y, bird.size + bird.boost, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.arc(x, y, radius, this.angle, this.angle + this.width);
+    ctx.stroke();
 
-    if (bird.shield) {
-      ctx.strokeStyle = "rgba(0,255,255,0.6)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(bird.x, bird.y, bird.size + 8, 0, Math.PI * 2);
-      ctx.stroke();
+    // Glow effect
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = this.color;
+  }
+}
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = (Math.random() - 0.5) * w * 2;
+    this.y = (Math.random() - 0.5) * h * 2;
+    this.z = Math.random() * 100;
+    this.o = Math.random();
+  }
+  update() {
+    this.z -= speed * 50;
+    if (this.z <= 0) this.reset();
+  }
+  draw() {
+    let scale = 1000 / (this.z + 1);
+    let px = centerX + this.x * (scale / 100);
+    let py = centerY + this.y * (scale / 100);
+    ctx.fillStyle = `rgba(0, 255, 204, ${this.o})`;
+    ctx.fillRect(px, py, scale/100, scale/100);
+  }
+}
+
+// Inicializa partículas de fundo
+for(let i=0; i<200; i++) particles.push(new Particle());
+
+function checkCollision(obs) {
+  if (obs.z < 5 && obs.z > 0) {
+    // Normaliza ângulos
+    let pA = playerAngle % (Math.PI * 2);
+    let oAStart = obs.angle % (Math.PI * 2);
+    let oAEnd = (obs.angle + obs.width) % (Math.PI * 2);
+
+    // Simplificação de colisão de arco
+    if (oAStart < oAEnd) {
+        if (pA > oAStart && pA < oAEnd) return true;
+    } else {
+        if (pA > oAStart || pA < oAEnd) return true;
     }
   }
+  return false;
+}
 
-  function drawObstacles() {
-    obstacles.forEach(obs => {
-      const grad = ctx.createLinearGradient(obs.x, obs.y, obs.x + obs.w, obs.y + obs.h);
-      grad.addColorStop(0, `hsl(${bgHue}, 100%, 60%)`);
-      grad.addColorStop(1, "#002222");
-      ctx.fillStyle = grad;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = `hsl(${bgHue}, 100%, 60%)`;
-      ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-      ctx.shadowBlur = 0;
-    });
-  }
+function gameOver() {
+  gameActive = false;
+  menu.style.display = "block";
+  const best = localStorage.getItem("bestNeon") || 0;
+  if (score > best) localStorage.setItem("bestNeon", score);
+  bestEl.innerText = Math.max(score, best);
+  menu.innerHTML = `
+    <h1 style="color:#ff0055">CRASH!</h1>
+    <p>Sua pontuação: ${Math.floor(score)}</p>
+    <button class="btn" onclick="startGame()">REPARAR E VOLTAR</button>
+  `;
+}
 
-  function drawPowerups() {
-    powerups.forEach(p => {
-      ctx.fillStyle = p.type === "shield" ? "#00ffff" : p.type === "turbo" ? "#ff00ff" : "#ffff00";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    });
-  }
+function update() {
+  if (!gameActive) return;
 
-  function updateGame() {
-    if (gameOverFlag) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawBackground();
+  ctx.shadowBlur = 0;
+  // Limpeza com rastro (Motion Blur)
+  ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+  ctx.fillRect(0, 0, w, h);
 
-    // Física
-    bird.velocity += gravity;
-    bird.velocity *= 0.97;
-    bird.y += bird.velocity;
-    bird.boost *= 0.9;
+  // Interpolação suave do movimento do jogador
+  playerAngle += (targetAngle - playerAngle) * 0.1;
 
-    // Pássaro pulsa
-    bird.size = 16 + Math.sin(frame / 10) * 2;
-
-    drawBird();
-
-    if (frame % 100 === 0) {
-      const top = Math.random() * (canvas.height / 2) + 50;
-      const gap = 160 - Math.min(score / 30, 70);
-      const move = (Math.random() - 0.5) * 2;
-      obstacles.push({ x: canvas.width, y: 0, w: 45, h: top, dy: move });
-      obstacles.push({ x: canvas.width, y: top + gap, w: 45, h: canvas.height - top - gap, dy: -move });
-    }
-
-    // Power-ups ocasionais
-    if (frame % 800 === 0) {
-      const types = ["shield", "turbo", "slow"];
-      const type = types[Math.floor(Math.random() * types.length)];
-      powerups.push({ x: canvas.width, y: Math.random() * (canvas.height - 100) + 50, type });
-    }
-
-    obstacles.forEach(obs => {
-      obs.x -= speed;
-      obs.y += obs.dy * Math.sin(frame / 60);
-    });
-    powerups.forEach(p => p.x -= speed);
-
-    obstacles = obstacles.filter(obs => obs.x + obs.w > 0);
-    powerups = powerups.filter(p => p.x > -20);
-
-    drawObstacles();
-    drawPowerups();
-
-    // Colisões
-    if (
-      obstacles.some(obs =>
-        bird.x + bird.size > obs.x &&
-        bird.x - bird.size < obs.x + obs.w &&
-        bird.y + bird.size > obs.y &&
-        bird.y - bird.size < obs.y + obs.h
-      )
-    ) {
-      if (bird.shield) {
-        bird.shield = false;
-        powerSound.play();
-      } else gameOver();
-    }
-
-    // Power-up coleta
-    powerups.forEach((p, i) => {
-      const dist = Math.hypot(bird.x - p.x, bird.y - p.y);
-      if (dist < 20) {
-        powerSound.play();
-        if (p.type === "shield") bird.shield = true;
-        if (p.type === "turbo") { speed *= 1.5; setTimeout(() => speed /= 1.5, 3000); }
-        if (p.type === "slow") { gravity *= 0.5; setTimeout(() => gravity *= 2, 3000); }
-        powerups.splice(i, 1);
-      }
-    });
-
-    // Bordas
-    if (bird.y + bird.size > canvas.height || bird.y - bird.size < 0) gameOver();
-
-    // HUD
-    ctx.fillStyle = "#00ffcc";
-    ctx.font = `${canvas.width / 20}px Orbitron`;
-    ctx.fillText(`Score: ${score}`, 20, 60);
-    ctx.fillText(`Recorde: ${bestScore}`, 20, 100);
-    ctx.font = "20px Orbitron";
-    ctx.fillText(`Dash: ${bird.dash}`, 20, 140);
-    if (bird.shield) ctx.fillText(`🛡️`, 150, 140);
-
-    score++;
-    frame++;
-    speed = 4 + Math.min(score / 200, 6);
-    gravity = 0.4 + Math.min(score / 1000, 0.4);
-    requestAnimationFrame(updateGame);
-  }
-
-  function jumpBird() {
-    if (gameOverFlag) return;
-    if (bird.velocity > jump / 1.5) {
-      bird.velocity = jump;
-      bird.boost = 4;
-      jumpSound.currentTime = 0;
-      jumpSound.play();
-    }
-  }
-
-  function dashBird() {
-    if (!gameOverFlag && bird.dash > 0) {
-      bird.velocity = jump * 1.5;
-      bird.boost = 8;
-      bird.dash--;
-      jumpSound.play();
-    }
-  }
-
-  function gameOver() {
-    gameOverFlag = true;
-    hitSound.play();
-    bgMusic.pause();
-    if (score > bestScore) localStorage.setItem("bestScore", score);
-    setTimeout(() => {
-      menu.innerHTML = `<p style="font-size:1.4em;">💀 GAME OVER 💀<br><br>Score: <b>${score}</b><br>Recorde: <b>${Math.max(score, bestScore)}</b></p>
-                        <button class="btn" id="restartBtn">🔁 Jogar Novamente</button>`;
-      menu.style.display = "flex";
-      document.getElementById("restartBtn").onclick = startGame;
-    }, 800);
-  }
-
-  function startGame() {
-    resetGame();
-    menu.style.display = "none";
-    bgMusic.play();
-    updateGame();
-  }
-
-  window.addEventListener("keydown", e => {
-    if (e.code === "Space") jumpBird();
-    if (e.code === "ArrowUp") dashBird();
+  // Desenha Partículas
+  particles.forEach(p => {
+    p.update();
+    p.draw();
   });
-  window.addEventListener("touchstart", jumpBird);
-  startBtn.onclick = startGame;
 
-  resetGame();
-  </script>
+  // Gerencia Obstáculos
+  if (frame % Math.max(10, 40 - Math.floor(score/100)) === 0) {
+    obstacles.push(new Obstacle());
+  }
+
+  obstacles.forEach((obs, index) => {
+    obs.update();
+    obs.draw();
+    
+    if (checkCollision(obs)) gameOver();
+
+    if (obs.z <= 0) {
+      obstacles.splice(index, 1);
+      score += 10;
+    }
+  });
+
+  // Desenha o "Pássaro" (Nave Neon)
+  let pX = centerX + Math.cos(playerAngle) * 150;
+  let pY = centerY + Math.sin(playerAngle) * 150;
+
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = "#00ffcc";
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(pX, pY, 12, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Score UI
+  score += 0.1;
+  scoreEl.innerText = Math.floor(score);
+  
+  frame++;
+  speed = 0.05 + (score / 10000);
+  requestAnimationFrame(update);
+}
+
+function startGame() {
+  score = 0;
+  frame = 0;
+  obstacles = [];
+  gameActive = true;
+  menu.style.display = "none";
+  bestEl.innerText = localStorage.getItem("bestNeon") || 0;
+  update();
+}
+
+document.getElementById("startBtn").onclick = startGame;
+</script>
 </body>
 </html>
