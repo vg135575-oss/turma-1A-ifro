@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mine Mobile Pro</title>
+    <link rel="stylesheet" href="Mine.css">
+</head>
+<body>
+
+    <div id="crosshair">+</div>
+
+    <div id="ui-overlay">
+        <div id="dpad">
+            <div class="dbtn" id="btn-up">▲</div>
+            <div class="dpad-horizontal">
+                <div class="dbtn" id="btn-left">◀</div>
+                <div class="dbtn" id="btn-right">▶</div>
+            </div>
+            <div class="dbtn" id="btn-down">▼</div>
+        </div>
+
+        <div id="action-btns">
+            <div class="action-row">
+                <div class="act-btn" id="btn-break">M</div>
+                <div class="act-btn" id="btn-place">P</div>
+            </div>
+            <div id="btn-jump">PULO</div>
+        </div>
+    </div>
+
+    <div id="hotbar">
+        <div class="slot selected" data-block="none">✋</div>
+        <div class="slot" data-block="grass">🌿</div>
+        <div class="slot" data-block="dirt">🟫</div>
+        <div class="slot" data-block="stone">🪨</div>
+        <div class="slot" data-block="wood">🪵</div>
+        <div class="slot" data-block="leaf">🍃</div>
+    </div>
+
+    <div id="game-container"></div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+    </script>
+
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
