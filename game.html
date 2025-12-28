@@ -1,281 +1,219 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEON VORTEX 3D | Cyber Runner</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBER DRIFT 2077 | Neon Ultra</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Orbitron', sans-serif;
-      background: #000;
-      color: #fff;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      margin: 0; padding: 0; overflow: hidden;
+      background: #000; font-family: 'Orbitron', sans-serif;
     }
-    #game-container { position: relative; width: 100vw; height: 100vh; }
-    canvas { width: 100%; height: 100%; display: block; }
+    #ui {
+      position: absolute; top: 20px; left: 0; width: 100%;
+      display: flex; justify-content: space-around;
+      pointer-events: none; color: #0ff; text-shadow: 0 0 10px #0ff;
+    }
+    .stat { background: rgba(0,0,0,0.5); padding: 10px 20px; border: 1px solid #0ff; }
     
-    .ui-layer {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 30px;
+    #overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 10;
     }
-
-    .stats { display: flex; justify-content: space-between; pointer-events: auto; }
-    .stat-box { 
-      background: rgba(0, 255, 200, 0.1); 
-      padding: 15px 25px; 
-      border-left: 5px solid #00ffcc;
-      backdrop-filter: blur(5px);
-    }
-    .score-val { font-size: 2em; font-weight: 900; color: #00ffcc; text-shadow: 0 0 15px #00ffcc; }
-
-    .overlay {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-      background: rgba(0,0,0,0.9);
-      padding: 50px;
-      border: 1px solid #00ffcc;
-      box-shadow: 0 0 50px rgba(0,255,204,0.3);
-      pointer-events: auto;
-      border-radius: 10px;
-    }
-
+    h1 { color: #0ff; font-size: 4em; margin: 0; text-shadow: 0 0 30px #0ff; letter-spacing: 10px; }
     .btn {
-      background: transparent;
-      color: #00ffcc;
-      border: 2px solid #00ffcc;
-      padding: 15px 40px;
-      font-family: 'Orbitron';
-      font-size: 1.2em;
-      cursor: pointer;
-      margin-top: 20px;
-      transition: 0.3s;
+      background: transparent; color: #0ff; border: 2px solid #0ff;
+      padding: 15px 40px; font-size: 1.5em; cursor: pointer; margin-top: 30px;
+      font-family: 'Orbitron'; transition: 0.3s;
     }
-    .btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 30px #00ffcc; }
-    
-    #tutorial { font-size: 0.8em; color: #666; margin-top: 15px; }
+    .btn:hover { background: #0ff; color: #000; box-shadow: 0 0 50px #0ff; }
   </style>
 </head>
 <body>
 
-<div id="game-container">
-  <canvas id="c"></canvas>
-  
-  <div class="ui-layer">
-    <div class="stats">
-      <div class="stat-box">
-        <div>SCORE</div>
-        <div id="score" class="score-val">0</div>
-      </div>
-      <div class="stat-box" style="border-left-color: #ff00ff;">
-        <div>BEST</div>
-        <div id="best" class="score-val" style="color: #ff00ff;">0</div>
-      </div>
-    </div>
-  </div>
-
-  <div id="menu" class="overlay">
-    <h1 style="font-size: 3em; margin-bottom: 10px; letter-spacing: 5px;">NEON VORTEX</h1>
-    <p>Sobreviva ao túnel hiperespacial</p>
-    <button class="btn" id="startBtn">INICIAR SALTO</button>
-    <div id="tutorial">Use MOUSE ou TOQUE para girar no túnel</div>
-  </div>
+<div id="ui">
+  <div class="stat">SCORE: <span id="scoreVal">0</span></div>
+  <div class="stat">BEST: <span id="bestVal">0</span></div>
 </div>
 
-<script>
-/** @type {HTMLCanvasElement} */
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
-const scoreEl = document.getElementById("score");
-const bestEl = document.getElementById("best");
-const menu = document.getElementById("menu");
+<div id="overlay">
+  <h1 id="title">CYBER DRIFT</h1>
+  <p style="color: #f0f;">Sobreviva à rodovia de néon</p>
+  <button class="btn" onclick="startGame()">INICIAR ENGINE</button>
+  <p style="color: #666; margin-top: 20px;">Use o MOUSE ou TOQUE para deslizar</p>
+</div>
 
-let w, h, centerX, centerY;
-let score = 0, gameActive = false, frame = 0;
-let obstacles = [], particles = [];
-let playerAngle = 0, targetAngle = 0;
-let speed = 0.05, tunnelZ = 0;
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const scoreDisplay = document.getElementById('scoreVal');
+const bestDisplay = document.getElementById('bestVal');
+const overlay = document.getElementById('overlay');
+
+let w, h, player, obstacles, particles, score, gameActive, speed, frame;
 
 function resize() {
   w = canvas.width = window.innerWidth;
   h = canvas.height = window.innerHeight;
-  centerX = w / 2;
-  centerY = h / 2;
 }
-window.addEventListener("resize", resize);
+window.addEventListener('resize', resize);
 resize();
 
-// Mouse/Touch Control
-window.addEventListener("mousemove", (e) => {
-  targetAngle = (e.clientX / w) * Math.PI * 2;
-});
-window.addEventListener("touchmove", (e) => {
-  targetAngle = (e.touches[0].clientX / w) * Math.PI * 2;
-});
+// Gerenciamento de recorde
+let bestScore = localStorage.getItem('bestDrift') || 0;
+bestDisplay.innerText = bestScore;
+
+function startGame() {
+  player = { x: w/2, targetX: w/2, y: h * 0.8, size: 20 };
+  obstacles = [];
+  particles = [];
+  score = 0;
+  speed = 8;
+  frame = 0;
+  gameActive = true;
+  overlay.style.display = 'none';
+  animate();
+}
+
+// Controles
+window.addEventListener('mousemove', (e) => player.targetX = e.clientX);
+window.addEventListener('touchmove', (e) => {
+  player.targetX = e.touches[0].clientX;
+  e.preventDefault();
+}, {passive: false});
 
 class Obstacle {
   constructor() {
-    this.z = 100; // Distância (100 = longe, 0 = colisão)
-    this.angle = Math.random() * Math.PI * 2;
-    this.width = Math.PI * 0.5; // Tamanho do arco do obstáculo
-    this.color = `hsl(${Math.random() * 360}, 100%, 60%)`;
+    this.lane = Math.floor(Math.random() * 5) - 2; // -2 a 2
+    this.z = 1000; // Distância inicial
+    this.w = 150;
+    this.h = 40;
+    this.color = Math.random() > 0.5 ? '#0ff' : '#f0f';
   }
 
   update() {
-    this.z -= speed * 40; // Aproxima-se do jogador
+    this.z -= speed;
   }
 
   draw() {
-    let scale = 1000 / (this.z + 1);
-    let x = centerX;
-    let y = centerY;
-    let radius = scale * 0.5;
+    const scale = 400 / (this.z + 1);
+    const x = w/2 + (this.lane * 200 * scale);
+    const y = h/2 + (200 * scale);
+    const drawW = this.w * scale;
+    const drawH = this.h * scale;
 
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 10 * (scale / 50);
-    ctx.beginPath();
-    ctx.arc(x, y, radius, this.angle, this.angle + this.width);
-    ctx.stroke();
-
-    // Glow effect
-    ctx.shadowBlur = 15;
+    ctx.fillStyle = this.color;
+    ctx.shadowBlur = 20 * scale;
     ctx.shadowColor = this.color;
-  }
-}
-
-class Particle {
-  constructor() {
-    this.reset();
-  }
-  reset() {
-    this.x = (Math.random() - 0.5) * w * 2;
-    this.y = (Math.random() - 0.5) * h * 2;
-    this.z = Math.random() * 100;
-    this.o = Math.random();
-  }
-  update() {
-    this.z -= speed * 50;
-    if (this.z <= 0) this.reset();
-  }
-  draw() {
-    let scale = 1000 / (this.z + 1);
-    let px = centerX + this.x * (scale / 100);
-    let py = centerY + this.y * (scale / 100);
-    ctx.fillStyle = `rgba(0, 255, 204, ${this.o})`;
-    ctx.fillRect(px, py, scale/100, scale/100);
-  }
-}
-
-// Inicializa partículas de fundo
-for(let i=0; i<200; i++) particles.push(new Particle());
-
-function checkCollision(obs) {
-  if (obs.z < 5 && obs.z > 0) {
-    // Normaliza ângulos
-    let pA = playerAngle % (Math.PI * 2);
-    let oAStart = obs.angle % (Math.PI * 2);
-    let oAEnd = (obs.angle + obs.width) % (Math.PI * 2);
-
-    // Simplificação de colisão de arco
-    if (oAStart < oAEnd) {
-        if (pA > oAStart && pA < oAEnd) return true;
-    } else {
-        if (pA > oAStart || pA < oAEnd) return true;
+    ctx.fillRect(x - drawW/2, y - drawH/2, drawW, drawH);
+    
+    // Detecção de colisão (quando z está perto de 0)
+    if (this.z < 20 && this.z > -20) {
+      const playerPos = (player.x - w/2) / (200 * (400 / 21)); // Normalização aproximada
+      const obsLanePos = this.lane;
+      
+      // Checagem simplificada de proximidade
+      const dist = Math.abs((player.x - x));
+      if (dist < drawW/2 + player.size) {
+        endGame();
+      }
     }
   }
-  return false;
 }
 
-function gameOver() {
-  gameActive = false;
-  menu.style.display = "block";
-  const best = localStorage.getItem("bestNeon") || 0;
-  if (score > best) localStorage.setItem("bestNeon", score);
-  bestEl.innerText = Math.max(score, best);
-  menu.innerHTML = `
-    <h1 style="color:#ff0055">CRASH!</h1>
-    <p>Sua pontuação: ${Math.floor(score)}</p>
-    <button class="btn" onclick="startGame()">REPARAR E VOLTAR</button>
-  `;
-}
-
-function update() {
-  if (!gameActive) return;
-
+function drawGrid() {
+  ctx.strokeStyle = '#044';
+  ctx.lineWidth = 1;
   ctx.shadowBlur = 0;
-  // Limpeza com rastro (Motion Blur)
-  ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-  ctx.fillRect(0, 0, w, h);
-
-  // Interpolação suave do movimento do jogador
-  playerAngle += (targetAngle - playerAngle) * 0.1;
-
-  // Desenha Partículas
-  particles.forEach(p => {
-    p.update();
-    p.draw();
-  });
-
-  // Gerencia Obstáculos
-  if (frame % Math.max(10, 40 - Math.floor(score/100)) === 0) {
-    obstacles.push(new Obstacle());
+  
+  const offset = (frame * speed) % 100;
+  
+  // Linhas horizontais (profundidade)
+  for (let i = 0; i < 20; i++) {
+    const z = i * 50 - offset;
+    if (z <= 0) continue;
+    const scale = 400 / z;
+    const y = h/2 + (200 * scale);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
   }
 
-  obstacles.forEach((obs, index) => {
+  // Linhas verticais (perspectiva)
+  for (let i = -10; i <= 10; i++) {
+    const xStart = w/2;
+    const yStart = h/2;
+    const xEnd = w/2 + i * 500;
+    const yEnd = h;
+    ctx.beginPath();
+    ctx.moveTo(xStart, yStart);
+    ctx.lineTo(xEnd, yEnd);
+    ctx.stroke();
+  }
+}
+
+function endGame() {
+  gameActive = false;
+  overlay.style.display = 'flex';
+  document.getElementById('title').innerText = "WASTED";
+  document.getElementById('title').style.color = "#f05";
+  if (score > bestScore) {
+    bestScore = Math.floor(score);
+    localStorage.setItem('bestDrift', bestScore);
+    bestDisplay.innerText = bestScore;
+  }
+}
+
+function animate() {
+  if (!gameActive) return;
+
+  // Background
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+
+  drawGrid();
+
+  // Movimento Suave do Jogador
+  player.x += (player.targetX - player.x) * 0.15;
+
+  // Gerar Obstáculos
+  if (frame % 30 === 0) obstacles.push(new Obstacle());
+
+  // Atualizar Obstáculos
+  obstacles.forEach((obs, i) => {
     obs.update();
     obs.draw();
-    
-    if (checkCollision(obs)) gameOver();
-
-    if (obs.z <= 0) {
-      obstacles.splice(index, 1);
+    if (obs.z < -100) {
+      obstacles.splice(i, 1);
       score += 10;
     }
   });
 
-  // Desenha o "Pássaro" (Nave Neon)
-  let pX = centerX + Math.cos(playerAngle) * 150;
-  let pY = centerY + Math.sin(playerAngle) * 150;
-
-  ctx.shadowBlur = 20;
-  ctx.shadowColor = "#00ffcc";
-  ctx.fillStyle = "#fff";
+  // Desenhar Jogador (Nave)
+  ctx.shadowBlur = 25;
+  ctx.shadowColor = '#0ff';
+  ctx.fillStyle = '#fff';
   ctx.beginPath();
-  ctx.arc(pX, pY, 12, 0, Math.PI * 2);
+  ctx.moveTo(player.x, player.y - 20);
+  ctx.lineTo(player.x - 25, player.y + 20);
+  ctx.lineTo(player.x + 25, player.y + 20);
+  ctx.closePath();
   ctx.fill();
 
-  // Score UI
+  // HUD
   score += 0.1;
-  scoreEl.innerText = Math.floor(score);
-  
+  scoreDisplay.innerText = Math.floor(score);
+  speed += 0.002;
   frame++;
-  speed = 0.05 + (score / 10000);
-  requestAnimationFrame(update);
+
+  requestAnimationFrame(animate);
 }
 
-function startGame() {
-  score = 0;
-  frame = 0;
-  obstacles = [];
-  gameActive = true;
-  menu.style.display = "none";
-  bestEl.innerText = localStorage.getItem("bestNeon") || 0;
-  update();
-}
-
-document.getElementById("startBtn").onclick = startGame;
 </script>
 </body>
 </html>
