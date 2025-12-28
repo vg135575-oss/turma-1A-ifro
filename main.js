@@ -56,7 +56,7 @@ function addBlock(x, y, z, type) {
     blocks.push(b);
 }
 
-// Chão inicial maior para testar
+// Chão inicial
 for(let x = -8; x < 8; x++) {
     for(let z = -8; z < 8; z++) {
         addBlock(x, 0, z, 'grass');
@@ -98,7 +98,7 @@ function bindBtn(id, key) {
     if(!el) return;
 
     if (key === 'shift') {
-        // Toggle Sneak: Clica uma vez e fica ativo
+        // Toggle Sneak
         el.onpointerdown = e => {
             e.stopPropagation();
             input.shift = !input.shift;
@@ -121,7 +121,6 @@ document.getElementById('btn-jump').onpointerdown = e => {
     if(onGround) velocityY = 0.22; 
 };
 
-// Selecionar blocos na hotbar
 document.querySelectorAll('.slot').forEach(slot => {
     slot.onpointerdown = e => {
         e.stopPropagation();
@@ -131,7 +130,6 @@ document.querySelectorAll('.slot').forEach(slot => {
     };
 });
 
-// Movimento da câmara e cliques no ecrã
 window.addEventListener('pointerdown', e => {
     if (e.target.closest('.mc-btn') || e.target.closest('.slot')) return;
     if (e.clientX > window.innerWidth / 2) {
@@ -155,8 +153,8 @@ window.addEventListener('pointerup', e => {
     if (e.pointerId === lookId) {
         if (!isMovingFinger) {
             const duration = Date.now() - touchStartTime;
-            if (duration < 250) handleAction(true); // Toque rápido: Coloca
-            else handleAction(false);              // Toque longo: Quebra
+            if (duration < 250) handleAction(true); 
+            else handleAction(false); 
         }
         lookId = null;
     }
@@ -166,13 +164,23 @@ window.addEventListener('pointerup', e => {
 let velocityY = 0, onGround = false, currentHeight = 1.8;
 camera.position.set(0, 5, 5);
 
-// [CORREÇÃO] Verificação rigorosa do chão
-// < 0.5 significa que o centro do jogador tem de estar ESTRITAMENTE dentro do bloco.
+// VERIFICA SE ESTÁ NO CHÃO (Para Sneak)
+// Usei 0.45 para garantir que não chegas nem perto da borda
 function hasFloorAt(x, z) {
     for (const b of blocks) {
-        // Se a distância for maior que 0.5, já estás fora da borda
-        if (Math.abs(b.position.x - x) < 0.5 && Math.abs(b.position.z - z) < 0.5) {
+        if (Math.abs(b.position.x - x) < 0.45 && Math.abs(b.position.z - z) < 0.45) {
             if (b.position.y < camera.position.y - 0.5) return true;
+        }
+    }
+    return false;
+}
+
+// COLISÃO COM PAREDES (Não atravessar blocos)
+function checkWallCollision(x, y, z) {
+    for (const b of blocks) {
+        if (Math.abs(b.position.x - x) < 0.3 && Math.abs(b.position.z - z) < 0.3) {
+            // Verifica se o bloco está na altura do corpo (cabeça ou pés)
+            if (y > b.position.y - 1.5 && y < b.position.y + 1.2) return true;
         }
     }
     return false;
@@ -188,12 +196,16 @@ function animate() {
     const direction = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     direction.applyEuler(new THREE.Euler(0, yaw, 0));
     
+    // Calcula próxima posição
     let nextX = camera.position.x + direction.x * moveSpeed;
     let nextZ = camera.position.z + direction.z * moveSpeed;
 
-    // LÓGICA DE BORDA:
-    // Se o Sneak estiver ativo E estiveres no chão, ele verifica se o PRÓXIMO passo tem chão.
-    // Se não tiver, ele CANCELA o movimento naquele eixo.
+    // 1. COLISÃO COM PAREDES (Impede de entrar em blocos)
+    if (checkWallCollision(nextX, camera.position.y, camera.position.z)) nextX = camera.position.x;
+    if (checkWallCollision(camera.position.x, camera.position.y, nextZ)) nextZ = camera.position.z;
+
+    // 2. LÓGICA DE BORDA (EAGLE/SNEAK)
+    // Se estiver no chão e com shift, verifica se vai cair
     if (input.shift && onGround) {
         if (!hasFloorAt(nextX, camera.position.z)) nextX = camera.position.x;
         if (!hasFloorAt(camera.position.x, nextZ)) nextZ = camera.position.z;
@@ -207,36 +219,19 @@ function animate() {
     camera.position.y += velocityY;
 
     // Colisão com o chão
-    let groundHeight = -10;
+    let groundHeight = -100;
     for (const b of blocks) {
+        // Área de detecção do pé
         if (Math.abs(b.position.x - camera.position.x) < 0.6 && Math.abs(b.position.z - camera.position.z) < 0.6) {
-            if (b.position.y < camera.position.y - 0.5) {
-                // Ajuste para ficar em cima do bloco corretamente
-                groundHeight = Math.max(groundHeight, b.position.y + 0.5 + currentHeight - 1.8);
-                // (Nota: esta fórmula de altura tenta compensar a posição do bloco)
-                // Se preferires a física antiga simples, usa: b.position.y + currentHeight
+            // Apenas blocos abaixo de nós
+            if (b.position.y <= camera.position.y) {
+                 groundHeight = Math.max(groundHeight, b.position.y + currentHeight);
             }
         }
     }
-    
-    // Simplificação para garantir que não afundas nem flutuas demais
-    // Assumindo que o centro do bloco é Y, o topo é Y+0.5
-    // Altura dos olhos é currentHeight (1.8) acima dos pés.
-    // Pés devem estar em groundHeight.
-    // Logo CameraY deve ser groundHeight
-    
-    // Vou reverter para a lógica simples que funcionava, mas ajustada
-    let simpleGroundY = -100;
-    for(const b of blocks) {
-         if (Math.abs(b.position.x - camera.position.x) < 0.6 && Math.abs(b.position.z - camera.position.z) < 0.6) {
-             if(b.position.y < camera.position.y) {
-                 simpleGroundY = Math.max(simpleGroundY, b.position.y + currentHeight);
-             }
-         }
-    }
 
-    if (camera.position.y <= simpleGroundY) {
-        camera.position.y = simpleGroundY;
+    if (camera.position.y <= groundHeight) {
+        camera.position.y = groundHeight;
         velocityY = 0;
         onGround = true;
     } else {
