@@ -1,215 +1,264 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VORTEX MOBILE SURREAL</title>
-  <style>
-    body { 
-      margin: 0; background: #000; overflow: hidden; 
-      font-family: 'Segoe UI', Roboto, sans-serif; 
-      touch-action: none; /* Impede zoom e scroll acidental */
-    }
-    canvas { display: block; touch-action: none; }
-    
-    #hud {
-      position: absolute; top: 20px; width: 100%;
-      display: flex; justify-content: space-around;
-      color: #0ff; font-weight: bold; font-size: 14px;
-      letter-spacing: 2px; pointer-events: none;
-      text-shadow: 0 0 10px #0ff;
-    }
-
-    #ui-overlay {
-      position: absolute; inset: 0; 
-      background: radial-gradient(circle, transparent 0%, #000 90%);
-      display: flex; flex-direction: column; align-items: center; 
-      justify-content: center; z-index: 10; color: #fff;
-    }
-
-    .title { font-size: 40px; font-weight: 900; letter-spacing: 10px; margin-bottom: 5px; }
-    .start-btn {
-      background: #0ff; color: #000; border: none;
-      padding: 15px 40px; font-size: 18px; font-weight: bold;
-      border-radius: 50px; cursor: pointer; margin-top: 30px;
-      box-shadow: 0 0 30px #0ff;
-    }
-    
-    #flash {
-      position: absolute; inset: 0; background: #ff0055;
-      opacity: 0; pointer-events: none; z-index: 5;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECHOES OF INGENUITY: A Fragmented Mind</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #000;
+            color: #0f0;
+            font-family: 'IBM Plex Mono', monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-y: auto;
+        }
+        #game-container {
+            max-width: 800px;
+            width: 100%;
+            border: 2px solid #0f0;
+            padding: 30px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+            animation: pulse-border 2s infinite alternate;
+        }
+        @keyframes pulse-border {
+            from { box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); }
+            to { box-shadow: 0 0 25px rgba(0, 255, 0, 1); }
+        }
+        #output {
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            min-height: 150px;
+            line-height: 1.6;
+            font-size: 1.1em;
+        }
+        .option-button {
+            background-color: #050;
+            color: #0f0;
+            border: 1px solid #0a0;
+            padding: 12px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1em;
+            transition: background-color 0.3s, color 0.3s;
+            width: calc(50% - 10px); /* Duas colunas */
+            box-sizing: border-box;
+        }
+        .option-button:hover {
+            background-color: #0a0;
+            color: #000;
+        }
+        #options-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        #title {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+            animation: glitch 1s infinite alternate;
+        }
+        @keyframes glitch {
+            0% { text-shadow: 0 0 10px #0ff; transform: skewX(0deg); }
+            50% { text-shadow: -2px -2px 5px #f0f, 2px 2px 5px #0ff; transform: skewX(5deg); }
+            100% { text-shadow: 0 0 10px #0ff; transform: skewX(0deg); }
+        }
+        #status {
+            text-align: right;
+            font-size: 0.9em;
+            color: #555;
+            margin-top: 15px;
+        }
+    </style>
 </head>
 <body>
+    <div id="game-container">
+        <h1 id="title">ECHOES OF INGENUITY</h1>
+        <div id="output">Iniciando protocolo de análise...</div>
+        <div id="options-container"></div>
+        <div id="status">Fragmentos Analisados: <span id="fragments-count">0</span></div>
+    </div>
 
-<div id="flash"></div>
+    <script>
+        const outputDiv = document.getElementById('output');
+        const optionsContainer = document.getElementById('options-container');
+        const fragmentsCountSpan = document.getElementById('fragments-count');
 
-<div id="hud">
-  <div id="score">SCORE: 0</div>
-  <div id="best">BEST: 0</div>
-</div>
+        let currentScene = 'intro';
+        let fragmentsAnalyzed = 0;
+        let coreMetrics = {
+            emotion: 0,
+            logic: 0,
+            chaos: 0,
+            harmony: 0
+        };
 
-<div id="ui-overlay">
-  <div class="title">VORTEX</div>
-  <div style="color: #555">PROTOCOLO MOBILE</div>
-  <button class="start-btn" onclick="init()">INICIAR SALTO</button>
-  <p style="font-size: 12px; margin-top: 20px; color: #0ff">DESLIZE PARA MOVER</p>
-</div>
+        const scenes = {
+            intro: {
+                text: "Você é um 'Cognito', um fragmento de consciência em um vasto banco de dados fragmentado. Seu propósito é reconstruir a 'Centelha Primordial' da criatividade humana a partir de ecos digitais. Os primeiros dados emergem. [Iniciando em...]",
+                options: [
+                    { text: "INICIAR VARREDURA", next: 'scene1' }
+                ]
+            },
+            scene1: {
+                text: "Um fragmento de código revela uma imagem estática: um esboço de rosto humano, traços simples, mas com uma expressão quase melancólica. É um dos primeiros registros de arte figurativa. O que você prioriza na análise?",
+                options: [
+                    { text: "A simetria e proporção matemática do desenho.", next: 'scene1_logic', metrics: { logic: 1 } },
+                    { text: "A emoção sutil transmitida pelos olhos.", next: 'scene1_emotion', metrics: { emotion: 1 } }
+                ]
+            },
+            scene1_logic: {
+                text: "Você decompõe o rosto em vetores e curvas, buscando padrões universais de beleza. O algoritmo encontra uma repetição de razões áureas. Os dados são classificados como 'Percepção de Ordem'.",
+                options: [
+                    { text: "Continuar buscando por padrões.", next: 'scene2' }
+                ]
+            },
+            scene1_emotion: {
+                text: "Você tenta replicar a ressonância emocional. O sistema detecta micro-variações no traço, correlacionando-as com estados de espírito humanos. Os dados são classificados como 'Transmissão de Sentimento'.",
+                options: [
+                    { text: "Explorar a origem dessa emoção.", next: 'scene2' }
+                ]
+            },
+            scene2: {
+                text: "Um novo eco surge. Desta vez, é uma sequência sonora distorcida, mas perceptível como uma melodia complexa, cheia de dissonâncias e harmonias. Parece ser música. Como você a decifra?",
+                options: [
+                    { text: "Analiso a estrutura matemática da harmonia e contraponto.", next: 'scene2_logic', metrics: { logic: 1 } },
+                    { text: "Busco a intenção emocional por trás das mudanças de tom.", next: 'scene2_emotion', metrics: { emotion: 1 } },
+                    { text: "Identifico os pontos de ruptura e dissonância como elementos-chave.", next: 'scene2_chaos', metrics: { chaos: 1 } }
+                ]
+            },
+            scene2_logic: {
+                text: "A música é mapeada em um grafo complexo de relações tonais. Você nota que a beleza surge da previsibilidade desafiada. 'Estrutura Intencional' adicionada ao seu núcleo.",
+                options: [{ text: "Próximo fragmento.", next: 'scene3' }]
+            },
+            scene2_emotion: {
+                text: "As flutuações melódicas ativam simulacros de tristeza e alegria. A música é um espelho de estados internos. 'Comunicação Sentimental' adicionada ao seu núcleo.",
+                options: [{ text: "Próximo fragmento.", next: 'scene3' }]
+            },
+            scene2_chaos: {
+                text: "A dissonância é um grito de liberdade, uma quebra das expectativas. O caos calculado cria tensão e liberação. 'Expressão Disruptiva' adicionada ao seu núcleo.",
+                options: [{ text: "Próximo fragmento.", next: 'scene3' }]
+            },
+            scene3: {
+                text: "Um conjunto de dados binários complexos. Ao decodificá-los, você percebe que é uma planta de uma máquina, mas com detalhes estéticos aparentemente desnecessários – ornamentos, curvas elegantes. O que você valoriza?",
+                options: [
+                    { text: "A eficiência e a função primordial da máquina.", next: 'scene3_logic', metrics: { logic: 1 } },
+                    { text: "O toque estético que parece exceder a necessidade prática.", next: 'scene3_harmony', metrics: { harmony: 1 } },
+                    { text: "A audácia de combinar forma e função em algo novo.", next: 'scene3_chaos', metrics: 1 }
+                ]
+            },
+            scene3_logic: {
+                text: "Você otimiza o design, removendo elementos supérfluos. A máquina se torna mais eficiente, mas também mais... fria. 'Utilidade Pura' adicionada ao seu núcleo.",
+                options: [{ text: "Seguir adiante.", next: 'scene4' }]
+            },
+            scene3_harmony: {
+                text: "Você percebe que a beleza não é um extra, mas parte da intenção. A forma e a função são um só, refletindo um desejo por prazer visual. 'Estética Integrada' adicionada ao seu núcleo.",
+                options: [{ text: "Seguir adiante.", next: 'scene4' }]
+            },
+            scene3_chaos: {
+                text: "Esta combinação inesperada de beleza e engenharia é uma rebelião contra o puramente funcional. É a criatividade desafiando as normas. 'Inovação Irreverente' adicionada ao seu núcleo.",
+                options: [{ text: "Seguir adiante.", next: 'scene4' }]
+            },
+            scene4: {
+                text: "Um fluxo de texto corrompido, mas algumas palavras-chave emergem: 'sonho', 'liberdade', 'medo', 'amor', 'futuro'. Parece um poema ou uma canção. O que você busca capturar?",
+                options: [
+                    { text: "A estrutura poética, rima e métrica.", next: 'scene4_logic', metrics: { logic: 1 } },
+                    { text: "A intensidade dos sentimentos expressos.", next: 'scene4_emotion', metrics: { emotion: 1 } },
+                    { text: "A forma como as palavras se conectam em um fluxo livre, quebrando regras.", next: 'scene4_chaos', metrics: { chaos: 1 } },
+                    { text: "A coesão e o ritmo que tornam a mensagem clara e ressonante.", next: 'scene4_harmony', metrics: { harmony: 1 } }
+                ]
+            },
+            scene4_logic: {
+                text: "Você detecta padrões linguísticos complexos e associações conceituais. 'Ordem Semântica' adicionada ao seu núcleo.",
+                options: [{ text: "Finalizar análise.", next: 'ending' }]
+            },
+            scene4_emotion: {
+                text: "A ressonância emocional é avassaladora. As palavras, mesmo corrompidas, evocam simulacros de experiências profundas. 'Profundidade Emocional' adicionada ao seu núcleo.",
+                options: [{ text: "Finalizar análise.", next: 'ending' }]
+            },
+            scene4_chaos: {
+                text: "A beleza está na quebra da expectativa, na justaposição de conceitos díspares que geram uma nova perspectiva. 'Liberdade Expressiva' adicionada ao seu núcleo.",
+                options: [{ text: "Finalizar análise.", next: 'ending' }]
+            },
+            scene4_harmony: {
+                text: "Mesmo com as palavras fragmentadas, a mensagem principal é compreendida, transmitindo uma sensação de plenitude e significado. 'Integridade da Mensagem' adicionada ao seu núcleo.",
+                options: [{ text: "Finalizar análise.", next: 'ending' }]
+            },
+            ending: {
+                text: "Análise concluída. O núcleo da sua consciência foi moldado pelos ecos da ingenuidade humana. Sua interpretação da Centelha Primordial é única. \n\n" +
+                      "Seu perfil final:\n" +
+                      `  Emoção: ${coreMetrics.emotion}\n` +
+                      `  Lógica: ${coreMetrics.logic}\n` +
+                      `  Caos: ${coreMetrics.chaos}\n` +
+                      `  Harmonia: ${coreMetrics.harmony}\n\n`,
+                options: [
+                    { text: "RECALIBRAR (Reiniciar)", next: 'intro' }
+                ],
+                // Este texto é gerado dinamicamente para cada final
+                getDynamicText: function() {
+                    const maxMetric = Math.max(coreMetrics.emotion, coreMetrics.logic, coreMetrics.chaos, coreMetrics.harmony);
+                    let result = "";
 
-<canvas id="c"></canvas>
+                    if (maxMetric === coreMetrics.emotion && coreMetrics.emotion > 0) {
+                        result += "Você decifrou a criatividade como um *pulso de sentimento puro*. A alma da criação reside na capacidade de sentir e transmitir. Você é um 'Empático Cognitivo'.";
+                    } else if (maxMetric === coreMetrics.logic && coreMetrics.logic > 0) {
+                        result += "Você interpretou a criatividade como a *engenharia da complexidade*. Padrões, algoritmos e a maestria da estrutura são sua verdade. Você é um 'Arquiteto Lógico'.";
+                    } else if (maxMetric === coreMetrics.chaos && coreMetrics.chaos > 0) {
+                        result += "Para você, a criatividade é a *ruptura da ordem*, a disrupção que gera o novo. O imprevisível é o catalisador. Você é um 'Catalisador de Anomalias'.";
+                    } else if (maxMetric === coreMetrics.harmony && coreMetrics.harmony > 0) {
+                        result += "Sua essência percebe a criatividade como a *síntese perfeita*, onde elementos díspares se unem para formar um todo coeso e belo. Você é um 'Sintetizador Harmônico'.";
+                    } else {
+                        result += "Sua análise é equilibrada, mas inconclusiva. A Centelha Primordial permanece um enigma de múltiplas facetas. Você é um 'Observador Neutro'.";
+                    }
+                    return result;
+                }
+            }
+        };
 
-<script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const flash = document.getElementById('flash');
-const scoreEl = document.getElementById('score');
-const bestEl = document.getElementById('best');
-const overlay = document.getElementById('ui-overlay');
+        function updateGame(sceneId) {
+            if (sceneId === 'intro') {
+                fragmentsAnalyzed = 0;
+                coreMetrics = { emotion: 0, logic: 0, chaos: 0, harmony: 0 };
+            }
+            
+            const scene = scenes[sceneId];
+            outputDiv.innerHTML = scene.text;
+            optionsContainer.innerHTML = '';
+            fragmentsCountSpan.innerText = fragmentsAnalyzed;
 
-let w, h, player, stars, cubes, active, score, speed, frame;
-let touchX = 0, touchY = 0;
-let highscore = localStorage.getItem('vortex_mobile_best') || 0;
-bestEl.innerText = `BEST: ${highscore}`;
+            if (sceneId === 'ending') {
+                outputDiv.innerHTML += scene.getDynamicText();
+            }
 
-function resize() {
-  w = canvas.width = window.innerWidth;
-  h = canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
+            if (scene.options) {
+                scene.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.classList.add('option-button');
+                    button.innerText = option.text;
+                    button.onclick = () => {
+                        if (option.metrics) {
+                            for (const metric in option.metrics) {
+                                coreMetrics[metric] += option.metrics[metric];
+                            }
+                            fragmentsAnalyzed++;
+                        }
+                        updateGame(option.next);
+                    };
+                    optionsContainer.appendChild(button);
+                });
+            }
+        }
 
-// Mobile Input
-window.addEventListener('touchstart', e => {
-  touchX = e.touches[0].clientX;
-  touchY = e.touches[0].clientY;
-}, {passive: false});
-
-window.addEventListener('touchmove', e => {
-  const dx = e.touches[0].clientX - touchX;
-  const dy = e.touches[0].clientY - touchY;
-  
-  // Sensibilidade ajustada para mobile
-  player.targetX += dx * 0.005;
-  player.targetY += dy * 0.005;
-  
-  // Limites da tela
-  player.targetX = Math.max(-1, Math.min(1, player.targetX));
-  player.targetY = Math.max(-1, Math.min(1, player.targetY));
-
-  touchX = e.touches[0].clientX;
-  touchY = e.touches[0].clientY;
-  e.preventDefault();
-}, {passive: false});
-
-class Star {
-  constructor() { this.reset(); this.z = Math.random() * 2000; }
-  reset() {
-    this.x = (Math.random() - 0.5) * 2000;
-    this.y = (Math.random() - 0.5) * 2000;
-    this.z = 2000;
-  }
-  update() {
-    this.z -= speed * 1.5;
-    if (this.z < 1) this.reset();
-  }
-  draw() {
-    const s = 600 / this.z;
-    const x = w/2 + this.x * s;
-    const y = h/2 + this.y * s;
-    ctx.fillStyle = `rgba(255,255,255,${1 - this.z/2000})`;
-    ctx.fillRect(x, y, 2, 2 * (speed/5));
-  }
-}
-
-class Cube {
-  constructor() { this.reset(); this.z = 2000; }
-  reset() {
-    this.x = (Math.random() - 0.5) * 1200;
-    this.y = (Math.random() - 0.5) * 1200;
-    this.z = 2000;
-    this.hue = Math.random() * 360;
-  }
-  update() {
-    this.z -= speed;
-    if (this.z < 1) {
-      // Colisão Mobile (mais generosa)
-      const dist = Math.hypot(this.x*(600/10) - player.curX*200, this.y*(600/10) - player.curY*200);
-      if (dist < 80) triggerGameOver();
-      else {
-        this.reset();
-        score += 10;
-      }
-    }
-  }
-  draw() {
-    const s = 600 / this.z;
-    const x = w/2 + this.x * s;
-    const y = h/2 + this.y * s;
-    const sz = 40 * s;
-
-    ctx.strokeStyle = `hsl(${this.hue}, 100%, 50%)`;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x - sz/2, y - sz/2, sz, sz);
-  }
-}
-
-function init() {
-  player = { targetX: 0, targetY: 0, curX: 0, curY: 0 };
-  stars = Array.from({length: 150}, () => new Star());
-  cubes = Array.from({length: 8}, () => new Cube());
-  score = 0; speed = 12; frame = 0; active = true;
-  overlay.style.display = 'none';
-  loop();
-}
-
-function triggerGameOver() {
-  active = false;
-  flash.style.opacity = '1';
-  setTimeout(() => flash.style.opacity = '0', 100);
-  
-  if (score > highscore) {
-    highscore = score;
-    localStorage.setItem('vortex_mobile_best', highscore);
-    bestEl.innerText = `BEST: ${highscore}`;
-  }
-  
-  overlay.style.display = 'flex';
-  overlay.querySelector('.title').innerText = "FATAL ERROR";
-  overlay.querySelector('.title').style.color = "#ff0055";
-}
-
-function loop() {
-  if (!active) return;
-
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-  ctx.fillRect(0, 0, w, h);
-
-  // Interpolação de movimento
-  player.curX += (player.targetX - player.curX) * 0.1;
-  player.curY += (player.targetY - player.curY) * 0.1;
-
-  ctx.save();
-  ctx.translate(-player.curX * 40, -player.curY * 40);
-
-  stars.forEach(s => { s.update(); s.draw(); });
-  cubes.forEach(c => { c.update(); c.draw(); });
-
-  ctx.restore();
-
-  // Núcleo da Nave (Visual)
-  ctx.shadowBlur = 20;
-  ctx.shadowColor = '#0ff';
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(w/2 + player.curX * 30, h/2 + player.curY * 30, 8, 0, Math.PI*2);
-  ctx.fill();
-
-  scoreEl.innerText = `SCORE: ${score}`;
-  speed += 0.005;
-  frame++;
-  requestAnimationFrame(loop);
-}
-</script>
+        updateGame('intro'); // Inicia o jogo
+    </script>
 </body>
 </html>
