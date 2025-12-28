@@ -1,36 +1,38 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Minecraft Mobile Pro</title>
-    <link rel="stylesheet" href="Mine.css">
+    <title>Minecraft Mobile Clone</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container"></div>
-    
-    <div id="ui">
-        <div class="crosshair">+</div>
-        
-        <div class="movement-controls">
-            <div id="btn-up" class="mc-btn">▲</div>
-            <div id="btn-left" class="mc-btn">◀</div>
-            <div id="btn-shift" class="mc-btn">●</div> <div id="btn-right" class="mc-btn">▶</div>
-            <div id="btn-down" class="mc-btn">▼</div>
-        </div>
 
-        <div class="action-buttons">
-            <div id="btn-jump" class="mc-btn jump-btn">PULO</div>
+    <div id="breaking-bar-container">
+        <div id="breaking-bar-progress"></div>
+    </div>
+
+    <div class="ui">
+        <div class="controls">
+            <button id="btn-up" class="mc-btn">↑</button>
+            <div class="side-btns">
+                <button id="btn-left" class="mc-btn">←</button>
+                <button id="btn-right" class="mc-btn">→</button>
+            </div>
+            <button id="btn-down" class="mc-btn">↓</button>
+        </div>
+        
+        <div class="action-btns">
+            <button id="btn-jump" class="mc-btn">Pular</button>
+            <button id="btn-shift" class="mc-btn">Sneak</button>
         </div>
 
         <div class="hotbar">
             <div class="slot selected" data-block="none">✋</div>
-
-            <div class="slot selected" data-block="stone"><img src="textures/stone.png"></div>
-            <div class="slot" data-block="grass"><img src="textures/grass_side.png"></div>
-            <div class="slot" data-block="dirt"><img src="textures/dirt.png"></div>
-            <div class="slot" data-block="wood"><img src="textures/wood.png"></div>
-            <div class="slot" data-block="leaf"><img src="textures/leaf.png"></div>
+            <div class="slot" data-block="stone">🪨</div>
+            <div class="slot" data-block="grass">🌿</div>
+            <div class="slot" data-block="wood">🪵</div>
         </div>
     </div>
 
