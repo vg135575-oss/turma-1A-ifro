@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// 1. CONFIGURAÇÃO BÁSICA
+// 1. CENA E RENDERER
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -34,12 +34,13 @@ function addBlock(x, y, z, type) {
     blocks.push(b);
 }
 
-// Criar plataforma de teste
+// Criar cenário de teste: uma plataforma alta e um degrau
 for(let x = -3; x <= 3; x++) {
     for(let z = -3; z <= 3; z++) {
-        addBlock(x, 0, z, 'grass');
+        addBlock(x, 0, z, 'grass'); // Chão base
     }
 }
+addBlock(0, 1, 0, 'stone'); // Um bloco solitário em cima para testar a borda de 1 de altura
 
 // 4. CONTROLES
 const input = { f: 0, b: 0, l: 0, r: 0, shift: false };
@@ -65,25 +66,27 @@ bindBtn('btn-left', 'l'); bindBtn('btn-right', 'r');
 bindBtn('btn-shift', 'shift');
 document.getElementById('btn-jump').onpointerdown = () => { if(onGround) velocityY = 0.2; };
 
-// 5. LÓGICA DE COLISÃO MELHORADA
-const PLAYER_RADIUS = 0.3; // Largura do jogador
+// 5. LÓGICA DE SNEAK REFEITA
+const PLAYER_RADIUS = 0.3; 
 
 function isFloorAt(x, z) {
-    const footY = camera.position.y - (input.shift ? 1.4 : 1.8);
+    // Pegamos a altura exata do bloco que estamos a pisar agora
+    const currentFootY = Math.round(camera.position.y - (input.shift ? 1.4 : 1.8));
+    
     for (const b of blocks) {
-        // Checa se o ponto (x, z) está dentro do quadrado do bloco (que vai de -0.5 a +0.5 do centro)
+        // Verifica se a coordenada (x,z) está dentro deste bloco
         if (x >= b.position.x - 0.5 && x <= b.position.x + 0.5 &&
             z >= b.position.z - 0.5 && z <= b.position.z + 0.5) {
-            // Checa se o bloco está logo abaixo
-            if (b.position.y < camera.position.y && b.position.y > footY - 0.5) return true;
+            
+            // [MUDANÇA CRÍTICA]: O bloco tem de estar exatamente na mesma altura 
+            // que o bloco onde começaste o movimento. Se estiver abaixo, o sneak trava.
+            if (Math.abs(b.position.y - currentFootY) < 0.1) return true;
         }
     }
     return false;
 }
 
-// Checa se o corpo do jogador caberia nessa posição (considerando sua largura)
 function canStandAt(x, z) {
-    // Para o Sneak, checamos se os 4 cantos da base do jogador ainda têm chão
     const points = [
         {x: x - PLAYER_RADIUS, z: z - PLAYER_RADIUS},
         {x: x + PLAYER_RADIUS, z: z - PLAYER_RADIUS},
@@ -91,7 +94,6 @@ function canStandAt(x, z) {
         {x: x + PLAYER_RADIUS, z: z + PLAYER_RADIUS}
     ];
     
-    // Se QUALQUER um dos cantos do pé sair do bloco, o Sneak deve travar
     for(let p of points) {
         if (!isFloorAt(p.x, p.z)) return false;
     }
@@ -110,11 +112,10 @@ function animate() {
     let nextZ = camera.position.z + direction.z * speed;
 
     if (input.shift && onGround) {
-        // Tenta mover no X: se o novo X fizer um dos cantos do pé ficar sem chão, cancela X.
+        // Checa X e Z de forma independente para permitir deslizar na borda
         if (!canStandAt(nextX, camera.position.z)) {
             nextX = camera.position.x;
         }
-        // Tenta mover no Z: se o novo Z fizer um dos cantos do pé ficar sem chão, cancela Z.
         if (!canStandAt(camera.position.x, nextZ)) {
             nextZ = camera.position.z;
         }
@@ -123,28 +124,34 @@ function animate() {
     camera.position.x = nextX;
     camera.position.z = nextZ;
 
-    // Gravidade e Colisão simples com chão
+    // Física de Gravidade e Colisão
     velocityY -= 0.01;
     camera.position.y += velocityY;
 
     onGround = false;
     let targetHeight = input.shift ? 1.4 : 1.8;
-    
+    let highestGround = -100;
+
     for(const b of blocks) {
         if (Math.abs(b.position.x - camera.position.x) < 0.7 && Math.abs(b.position.z - camera.position.z) < 0.7) {
             let topY = b.position.y + 0.5 + targetHeight;
-            if (camera.position.y <= topY && camera.position.y > b.position.y) {
-                camera.position.y = topY;
-                velocityY = 0;
+            // Se estivermos a cair e passarmos pelo topo de um bloco
+            if (camera.position.y <= topY + 0.1 && camera.position.y > b.position.y) {
+                highestGround = Math.max(highestGround, topY);
                 onGround = true;
             }
         }
     }
 
+    if (onGround) {
+        camera.position.y = highestGround;
+        velocityY = 0;
+    }
+
     renderer.render(scene, camera);
 }
 
-// Rotação da câmera
+// Visão
 window.addEventListener('pointermove', (e) => {
     if (e.buttons > 0 || e.pointerType === 'touch') {
         yaw -= e.movementX * 0.005;
