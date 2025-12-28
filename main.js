@@ -52,8 +52,9 @@ function addBlock(x, y, z, type) {
     blocks.push(b);
 }
 
-for(let x = -6; x < 6; x++) {
-    for(let z = -6; z < 6; z++) {
+// Chão inicial
+for(let x = -7; x < 7; x++) {
+    for(let z = -7; z < 7; z++) {
         addBlock(x, 0, z, 'grass');
     }
 }
@@ -75,7 +76,7 @@ function action(place) {
         } else {
             scene.remove(hit.object);
             blocks.splice(blocks.indexOf(hit.object), 1);
-            if(navigator.vibrate) navigator.vibrate(40);
+            if(navigator.vibrate) navigator.vibrate(50);
         }
     }
 }
@@ -86,15 +87,14 @@ let pitch = 0, yaw = 0, lookId = null, lastX = 0, lastY = 0, isMovingDedo = fals
 function bind(id, k) {
     const el = document.getElementById(id);
     if(el) {
-        el.onpointerdown = e => { e.stopPropagation(); input[k] = 1; };
-        el.onpointerup = el.onpointerleave = e => { e.stopPropagation(); input[k] = 0; };
+        el.onpointerdown = e => { e.stopPropagation(); if(k==='shift') input.shift=true; else input[k]=1; };
+        el.onpointerup = el.onpointerleave = e => { e.stopPropagation(); if(k==='shift') input.shift=false; else input[k]=0; };
     }
 }
 bind('btn-up','f'); bind('btn-down','b'); bind('btn-left','l'); bind('btn-right','r');
+bind('btn-shift','shift');
 
 document.getElementById('btn-jump').onpointerdown = e => { e.stopPropagation(); if(onGround) vy = 0.22; };
-document.getElementById('btn-shift').onpointerdown = e => { e.stopPropagation(); input.shift = true; };
-document.getElementById('btn-shift').onpointerup = e => { e.stopPropagation(); input.shift = false; };
 
 document.querySelectorAll('.slot').forEach(s => {
     s.onpointerdown = e => {
@@ -105,7 +105,7 @@ document.querySelectorAll('.slot').forEach(s => {
 });
 
 window.addEventListener('pointerdown', e => {
-    if (e.target.closest('.dbtn') || e.target.closest('.slot') || e.target.closest('.action-btn')) return;
+    if (e.target.closest('.mc-btn') || e.target.closest('.slot')) return;
     if (e.clientX > window.innerWidth / 2) {
         lookId = e.pointerId; lastX = e.clientX; lastY = e.clientY;
         touchStart = Date.now(); isMovingDedo = false;
@@ -115,7 +115,7 @@ window.addEventListener('pointerdown', e => {
 window.addEventListener('pointermove', e => {
     if (e.pointerId === lookId) {
         const dx = e.clientX - lastX, dy = e.clientY - lastY;
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) isMovingDedo = true;
+        if (Math.abs(dx) > 6 || Math.abs(dy) > 6) isMovingDedo = true;
         yaw -= dx * 0.005; pitch -= dy * 0.005;
         pitch = Math.max(-1.5, Math.min(1.5, pitch));
         camera.rotation.set(pitch, yaw, 0, 'YXZ');
@@ -126,20 +126,20 @@ window.addEventListener('pointermove', e => {
 window.addEventListener('pointerup', e => {
     if (e.pointerId === lookId) {
         if (!isMovingDedo) {
-            const duration = Date.now() - touchStart;
-            if (duration < 250) action(true);
-            else action(false);
+            const dur = Date.now() - touchStart;
+            if (dur < 250) action(true); // Toque rápido: Coloca
+            else action(false);           // Toque longo: Quebra
         }
         lookId = null;
     }
 });
 
 let vy = 0, onGround = false, currentHeight = 1.8;
-camera.position.set(0, 4, 4);
+camera.position.set(0, 5, 5);
 
 function hasFloorAt(x, z) {
     for (const b of blocks) {
-        if (Math.abs(b.position.x - x) < 0.6 && Math.abs(b.position.z - z) < 0.6) {
+        if (Math.abs(b.position.x - x) < 0.65 && Math.abs(b.position.z - z) < 0.65) {
             if (b.position.y < camera.position.y - 0.5) return true;
         }
     }
@@ -149,22 +149,22 @@ function hasFloorAt(x, z) {
 function animate() {
     requestAnimationFrame(animate);
     const speed = input.shift ? 0.05 : 0.12;
-    const targetHeight = input.shift ? 1.4 : 1.8;
-    currentHeight += (targetHeight - currentHeight) * 0.15;
+    const targetH = input.shift ? 1.4 : 1.8;
+    currentHeight += (targetH - currentHeight) * 0.15;
 
     const move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     move.applyEuler(new THREE.Euler(0, yaw, 0));
     
-    let nextX = camera.position.x + move.x * speed;
-    let nextZ = camera.position.z + move.z * speed;
+    let nX = camera.position.x + move.x * speed;
+    let nZ = camera.position.z + move.z * speed;
 
     if (input.shift && onGround) {
-        if (!hasFloorAt(nextX, camera.position.z)) nextX = camera.position.x;
-        if (!hasFloorAt(camera.position.x, nextZ)) nextZ = camera.position.z;
+        if (!hasFloorAt(nX, camera.position.z)) nX = camera.position.x;
+        if (!hasFloorAt(camera.position.x, nZ)) nZ = camera.position.z;
     }
 
-    camera.position.x = nextX;
-    camera.position.z = nextZ;
+    camera.position.x = nX;
+    camera.position.z = nZ;
 
     vy -= 0.012; camera.position.y += vy;
     let gh = -10;
