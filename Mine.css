@@ -10,8 +10,10 @@ body {
     position: absolute;
     width: 100%;
     height: 100%;
+    z-index: 1;
 }
 
+/* MIRA NO MEIO */
 #crosshair {
     position: fixed;
     top: 50%;
@@ -19,14 +21,40 @@ body {
     transform: translate(-50%, -50%);
     color: rgba(255, 255, 255, 0.8);
     font-size: 30px;
-    z-index: 5;
+    z-index: 50;
     pointer-events: none;
+    user-select: none;
 }
 
-/* BOTÕES ESTILO MINECRAFT */
+/* SISTEMA DE CONTROLES (DPAD) */
+#dpad {
+    position: fixed;
+    bottom: 30px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+}
+
+.dpad-horizontal {
+    display: flex;
+    gap: 65px; /* Espaço para alinhar as setas em cruz */
+    margin: -5px 0;
+}
+
+/* BOTÃO DE PULO */
+#btn-jump {
+    position: fixed;
+    bottom: 60px;
+    right: 30px;
+    width: 80px;
+    height: 80px;
+    z-index: 100;
+}
+
+/* ESTILO DOS BOTÕES (MINECRAFT UI) */
 .dbtn, #btn-jump {
-    width: 60px;
-    height: 60px;
     background-color: #8B8B8B;
     border: 4px solid #000;
     border-top-color: #DBDBDB;
@@ -37,12 +65,15 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 24px;
     font-weight: bold;
     user-select: none;
-    font-size: 20px;
+    pointer-events: auto;
 }
 
-/* Efeito de apertado */
+.dbtn { width: 60px; height: 60px; }
+
+/* Efeito ao clicar */
 .dbtn:active, #btn-jump:active {
     background-color: #404040;
     border-top-color: #000;
@@ -52,32 +83,7 @@ body {
     padding-top: 4px;
 }
 
-#dpad {
-    position: fixed;
-    bottom: 40px;
-    left: 30px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 10;
-}
-
-.dpad-horizontal {
-    display: flex;
-    gap: 60px; /* Espaço para o meio do dpad */
-}
-
-#btn-jump {
-    position: fixed;
-    bottom: 80px;
-    right: 50px;
-    width: 80px;
-    height: 80px;
-    border-radius: 4px;
-    z-index: 10;
-}
-
-/* HOTBAR ESTILO MINE */
+/* HOTBAR */
 #hotbar {
     position: fixed;
     bottom: 15px;
@@ -87,7 +93,8 @@ body {
     background: #8B8B8B;
     border: 4px solid #000;
     padding: 2px;
-    z-index: 15;
+    z-index: 100;
+    pointer-events: auto;
 }
 
 .slot {
@@ -99,6 +106,7 @@ body {
     border: 4px solid #404040;
     margin: 2px;
     background: #8B8B8B;
+    font-size: 20px;
 }
 
 .slot.selected {
