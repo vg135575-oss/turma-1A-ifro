@@ -40,16 +40,17 @@ function addBlock(x, y, z, type) {
     if (type === 'none') return;
     const b = new THREE.Mesh(geo, type === 'grass' ? mats.grass : mats[type]);
     b.position.set(Math.round(x), Math.round(y), Math.round(z));
+    b.userData.type = type;
     scene.add(b);
     blocks.push(b);
 }
 
+// Chão inicial
 for(let x = -8; x <= 8; x++) {
     for(let z = -8; z <= 8; z++) {
         addBlock(x, 0, z, 'grass');
     }
 }
-addBlock(2, 1, 0, 'stone'); // Teste de auto-jump
 
 // ─── 5. INTERAÇÃO ─────────────────────────────────────
 const raycaster = new THREE.Raycaster();
@@ -58,8 +59,10 @@ let selectedBlock = 'none';
 function handleAction(isPlacing) {
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const intersects = raycaster.intersectObjects(blocks);
+    
     arm.position.z += 0.2;
     setTimeout(() => arm.position.z -= 0.2, 100);
+
     if (intersects.length > 0 && intersects[0].distance < 5) {
         const hit = intersects[0];
         if (isPlacing && selectedBlock !== 'none') {
@@ -72,11 +75,11 @@ function handleAction(isPlacing) {
     }
 }
 
-// ─── 6. FÍSICA E MOVIMENTAÇÃO MINECRAFT ───────────────
+// ─── 6. FÍSICA E MOVIMENTAÇÃO CORRIGIDA ───────────────
 const input = { f: 0, b: 0, l: 0, r: 0, shift: false };
 let yaw = 0, pitch = 0, velocityY = 0, onGround = false;
-let moveVelocity = new THREE.Vector3(); // Velocidade com inércia
-let bobTimer = 0; // Para o balanço da câmara
+let moveVelocity = new THREE.Vector3();
+let bobTimer = 0;
 
 function bindBtn(id, key) {
     const el = document.getElementById(id);
@@ -92,64 +95,75 @@ function bindBtn(id, key) {
         el.onpointerup = el.onpointerleave = () => { input[key] = 0; };
     }
 }
+
 bindBtn('btn-up', 'f'); bindBtn('btn-down', 'b');
 bindBtn('btn-left', 'l'); bindBtn('btn-right', 'r');
 bindBtn('btn-shift', 'shift');
 document.getElementById('btn-jump').onpointerdown = (e) => {
-    e.preventDefault(); if(onGround) velocityY = 0.23;
+    e.preventDefault(); if(onGround) velocityY = 0.22;
 };
 
-function getGroundAt(x, z) {
+// Detecção de chão com precisão
+function getGroundAt(x, z, radius = 0.3) {
     let highest = -1;
     for (const b of blocks) {
-        if (Math.abs(b.position.x - x) < 0.65 && Math.abs(b.position.z - z) < 0.65) {
-            highest = Math.max(highest, b.position.y + 0.5);
+        if (Math.abs(b.position.x - x) < 0.5 + radius && Math.abs(b.position.z - z) < 0.5 + radius) {
+            // Só considera blocos que estão abaixo ou no máximo na altura dos pés
+            if (b.position.y + 0.5 <= camera.position.y - 0.5) {
+                highest = Math.max(highest, b.position.y + 0.5);
+            }
         }
     }
     return highest;
+}
+
+// Checa se há um obstáculo alto na frente (Impede teleporte)
+function isWallAhead(x, z) {
+    for (const b of blocks) {
+        if (Math.abs(b.position.x - x) < 0.4 && Math.abs(b.position.z - z) < 0.4) {
+            // Se o bloco estiver acima da altura permitida para degrau (1.1)
+            if (b.position.y + 0.5 > getGroundAt(camera.position.x, camera.position.z) + 1.1) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 function animate() {
     requestAnimationFrame(animate);
 
     const accel = 0.02;
-    const friction = 0.8; // Atrito (deslizar)
+    const friction = 0.8;
     const maxSpeed = input.shift ? 0.06 : 0.15;
     const eyeHeight = input.shift ? 1.3 : 1.7;
 
-    // Direção desejada
     const wishDir = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     wishDir.applyEuler(new THREE.Euler(0, yaw, 0));
 
-    // Aplicar aceleração
     moveVelocity.x += wishDir.x * accel;
     moveVelocity.z += wishDir.z * accel;
-    
-    // Aplicar atrito
     moveVelocity.x *= friction;
     moveVelocity.z *= friction;
 
     let nextX = camera.position.x + moveVelocity.x;
     let nextZ = camera.position.z + moveVelocity.z;
 
-    // SNEAK (Trava na borda)
-    if (input.shift && onGround) {
-        const currentFloor = getGroundAt(camera.position.x, camera.position.z);
-        if (currentFloor - getGroundAt(nextX, camera.position.z) > 0.1) {
-            nextX = camera.position.x;
-            moveVelocity.x = 0;
-        }
-        if (currentFloor - getGroundAt(camera.position.x, nextZ) > 0.1) {
-            nextZ = camera.position.z;
-            moveVelocity.z = 0;
-        }
+    // Colisão com Paredes/Torres
+    if (isWallAhead(nextX, nextZ)) {
+        nextX = camera.position.x;
+        nextZ = camera.position.z;
+        moveVelocity.set(0, 0, 0);
     }
 
-    // AUTO-JUMP (Sobe degrau se bater de frente)
-    const floorAhead = getGroundAt(nextX, nextZ);
-    const currentFloor = getGroundAt(camera.position.x, camera.position.z);
-    if (onGround && floorAhead > currentFloor && floorAhead <= currentFloor + 1.1) {
-        velocityY = 0.15; // Pequeno pulo automático
+    // SNEAK (Não cair de bordas)
+    if (input.shift && onGround) {
+        const currentFloor = getGroundAt(camera.position.x, camera.position.z);
+        if (currentFloor - getGroundAt(nextX, nextZ) > 0.1) {
+            nextX = camera.position.x;
+            nextZ = camera.position.z;
+            moveVelocity.set(0,0,0);
+        }
     }
 
     camera.position.x = nextX;
@@ -163,19 +177,24 @@ function animate() {
     const targetY = floorY + eyeHeight;
 
     if (camera.position.y < targetY) {
-        camera.position.y += (targetY - camera.position.y) * 0.25;
+        // Subida suave apenas para degraus pequenos
+        if (targetY - camera.position.y < 1.2) {
+            camera.position.y += (targetY - camera.position.y) * 0.2;
+        } else {
+            camera.position.y = targetY; 
+        }
         velocityY = 0;
         onGround = true;
     } else {
         onGround = false;
     }
 
-    // BOBBING (Balanço da câmara ao andar)
+    // Bobbing
     if (onGround && (Math.abs(moveVelocity.x) > 0.01 || Math.abs(moveVelocity.z) > 0.01)) {
         bobTimer += 0.15;
         const bob = Math.sin(bobTimer) * 0.03;
         camera.position.y += bob;
-        arm.position.y = -0.4 + (bob * 0.5); // Braço mexe junto
+        arm.position.y = -0.4 + (bob * 0.5);
     }
 
     renderer.render(scene, camera);
@@ -210,7 +229,6 @@ window.addEventListener('pointerup', e => {
     }
 });
 
-// Seleção de Hotbar
 document.querySelectorAll('.slot').forEach(s => {
     s.onpointerdown = (e) => {
         e.stopPropagation();
