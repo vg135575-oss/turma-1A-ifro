@@ -1,7 +1,6 @@
-body { margin: 0; overflow: hidden; font-family: sans-serif; user-select: none; }
+body { margin: 0; overflow: hidden; font-family: sans-serif; user-select: none; touch-action: none; }
 #game-container { position: absolute; top: 0; width: 100%; height: 100%; }
 
-/* Barra de Quebra Estilo Mine */
 #breaking-bar-container {
     position: fixed;
     top: 60%;
@@ -20,16 +19,17 @@ body { margin: 0; overflow: hidden; font-family: sans-serif; user-select: none; 
     background: #ffff00;
 }
 
-.ui { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+.ui { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
 .mc-btn, .slot { pointer-events: auto; background: rgba(0,0,0,0.4); border: 2px solid #fff; color: white; }
 
 .controls { position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; align-items: center; }
 .side-btns { display: flex; gap: 40px; }
-.mc-btn { width: 50px; height: 50px; font-size: 20px; }
-.mc-btn.active { background: rgba(255, 255, 255, 0.5); color: black; }
+.mc-btn { width: 55px; height: 55px; font-size: 20px; border-radius: 5px; }
+.mc-btn:active { background: rgba(255, 255, 255, 0.4); }
+.mc-btn.active { background: rgba(255, 255, 255, 0.6); color: black; }
 
 .action-btns { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
 
 .hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
-.slot { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
-.slot.selected { border-color: yellow; background: rgba(255,255,255,0.2); }
+.slot { width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border-radius: 3px; }
+.slot.selected { border-color: #ffff00; background: rgba(255,255,255,0.2); box-shadow: 0 0 10px #ffff00; }
