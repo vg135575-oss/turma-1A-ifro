@@ -180,7 +180,9 @@ window.addEventListener('pointerup', e => {
     }
 });
 
-function animate() {
+function animate()
+mobs.forEach(m => m.update());
+ {
     requestAnimationFrame(animate);
     updatePhysics();
 
@@ -207,6 +209,51 @@ document.querySelectorAll('.slot').forEach(s => {
         selBlock = s.dataset.block;
     };
 });
+class Mob {
+    constructor(x, y, z, color) {
+        this.mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.8, 0.8, 0.8), 
+            new THREE.MeshBasicMaterial({ color: color })
+        );
+        this.mesh.position.set(x, y, z);
+        scene.add(this.mesh);
+        
+        this.vY = 0;
+        this.dir = new THREE.Vector3(Math.random()-0.5, 0, Math.random()-0.5).normalize();
+        this.timer = 0;
+    }
+
+    update() {
+        // Mudar direção de vez em quando
+        this.timer++;
+        if(this.timer > 100) {
+            this.dir.set(Math.random()-0.5, 0, Math.random()-0.5).normalize();
+            this.timer = 0;
+        }
+
+        // Movimento
+        const speed = 0.03;
+        this.mesh.position.x += this.dir.x * speed;
+        this.mesh.position.z += this.dir.z * speed;
+
+        // Gravidade do Mob
+        this.vY -= 0.01;
+        this.mesh.position.y += this.vY;
+
+        // Colisão simples com o chão
+        if(this.mesh.position.y < 0.9) {
+            this.mesh.position.y = 0.9;
+            this.vY = 0;
+            // Chance de pular
+            if(Math.random() < 0.01) this.vY = 0.15;
+        }
+    }
+}
+
+// Lista para guardar os mobs
+const mobs = [];
+mobs.push(new Mob(2, 2, 2, 0x00ff00)); // Um slime verde
+mobs.push(new Mob(-3, 2, 5, 0xffcccc)); // Um porquinho rosa
 
 camera.position.set(0, 5, 5);
 animate();
