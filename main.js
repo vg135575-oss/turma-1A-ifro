@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// 1. SETUP DA CENA
+// ─── 1. SETUP DA CENA ─────────────────────────────────
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -9,7 +9,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.getElementById('game-container').appendChild(renderer.domElement);
 
-// 2. TEXTURAS
+// ─── 2. TEXTURAS ──────────────────────────────────────
 const textureLoader = new THREE.TextureLoader();
 function loadTex(file) {
     const tex = textureLoader.load(`./textures/${file}`);
@@ -19,22 +19,30 @@ function loadTex(file) {
 }
 
 const mats = {
-    grass: [loadTex('grass_side.png'), loadTex('grass_side.png'), loadTex('grass_top.png'), loadTex('dirt.png'), loadTex('grass_side.png'), loadTex('grass_side.png')].map(t => new THREE.MeshBasicMaterial({map: t})),
+    grass: [
+        loadTex('grass_side.png'), loadTex('grass_side.png'), 
+        loadTex('grass_top.png'), loadTex('dirt.png'), 
+        loadTex('grass_side.png'), loadTex('grass_side.png')
+    ].map(t => new THREE.MeshBasicMaterial({map: t})),
     dirt: new THREE.MeshBasicMaterial({ map: loadTex('dirt.png') }),
     stone: new THREE.MeshBasicMaterial({ map: loadTex('stone.png') }),
     wood: new THREE.MeshBasicMaterial({ map: loadTex('wood.png') }),
     leaf: new THREE.MeshBasicMaterial({ map: loadTex('leaf.png'), transparent: true, alphaTest: 0.5 })
 };
 
-// 3. BRAÇO (Filho da Câmera)
-const arm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.6), new THREE.MeshBasicMaterial({ color: 0xffdbac }));
+// ─── 3. JOGADOR (BRAÇO E CÂMERA) ──────────────────────
+const arm = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 0.2, 0.6), 
+    new THREE.MeshBasicMaterial({ color: 0xffdbac })
+);
 arm.position.set(0.4, -0.4, -0.5);
-camera.add(arm);
+camera.add(arm); // Braço preso à câmera
 scene.add(camera);
 
-// 4. MUNDO
+// ─── 4. MUNDO E BLOCOS ────────────────────────────────
 const blocks = [];
 const geo = new THREE.BoxGeometry(1, 1, 1);
+
 function addBlock(x, y, z, type) {
     const b = new THREE.Mesh(geo, type === 'grass' ? mats.grass : mats[type]);
     b.position.set(Math.round(x), Math.round(y), Math.round(z));
@@ -43,15 +51,15 @@ function addBlock(x, y, z, type) {
     blocks.push(b);
 }
 
-// Chão grande
+// Criar chão inicial
 for(let x = -8; x <= 8; x++) {
     for(let z = -8; z <= 8; z++) {
         addBlock(x, 0, z, 'grass');
     }
 }
-addBlock(0, 1, 0, 'stone'); // Degrau para teste
+addBlock(0, 1, 0, 'stone'); // Bloco para teste de degrau
 
-// 5. INTERAÇÃO (Quebrar/Colocar)
+// ─── 5. INTERAÇÃO (QUEBRAR/COLOCAR) ───────────────────
 const raycaster = new THREE.Raycaster();
 let selectedBlock = 'stone';
 
@@ -59,7 +67,7 @@ function handleAction(isPlacing) {
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const intersects = raycaster.intersectObjects(blocks);
 
-    // Animação do braço
+    // Animação de soco
     arm.position.z += 0.2;
     setTimeout(() => arm.position.z -= 0.2, 100);
 
@@ -75,7 +83,7 @@ function handleAction(isPlacing) {
     }
 }
 
-// 6. CONTROLES E MOVIMENTO
+// ─── 6. MOVIMENTO E FÍSICA ────────────────────────────
 const input = { f: 0, b: 0, l: 0, r: 0, shift: false };
 let yaw = 0, pitch = 0, velocityY = 0, onGround = false;
 
@@ -90,7 +98,8 @@ function bindBtn(id, key) {
         };
     } else {
         el.onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); input[key] = 1; };
-        el.onpointerup = el.onpointerleave = () => { input[key] = 0; };
+        el.onpointerup = () => { input[key] = 0; };
+        el.onpointerleave = () => { input[key] = 0; };
     }
 }
 
@@ -101,7 +110,6 @@ document.getElementById('btn-jump').onpointerdown = (e) => {
     e.preventDefault(); if(onGround) velocityY = 0.2; 
 };
 
-// Função de altura do chão
 function getGroundAt(x, z) {
     let highest = -1;
     for (const b of blocks) {
@@ -115,7 +123,7 @@ function getGroundAt(x, z) {
 function animate() {
     requestAnimationFrame(animate);
 
-    const moveSpeed = input.shift ? 0.05 : 0.12;
+    const moveSpeed = input.shift ? 0.05 : 0.13;
     const targetEyeHeight = input.shift ? 1.3 : 1.7;
 
     const dir = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
@@ -124,7 +132,7 @@ function animate() {
     let nextX = camera.position.x + dir.x * moveSpeed;
     let nextZ = camera.position.z + dir.z * moveSpeed;
 
-    // SNEAK: Bloqueia se a diferença de altura for > 0.1
+    // LÓGICA DE SNEAK (Não cair de degraus)
     if (input.shift && onGround) {
         const currentFloor = getGroundAt(camera.position.x, camera.position.z);
         if (currentFloor - getGroundAt(nextX, camera.position.z) > 0.1) nextX = camera.position.x;
@@ -135,7 +143,7 @@ function animate() {
     camera.position.z = nextZ;
 
     // Gravidade
-    velocityY -= 0.01;
+    velocityY -= 0.012;
     camera.position.y += velocityY;
 
     const floorY = getGroundAt(camera.position.x, camera.position.z);
@@ -150,25 +158,29 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// 7. TOUCH PARA VISÃO E AÇÃO
-let lookId = null, lastX = 0, lastY = 0, touchStart = 0;
+// ─── 7. TOUCH (VISÃO E FILTRO DE CLIQUES) ─────────────
+let lookId = null, lastX = 0, lastY = 0, touchStart = 0, totalMoved = 0;
 
 window.addEventListener('pointerdown', e => {
-    // Se clicou em botão ou hotbar, não faz nada aqui
     if (e.target.closest('.mc-btn') || e.target.closest('.slot')) return;
-    
     lookId = e.pointerId;
     lastX = e.clientX;
     lastY = e.clientY;
     touchStart = Date.now();
+    totalMoved = 0;
 });
 
 window.addEventListener('pointermove', e => {
     if (e.pointerId === lookId) {
-        yaw -= (e.clientX - lastX) * 0.005;
-        pitch -= (e.clientY - lastY) * 0.005;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        totalMoved += Math.abs(dx) + Math.abs(dy); // Mede o arrasto
+
+        yaw -= dx * 0.005;
+        pitch -= dy * 0.005;
         pitch = Math.max(-1.5, Math.min(1.5, pitch));
         camera.rotation.set(pitch, yaw, 0, 'YXZ');
+        
         lastX = e.clientX;
         lastY = e.clientY;
     }
@@ -177,14 +189,16 @@ window.addEventListener('pointermove', e => {
 window.addEventListener('pointerup', e => {
     if (e.pointerId === lookId) {
         const duration = Date.now() - touchStart;
-        // Distância para diferenciar clique de arrasto
-        if (duration < 250) handleAction(true); // Toque rápido: Coloca
-        else if (duration > 600) handleAction(false); // Toque longo: Quebra
+        // Só executa ação se o dedo quase não se moveu (limite de 10px)
+        if (totalMoved < 10) {
+            if (duration < 250) handleAction(true); // Toque rápido: Coloca
+            else if (duration > 600) handleAction(false); // Toque longo: Quebra
+        }
         lookId = null;
     }
 });
 
-// Hotbar
+// Seleção de Blocos
 document.querySelectorAll('.slot').forEach(s => {
     s.onpointerdown = (e) => {
         e.stopPropagation();
