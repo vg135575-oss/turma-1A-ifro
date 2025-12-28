@@ -2,8 +2,6 @@ import * as THREE from 'three';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
-scene.fog = new THREE.FogExp2(0x87CEEB, 0.01);
-
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -63,20 +61,25 @@ for(let x = -6; x < 6; x++) {
 const raycaster = new THREE.Raycaster();
 let selected = 'stone';
 
+// CORREÇÃO: Função de ação ajustada para detecção melhorada
 function action(place) {
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const hits = raycaster.intersectObjects(blocks);
+    
     armPivot.rotation.x = -0.5; 
     setTimeout(() => armPivot.rotation.x = 0, 100);
 
-    if (hits.length > 0 && hits[0].distance < 5) {
+    if (hits.length > 0) {
         const hit = hits[0];
-        if (place) {
-            const pos = hit.object.position.clone().add(hit.face.normal);
-            addBlock(pos.x, pos.y, pos.z, selected);
-        } else {
-            scene.remove(hit.object);
-            blocks.splice(blocks.indexOf(hit.object), 1);
+        if (hit.distance < 5) {
+            if (place) {
+                const pos = hit.object.position.clone().add(hit.face.normal);
+                addBlock(pos.x, pos.y, pos.z, selected);
+            } else {
+                scene.remove(hit.object);
+                blocks.splice(blocks.indexOf(hit.object), 1);
+                if(navigator.vibrate) navigator.vibrate(40);
+            }
         }
     }
 }
@@ -108,7 +111,7 @@ document.querySelectorAll('.slot').forEach(s => {
 
 window.addEventListener('pointerdown', e => {
     if (e.target.closest('.dbtn') || e.target.closest('.slot') || e.target.closest('.action-btn')) return;
-    if (e.clientX > window.innerWidth / 2 && lookId === null) {
+    if (e.clientX > window.innerWidth / 2) {
         lookId = e.pointerId; lastX = e.clientX; lastY = e.clientY;
         touchStart = Date.now(); isMovingDedo = false;
     }
@@ -127,13 +130,29 @@ window.addEventListener('pointermove', e => {
 
 window.addEventListener('pointerup', e => {
     if (e.pointerId === lookId) {
-        if (!isMovingDedo && (Date.now() - touchStart) < 250) action(true);
+        const duration = Date.now() - touchStart;
+        // Se não moveu o dedo e foi um toque rápido (< 250ms), coloca bloco. 
+        // Se segurou um pouco mais sem mover, quebra.
+        if (!isMovingDedo) {
+            if (duration < 250) action(true);
+            else action(false);
+        }
         lookId = null;
     }
 });
 
 let vy = 0, onGround = false, currentHeight = 1.8;
 camera.position.set(0, 4, 4);
+
+// FUNÇÃO AUXILIAR: Verifica se existe chão abaixo de uma posição específica
+function hasFloorAt(x, z) {
+    for (const b of blocks) {
+        if (Math.abs(b.position.x - x) < 0.6 && Math.abs(b.position.z - z) < 0.6) {
+            if (b.position.y < camera.position.y - 0.5) return true;
+        }
+    }
+    return false;
+}
 
 function animate() {
     requestAnimationFrame(animate);
@@ -144,8 +163,18 @@ function animate() {
     const move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     move.applyEuler(new THREE.Euler(0, yaw, 0));
     
-    camera.position.x += move.x * speed;
-    camera.position.z += move.z * speed;
+    // LÓGICA DO SNEAK (Não cair da borda)
+    let nextX = camera.position.x + move.x * speed;
+    let nextZ = camera.position.z + move.z * speed;
+
+    if (input.shift && onGround) {
+        // Se a próxima posição X ou Z não tiver chão, trava o movimento naquele eixo
+        if (!hasFloorAt(nextX, camera.position.z)) nextX = camera.position.x;
+        if (!hasFloorAt(camera.position.x, nextZ)) nextZ = camera.position.z;
+    }
+
+    camera.position.x = nextX;
+    camera.position.z = nextZ;
 
     vy -= 0.012; camera.position.y += vy;
     let gh = -10;
