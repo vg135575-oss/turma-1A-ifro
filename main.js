@@ -1,25 +1,26 @@
 import * as THREE from 'three';
 
-// ─── 1. CONFIGURAÇÃO DA CENA ───────────────────────────
+// ─── 1. CENA ──────────────────────────────────────────
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 5, 10);
+// Posição inicial segura
+camera.position.set(0, 10, 5);
 
 const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.getElementById('game-container').appendChild(renderer.domElement);
 
-// ─── 2. ILUMINAÇÃO ─────────────────────────────────────
+// ─── 2. ILUMINAÇÃO ────────────────────────────────────
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 const sun = new THREE.DirectionalLight(0xffffff, 1.0);
 sun.position.set(10, 20, 10);
 scene.add(sun);
 
-// ─── 3. CARREGADOR DE TEXTURAS ─────────────────────────
+// ─── 3. TEXTURAS ──────────────────────────────────────
 const textureLoader = new THREE.TextureLoader();
 function loadTex(file) {
     const tex = textureLoader.load(`./textures/${file}`);
@@ -43,7 +44,7 @@ const mats = {
     leaf: new THREE.MeshStandardMaterial({ map: loadTex('leaf.png'), transparent: true, alphaTest: 0.5 })
 };
 
-// ─── 4. SELEÇÃO E BRAÇO ────────────────────────────────
+// ─── 4. OBJETOS DE AUXÍLIO ────────────────────────────
 const selectionBox = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.BoxGeometry(1.02, 1.02, 1.02)),
     new THREE.LineBasicMaterial({ color: 0xffffff })
@@ -57,7 +58,7 @@ armPivot.add(arm);
 camera.add(armPivot);
 scene.add(camera);
 
-// ─── 5. MUNDO (BLOCOS, ÁRVORES E NUVENS) ───────────────
+// ─── 5. MUNDO E ÁRVORES ───────────────────────────────
 const blocks = [];
 const geo = new THREE.BoxGeometry(1, 1, 1);
 
@@ -74,20 +75,9 @@ function createTree(x, z) {
     for(let i=1; i<=4; i++) addBlock(x, hBase + i, z, 'wood');
     for(let lx=-1; lx<=1; lx++) {
         for(let lz=-1; lz<=1; lz++) {
-            for(let ly=hBase+4; ly<=hBase+5; ly++) {
-                if(lx === 0 && lz === 0 && ly === hBase+4) continue;
-                addBlock(x+lx, ly, z+lz, 'leaf');
-            }
+            addBlock(x+lx, hBase+5, z+lz, 'leaf');
         }
     }
-}
-
-const clouds = [];
-for(let i=0; i<8; i++) {
-    const cloud = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 3), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.8 }));
-    cloud.position.set(Math.random()*40-20, 15, Math.random()*40-20);
-    scene.add(cloud);
-    clouds.push(cloud);
 }
 
 // Gerar Terreno
@@ -96,14 +86,28 @@ for(let x=-10; x<10; x++) {
         const h = Math.floor(Math.sin(x * 0.3) * Math.cos(z * 0.3) * 1.5);
         addBlock(x, h, z, 'grass');
         addBlock(x, h-1, z, 'dirt');
-        if(Math.random() < 0.05) createTree(x, z);
+        if(Math.random() < 0.04) createTree(x, z);
     }
 }
 
-// ─── 6. CONTROLES E MOVIMENTO ──────────────────────────
+// ─── 6. FÍSICA E COLISÃO ──────────────────────────────
+function checkCollision(px, py, pz) {
+    for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i].position;
+        // Verifica se a câmera está dentro do volume do bloco (com margem de erro)
+        if (Math.abs(px - b.x) < 0.7 && 
+            Math.abs(pz - b.z) < 0.7 && 
+            py >= b.y - 0.5 && py <= b.y + 1.8) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ─── 7. CONTROLES ─────────────────────────────────────
 const input = { f:0, b:0, l:0, r:0 };
 let yaw = 0, pitch = 0, vy = 0, onGround = false;
-let selected = 'none';
+let selected = 'stone';
 
 function setupControls() {
     const bind = (id, k) => {
@@ -111,11 +115,12 @@ function setupControls() {
         if(el) {
             el.onpointerdown = (e) => { e.preventDefault(); input[k] = 1; };
             el.onpointerup = () => input[k] = 0;
+            el.onpointerleave = () => input[k] = 0;
         }
     };
     bind('btn-up','f'); bind('btn-down','b'); bind('btn-left','l'); bind('btn-right','r');
     
-    document.getElementById('btn-jump').onpointerdown = () => { if(onGround) vy = 0.22; };
+    document.getElementById('btn-jump').onpointerdown = () => { if(onGround) vy = 0.2; };
     document.getElementById('btn-break').onpointerdown = () => action(false);
     document.getElementById('btn-place').onpointerdown = () => action(true);
     
@@ -128,7 +133,7 @@ function setupControls() {
     });
 }
 
-// Olhar (Touch Lado Direito)
+// Olhar
 let lookId = null, lastX = 0, lastY = 0;
 window.addEventListener('pointerdown', e => {
     if(e.clientX > window.innerWidth/2) { lookId = e.pointerId; lastX = e.clientX; lastY = e.clientY; }
@@ -160,23 +165,43 @@ function action(place) {
     }
 }
 
-// ─── 7. LOOP DE ANIMAÇÃO ───────────────────────────────
-function animate(time) {
+// ─── 8. LOOP PRINCIPAL ────────────────────────────────
+function animate() {
     requestAnimationFrame(animate);
-    
-    // Nuvens
-    clouds.forEach(c => { c.position.x += 0.01; if(c.position.x > 25) c.position.x = -25; });
 
-    // Movimento
+    // Movimento Horizontal
+    const speed = 0.12;
     const move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     move.applyEuler(new THREE.Euler(0, yaw, 0));
-    camera.position.addScaledVector(move, 0.12);
 
-    // Gravidade
-    vy -= 0.012; camera.position.y += vy;
-    if(camera.position.y < 3) { camera.position.y = 3; vy = 0; onGround = true; }
+    // Tenta mover no X
+    const newX = camera.position.x + move.x * speed;
+    if (!checkCollision(newX, camera.position.y, camera.position.z)) {
+        camera.position.x = newX;
+    }
 
-    // Atualizar Seleção
+    // Tenta mover no Z
+    const newZ = camera.position.z + move.z * speed;
+    if (!checkCollision(camera.position.x, camera.position.y, newZ)) {
+        camera.position.z = newZ;
+    }
+
+    // Gravidade e Pulo
+    vy -= 0.01;
+    const newY = camera.position.y + vy;
+    
+    if (checkCollision(camera.position.x, newY, camera.position.z)) {
+        if (vy < 0) onGround = true;
+        vy = 0;
+    } else {
+        camera.position.y = newY;
+        onGround = false;
+    }
+
+    // Fallback caso caia do mundo
+    if (camera.position.y < -10) camera.position.set(0, 10, 0);
+
+    // Seleção de blocos
     raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
     const hits = raycaster.intersectObjects(blocks);
     if(hits.length > 0 && hits[0].distance < 5) {
@@ -188,4 +213,10 @@ function animate(time) {
 }
 
 setupControls();
-animate(0);
+animate();
+
+window.onresize = () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+};
