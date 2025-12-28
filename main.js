@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// 1. CENA E CÂMERA
+// ─── 1. CENA E CÂMARA ─────────────────────────────────
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -9,7 +9,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.getElementById('game-container').appendChild(renderer.domElement);
 
-// 2. TEXTURAS
+// ─── 2. TEXTURAS ──────────────────────────────────────
 const textureLoader = new THREE.TextureLoader();
 textureLoader.setCrossOrigin('anonymous');
 
@@ -35,7 +35,7 @@ const mats = {
     leaf: new THREE.MeshBasicMaterial({ map: loadTex('leaf.png'), transparent: true, alphaTest: 0.5 })
 };
 
-// 3. JOGADOR (BRAÇO)
+// ─── 3. JOGADOR (BRAÇO) ───────────────────────────────
 const armPivot = new THREE.Group();
 const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.8), new THREE.MeshBasicMaterial({ color: 0xffdbac }));
 arm.position.set(0.6, -0.5, -0.7);
@@ -43,7 +43,7 @@ armPivot.add(arm);
 camera.add(armPivot);
 scene.add(camera);
 
-// 4. MUNDO (BLOCOS)
+// ─── 4. MUNDO E BLOCOS ────────────────────────────────
 const blocks = [];
 const geo = new THREE.BoxGeometry(1, 1, 1);
 
@@ -56,20 +56,22 @@ function addBlock(x, y, z, type) {
     blocks.push(b);
 }
 
-// Chão inicial
+// Chão inicial maior para testar
 for(let x = -8; x < 8; x++) {
     for(let z = -8; z < 8; z++) {
         addBlock(x, 0, z, 'grass');
     }
 }
 
-// 5. INTERAÇÃO (QUEBRAR/COLOCAR)
+// ─── 5. INTERAÇÃO (QUEBRAR/COLOCAR) ───────────────────
 const raycaster = new THREE.Raycaster();
 let selectedBlock = 'stone';
 
 function handleAction(isPlacing) {
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const hits = raycaster.intersectObjects(blocks);
+    
+    // Animação do braço
     armPivot.rotation.x = -0.5; 
     setTimeout(() => armPivot.rotation.x = 0, 100);
 
@@ -86,30 +88,25 @@ function handleAction(isPlacing) {
     }
 }
 
-// 6. CONTROLES (BOTÕES E TOQUE)
+// ─── 6. CONTROLOS E LÓGICA DE TOGGLE ──────────────────
 const input = { f: 0, b: 0, l: 0, r: 0, shift: false };
 let pitch = 0, yaw = 0, lookId = null, lastX = 0, lastY = 0;
 let isMovingFinger = false, touchStartTime = 0;
 
-// Configuração dos Botões
 function bindBtn(id, key) {
     const el = document.getElementById(id);
     if(!el) return;
 
     if (key === 'shift') {
-        // Lógica de TOGGLE (Liga/Desliga)
+        // Toggle Sneak: Clica uma vez e fica ativo
         el.onpointerdown = e => {
             e.stopPropagation();
-            input.shift = !input.shift; // Inverte
-            
-            // Visual do botão
+            input.shift = !input.shift;
             if (input.shift) el.classList.add('active');
             else el.classList.remove('active');
-            
             if(navigator.vibrate) navigator.vibrate(30);
         };
     } else {
-        // Lógica normal (segurar para andar)
         el.onpointerdown = e => { e.stopPropagation(); input[key] = 1; };
         el.onpointerup = el.onpointerleave = e => { e.stopPropagation(); input[key] = 0; };
     }
@@ -124,7 +121,7 @@ document.getElementById('btn-jump').onpointerdown = e => {
     if(onGround) velocityY = 0.22; 
 };
 
-// Seleção de Blocos
+// Selecionar blocos na hotbar
 document.querySelectorAll('.slot').forEach(slot => {
     slot.onpointerdown = e => {
         e.stopPropagation();
@@ -134,7 +131,7 @@ document.querySelectorAll('.slot').forEach(slot => {
     };
 });
 
-// Controles da Câmera e Clique na Tela
+// Movimento da câmara e cliques no ecrã
 window.addEventListener('pointerdown', e => {
     if (e.target.closest('.mc-btn') || e.target.closest('.slot')) return;
     if (e.clientX > window.innerWidth / 2) {
@@ -165,14 +162,16 @@ window.addEventListener('pointerup', e => {
     }
 });
 
-// 7. FÍSICA E LOOP DO JOGO
+// ─── 7. FÍSICA E LOOP PRINCIPAL ───────────────────────
 let velocityY = 0, onGround = false, currentHeight = 1.8;
 camera.position.set(0, 5, 5);
 
-// Função para verificar se tem chão (Sneak Logic)
+// [CORREÇÃO] Verificação rigorosa do chão
+// < 0.5 significa que o centro do jogador tem de estar ESTRITAMENTE dentro do bloco.
 function hasFloorAt(x, z) {
     for (const b of blocks) {
-        if (Math.abs(b.position.x - x) < 0.65 && Math.abs(b.position.z - z) < 0.65) {
+        // Se a distância for maior que 0.5, já estás fora da borda
+        if (Math.abs(b.position.x - x) < 0.5 && Math.abs(b.position.z - z) < 0.5) {
             if (b.position.y < camera.position.y - 0.5) return true;
         }
     }
@@ -182,21 +181,20 @@ function hasFloorAt(x, z) {
 function animate() {
     requestAnimationFrame(animate);
 
-    // Velocidade e Altura da Câmera
     const moveSpeed = input.shift ? 0.05 : 0.12;
     const targetHeight = input.shift ? 1.4 : 1.8;
     currentHeight += (targetHeight - currentHeight) * 0.15;
 
-    // Calcular próximo passo
     const direction = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     direction.applyEuler(new THREE.Euler(0, yaw, 0));
     
     let nextX = camera.position.x + direction.x * moveSpeed;
     let nextZ = camera.position.z + direction.z * moveSpeed;
 
-    // LÓGICA DE BORDA (EAGLE/SNEAK)
+    // LÓGICA DE BORDA:
+    // Se o Sneak estiver ativo E estiveres no chão, ele verifica se o PRÓXIMO passo tem chão.
+    // Se não tiver, ele CANCELA o movimento naquele eixo.
     if (input.shift && onGround) {
-        // Se onde eu vou pisar não tem chão, cancela o movimento
         if (!hasFloorAt(nextX, camera.position.z)) nextX = camera.position.x;
         if (!hasFloorAt(camera.position.x, nextZ)) nextZ = camera.position.z;
     }
@@ -212,14 +210,38 @@ function animate() {
     let groundHeight = -10;
     for (const b of blocks) {
         if (Math.abs(b.position.x - camera.position.x) < 0.6 && Math.abs(b.position.z - camera.position.z) < 0.6) {
-            if (b.position.y < camera.position.y - 0.5) groundHeight = Math.max(groundHeight, b.position.y + currentHeight);
+            if (b.position.y < camera.position.y - 0.5) {
+                // Ajuste para ficar em cima do bloco corretamente
+                groundHeight = Math.max(groundHeight, b.position.y + 0.5 + currentHeight - 1.8);
+                // (Nota: esta fórmula de altura tenta compensar a posição do bloco)
+                // Se preferires a física antiga simples, usa: b.position.y + currentHeight
+            }
         }
     }
+    
+    // Simplificação para garantir que não afundas nem flutuas demais
+    // Assumindo que o centro do bloco é Y, o topo é Y+0.5
+    // Altura dos olhos é currentHeight (1.8) acima dos pés.
+    // Pés devem estar em groundHeight.
+    // Logo CameraY deve ser groundHeight
+    
+    // Vou reverter para a lógica simples que funcionava, mas ajustada
+    let simpleGroundY = -100;
+    for(const b of blocks) {
+         if (Math.abs(b.position.x - camera.position.x) < 0.6 && Math.abs(b.position.z - camera.position.z) < 0.6) {
+             if(b.position.y < camera.position.y) {
+                 simpleGroundY = Math.max(simpleGroundY, b.position.y + currentHeight);
+             }
+         }
+    }
 
-    if (camera.position.y <= groundHeight) {
-        camera.position.y = groundHeight;
-        velocityY = 0; onGround = true;
-    } else onGround = false;
+    if (camera.position.y <= simpleGroundY) {
+        camera.position.y = simpleGroundY;
+        velocityY = 0;
+        onGround = true;
+    } else {
+        onGround = false;
+    }
 
     renderer.render(scene, camera);
 }
