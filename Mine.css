@@ -8,8 +8,7 @@ body { margin: 0; overflow: hidden; font-family: sans-serif; user-select: none; 
 .dbtn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; }
 .action-buttons { position: absolute; bottom: 40px; right: 20px; display: flex; flex-direction: column; gap: 15px; }
 .action-btn { width: 90px; height: 60px; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; }
-.action-btn:active { background: rgba(255,255,255,0.4); } /* Feedback visual */
 .hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(0,0,0,0.6); padding: 4px; border: 2px solid #333; }
 .slot { width: 40px; height: 40px; border: 2px solid #555; margin: 2px; display: flex; align-items: center; justify-content: center; }
 .slot.selected { border-color: white; background: rgba(255,255,255,0.2); }
-.slot img { width: 80%; height: 80%; image-rendering: pixelated; }
+.slot img { width: 85%; height: 85%; image-rendering: pixelated; }
