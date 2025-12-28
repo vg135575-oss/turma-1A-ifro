@@ -37,79 +37,72 @@ const blocks = [];
 const geo = new THREE.BoxGeometry(1, 1, 1);
 
 function addBlock(x, y, z, type) {
-    if (type === 'none') return; // Segurança: não adiciona bloco "vazio"
+    if (type === 'none') return;
     const b = new THREE.Mesh(geo, type === 'grass' ? mats.grass : mats[type]);
     b.position.set(Math.round(x), Math.round(y), Math.round(z));
-    b.userData.type = type;
     scene.add(b);
     blocks.push(b);
 }
 
-// Chão inicial
 for(let x = -8; x <= 8; x++) {
     for(let z = -8; z <= 8; z++) {
         addBlock(x, 0, z, 'grass');
     }
 }
+addBlock(2, 1, 0, 'stone'); // Teste de auto-jump
 
-// ─── 5. INTERAÇÃO (QUEBRAR/COLOCAR) ───────────────────
+// ─── 5. INTERAÇÃO ─────────────────────────────────────
 const raycaster = new THREE.Raycaster();
-let selectedBlock = 'none'; // Começa com a Mão selecionada
+let selectedBlock = 'none';
 
 function handleAction(isPlacing) {
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const intersects = raycaster.intersectObjects(blocks);
-
-    // Animação de soco (Sempre acontece ao tocar)
     arm.position.z += 0.2;
     setTimeout(() => arm.position.z -= 0.2, 100);
-
     if (intersects.length > 0 && intersects[0].distance < 5) {
         const hit = intersects[0];
-        if (isPlacing) {
-            // SÓ COLOCA SE TIVER UM BLOCO NA MÃO (diferente de 'none')
-            if (selectedBlock !== 'none') {
-                const pos = hit.object.position.clone().add(hit.face.normal);
-                addBlock(pos.x, pos.y, pos.z, selectedBlock);
-            }
-        } else {
-            // QUEBRAR funciona sempre, mesmo com a mão vazia
+        if (isPlacing && selectedBlock !== 'none') {
+            const pos = hit.object.position.clone().add(hit.face.normal);
+            addBlock(pos.x, pos.y, pos.z, selectedBlock);
+        } else if (!isPlacing) {
             scene.remove(hit.object);
             blocks.splice(blocks.indexOf(hit.object), 1);
         }
     }
 }
 
-// ─── 6. MOVIMENTO E FÍSICA SUAVE ──────────────────────
+// ─── 6. FÍSICA E MOVIMENTAÇÃO MINECRAFT ───────────────
 const input = { f: 0, b: 0, l: 0, r: 0, shift: false };
 let yaw = 0, pitch = 0, velocityY = 0, onGround = false;
+let moveVelocity = new THREE.Vector3(); // Velocidade com inércia
+let bobTimer = 0; // Para o balanço da câmara
 
 function bindBtn(id, key) {
     const el = document.getElementById(id);
     if(!el) return;
-    if(key === 'shift') {
-        el.onpointerdown = (e) => {
-            e.preventDefault(); e.stopPropagation();
+    el.onpointerdown = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if(key === 'shift') {
             input.shift = !input.shift;
             el.classList.toggle('active', input.shift);
-        };
-    } else {
-        el.onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); input[key] = 1; };
+        } else { input[key] = 1; }
+    };
+    if(key !== 'shift') {
         el.onpointerup = el.onpointerleave = () => { input[key] = 0; };
     }
 }
-
 bindBtn('btn-up', 'f'); bindBtn('btn-down', 'b');
 bindBtn('btn-left', 'l'); bindBtn('btn-right', 'r');
 bindBtn('btn-shift', 'shift');
-document.getElementById('btn-jump').onpointerdown = (e) => { 
-    e.preventDefault(); if(onGround) velocityY = 0.22; 
+document.getElementById('btn-jump').onpointerdown = (e) => {
+    e.preventDefault(); if(onGround) velocityY = 0.23;
 };
 
 function getGroundAt(x, z) {
     let highest = -1;
     for (const b of blocks) {
-        if (Math.abs(b.position.x - x) < 0.6 && Math.abs(b.position.z - z) < 0.6) {
+        if (Math.abs(b.position.x - x) < 0.65 && Math.abs(b.position.z - z) < 0.65) {
             highest = Math.max(highest, b.position.y + 0.5);
         }
     }
@@ -119,20 +112,44 @@ function getGroundAt(x, z) {
 function animate() {
     requestAnimationFrame(animate);
 
-    const moveSpeed = input.shift ? 0.05 : 0.13;
+    const accel = 0.02;
+    const friction = 0.8; // Atrito (deslizar)
+    const maxSpeed = input.shift ? 0.06 : 0.15;
     const eyeHeight = input.shift ? 1.3 : 1.7;
 
-    const dir = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
-    dir.applyEuler(new THREE.Euler(0, yaw, 0));
+    // Direção desejada
+    const wishDir = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
+    wishDir.applyEuler(new THREE.Euler(0, yaw, 0));
 
-    let nextX = camera.position.x + dir.x * moveSpeed;
-    let nextZ = camera.position.z + dir.z * moveSpeed;
+    // Aplicar aceleração
+    moveVelocity.x += wishDir.x * accel;
+    moveVelocity.z += wishDir.z * accel;
+    
+    // Aplicar atrito
+    moveVelocity.x *= friction;
+    moveVelocity.z *= friction;
 
-    // SNEAK (Não cair de bordas)
+    let nextX = camera.position.x + moveVelocity.x;
+    let nextZ = camera.position.z + moveVelocity.z;
+
+    // SNEAK (Trava na borda)
     if (input.shift && onGround) {
         const currentFloor = getGroundAt(camera.position.x, camera.position.z);
-        if (currentFloor - getGroundAt(nextX, camera.position.z) > 0.1) nextX = camera.position.x;
-        if (currentFloor - getGroundAt(camera.position.x, nextZ) > 0.1) nextZ = camera.position.z;
+        if (currentFloor - getGroundAt(nextX, camera.position.z) > 0.1) {
+            nextX = camera.position.x;
+            moveVelocity.x = 0;
+        }
+        if (currentFloor - getGroundAt(camera.position.x, nextZ) > 0.1) {
+            nextZ = camera.position.z;
+            moveVelocity.z = 0;
+        }
+    }
+
+    // AUTO-JUMP (Sobe degrau se bater de frente)
+    const floorAhead = getGroundAt(nextX, nextZ);
+    const currentFloor = getGroundAt(camera.position.x, camera.position.z);
+    if (onGround && floorAhead > currentFloor && floorAhead <= currentFloor + 1.1) {
+        velocityY = 0.15; // Pequeno pulo automático
     }
 
     camera.position.x = nextX;
@@ -142,51 +159,52 @@ function animate() {
     velocityY -= 0.012;
     camera.position.y += velocityY;
 
-    // Colisão e Subida Suave
     const floorY = getGroundAt(camera.position.x, camera.position.z);
     const targetY = floorY + eyeHeight;
 
     if (camera.position.y < targetY) {
-        camera.position.y += (targetY - camera.position.y) * 0.2; // Suavização
+        camera.position.y += (targetY - camera.position.y) * 0.25;
         velocityY = 0;
         onGround = true;
     } else {
         onGround = false;
     }
 
+    // BOBBING (Balanço da câmara ao andar)
+    if (onGround && (Math.abs(moveVelocity.x) > 0.01 || Math.abs(moveVelocity.z) > 0.01)) {
+        bobTimer += 0.15;
+        const bob = Math.sin(bobTimer) * 0.03;
+        camera.position.y += bob;
+        arm.position.y = -0.4 + (bob * 0.5); // Braço mexe junto
+    }
+
     renderer.render(scene, camera);
 }
 
-// ─── 7. TOUCH (VISÃO E FILTRO) ────────────────────────
+// ─── 7. TOUCH (VISÃO) ─────────────────────────────────
 let lookId = null, lastX = 0, lastY = 0, touchStart = 0, totalMoved = 0;
 
 window.addEventListener('pointerdown', e => {
     if (e.target.closest('.mc-btn') || e.target.closest('.slot')) return;
-    lookId = e.pointerId;
-    lastX = e.clientX; lastY = e.clientY;
-    touchStart = Date.now();
-    totalMoved = 0;
+    lookId = e.pointerId; lastX = e.clientX; lastY = e.clientY;
+    touchStart = Date.now(); totalMoved = 0;
 });
-
 window.addEventListener('pointermove', e => {
     if (e.pointerId === lookId) {
-        const dx = e.clientX - lastX;
-        const dy = e.clientY - lastY;
+        const dx = e.clientX - lastX, dy = e.clientY - lastY;
         totalMoved += Math.abs(dx) + Math.abs(dy);
-        yaw -= dx * 0.005;
-        pitch -= dy * 0.005;
+        yaw -= dx * 0.005; pitch -= dy * 0.005;
         pitch = Math.max(-1.5, Math.min(1.5, pitch));
         camera.rotation.set(pitch, yaw, 0, 'YXZ');
         lastX = e.clientX; lastY = e.clientY;
     }
 });
-
 window.addEventListener('pointerup', e => {
     if (e.pointerId === lookId) {
-        if (totalMoved < 15) { // Só interage se não moveu muito a câmera
+        if (totalMoved < 15) {
             const duration = Date.now() - touchStart;
-            if (duration < 250) handleAction(true); // Toque rápido: Coloca
-            else if (duration > 600) handleAction(false); // Toque longo: Quebra
+            if (duration < 250) handleAction(true);
+            else if (duration > 600) handleAction(false);
         }
         lookId = null;
     }
@@ -198,7 +216,7 @@ document.querySelectorAll('.slot').forEach(s => {
         e.stopPropagation();
         document.querySelectorAll('.slot').forEach(x => x.classList.remove('selected'));
         s.classList.add('selected');
-        selectedBlock = s.dataset.block; // 'none', 'stone' ou 'grass'
+        selectedBlock = s.dataset.block;
     };
 });
 
