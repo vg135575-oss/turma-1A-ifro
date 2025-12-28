@@ -1,196 +1,167 @@
 import * as THREE from 'three';
 
-// ─── 1. SETUP ───
+// --- CONFIGURAÇÃO DE CENA ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: false });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(window.devicePixelRatio);
 document.getElementById('game-container').appendChild(renderer.domElement);
 
-// ─── 2. TEXTURAS ───
+// --- CARREGAMENTO DE TEXTURAS ---
 const loader = new THREE.TextureLoader();
-const crackTexs = [];
-for(let i=0; i<10; i++) {
-    const t = loader.load(`./textures/crack_${i}.png`);
-    t.magFilter = THREE.NearestFilter;
-    crackTexs.push(t);
+function loadTex(file) {
+    const t = loader.load(`./textures/${file}`);
+    t.magFilter = THREE.NearestFilter; // Mantém o estilo pixelado
+    t.minFilter = THREE.NearestFilter;
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    return t;
 }
 
-const loadM = (img) => {
-    const t = loader.load(`./textures/${img}`);
-    t.magFilter = THREE.NearestFilter;
-    return new THREE.MeshBasicMaterial({ map: t });
-};
-
+// Criando materiais com correção de mapeamento
 const mats = {
-    grass: [loadM('grass_side.png'), loadM('grass_side.png'), loadM('grass_top.png'), loadM('dirt.png'), loadM('grass_side.png'), loadM('grass_side.png')],
-    stone: loadM('stone.png'),
-    dirt: loadM('dirt.png'),
-    wood: loadM('wood.png')
+    grass: [
+        new THREE.MeshBasicMaterial({ map: loadTex('grass_side.png') }),
+        new THREE.MeshBasicMaterial({ map: loadTex('grass_side.png') }),
+        new THREE.MeshBasicMaterial({ map: loadTex('grass_top.png') }),
+        new THREE.MeshBasicMaterial({ map: loadTex('dirt.png') }),
+        new THREE.MeshBasicMaterial({ map: loadTex('grass_side.png') }),
+        new THREE.MeshBasicMaterial({ map: loadTex('grass_side.png') })
+    ],
+    stone: new THREE.MeshBasicMaterial({ map: loadTex('stone.png') }),
+    dirt: new THREE.MeshBasicMaterial({ map: loadTex('dirt.png') }),
+    wood: new THREE.MeshBasicMaterial({ map: loadTex('wood.png') })
 };
 
-// ─── 3. BRAÇO E RACHADURA ───
-const arm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.7), new THREE.MeshBasicMaterial({ color: 0xffdbac }));
-arm.position.set(0.4, -0.5, -0.6);
+// --- JOGADOR E BRAÇO ---
+const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.8), new THREE.MeshBasicMaterial({ color: 0xffdbac }));
+arm.position.set(0.5, -0.6, -0.7);
 camera.add(arm);
 scene.add(camera);
 
-const crackMesh = new THREE.Mesh(new THREE.BoxGeometry(1.01, 1.01, 1.01), new THREE.MeshBasicMaterial({ transparent: true, polygonOffset: true, polygonOffsetFactor: -1 }));
-crackMesh.visible = false;
-scene.add(crackMesh);
-
-// ─── 4. MUNDO ───
+// --- MUNDO ---
 const blocks = [];
-for(let x=-8; x<8; x++) {
-    for(let z=-8; z<8; z++) {
-        const b = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.grass);
-        b.position.set(x, 0, z);
-        scene.add(b);
-        blocks.push(b);
-    }
+const geo = new THREE.BoxGeometry(1, 1, 1);
+function addBlock(x, y, z, type) {
+    const mesh = new THREE.Mesh(geo, mats[type] || mats.stone);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    blocks.push(mesh);
 }
 
-// ─── 5. ESTADO E CONTROLES ───
-let input = { f:0, b:0, l:0, r:0, sneak: false };
-let yaw = 0, pitch = 0, vY = 0, onG = false;
+// Gerar um chão pequeno e uma torre (como na sua foto)
+for(let x = -5; x < 5; x++) for(let z = -5; z < 5; z++) addBlock(x, 0, z, 'grass');
+addBlock(0, 1, 0, 'stone');
+addBlock(0, 2, 0, 'wood');
+addBlock(0, 3, 0, 'dirt');
+
+// --- CONTROLES ---
+let input = { f: 0, b: 0, l: 0, r: 0, sneak: false };
+let yaw = 0, pitch = 0, vY = 0, onGround = false;
 let selectedBlock = 'none';
 
-// Mapeamento de botões
+// Botões de Movimento
 const bind = (id, key) => {
     const el = document.getElementById(id);
-    if(!el) return;
-    el.onpointerdown = (e) => {
-        e.preventDefault();
-        if(key === 'sneak') {
-            input.sneak = !input.sneak;
-            el.classList.toggle('active', input.sneak);
-        } else { input[key] = 1; }
-    };
+    if (!el) return;
+    el.onpointerdown = (e) => { e.preventDefault(); if(key === 'sneak') { input.sneak = !input.sneak; el.classList.toggle('active'); } else input[key] = 1; };
     el.onpointerup = () => { if(key !== 'sneak') input[key] = 0; };
 };
+bind('btn-up', 'f'); bind('btn-down', 'b'); bind('btn-left', 'l'); bind('btn-right', 'r'); bind('btn-shift', 'sneak');
+document.getElementById('btn-jump').onpointerdown = () => { if(onGround) vY = 0.22; };
 
-bind('btn-up','f'); bind('btn-down','b'); 
-bind('btn-left','l'); bind('btn-right','r'); 
-bind('btn-shift','sneak');
+// --- INTERAÇÃO: OLHAR E QUEBRAR ---
+let lookId = null, lastX, lastY, isBreaking = false, breakProg = 0, targetBlock = null;
 
-document.getElementById('btn-jump').onpointerdown = () => { if(onG) vY = 0.2; };
+window.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.mc-btn') || e.target.closest('.slot')) return;
 
-// ─── 6. LÓGICA DE MOVIMENTO E SHIFT ───
-function updatePlayer() {
-    // Ajuste da altura do Shift (Agachar)
-    const targetHeight = input.sneak ? 1.4 : 1.7;
-    const currentHeight = 1.7; // Altura padrão
-
-    let speed = input.sneak ? 0.05 : 0.12;
-    let dir = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
-    dir.applyEuler(new THREE.Euler(0, yaw, 0));
-
-    camera.position.x += dir.x * speed;
-    camera.position.z += dir.z * speed;
-
-    vY -= 0.01;
-    camera.position.y += vY;
-
-    onG = false;
-    for(let b of blocks) {
-        if(Math.abs(camera.position.x - b.position.x) < 0.7 && Math.abs(camera.position.z - b.position.z) < 0.7) {
-            if(camera.position.y - targetHeight < b.position.y + 0.5 && camera.position.y - targetHeight > b.position.y - 0.5) {
-                camera.position.y = b.position.y + 0.5 + targetHeight;
-                vY = 0;
-                onG = true;
-            }
-        }
-    }
-}
-
-// ─── 7. TOUCH (OLHAR EM TODA A TELA / QUEBRAR) ───
-let lookId = null, lastX, lastY, bBlock = null, bProg = 0, tStart;
-const bBar = document.getElementById('breaking-bar-container');
-const bProgIn = document.getElementById('breaking-bar-progress');
-
-window.addEventListener('pointerdown', e => {
-    // Bloqueia se clicar na UI
-    if(e.target.closest('.mc-btn') || e.target.closest('.slot')) return;
-
-    // Se clicar no lado direito (Ação de bloco)
-    if(e.clientX > window.innerWidth / 2) {
-        const ray = new THREE.Raycaster();
-        ray.setFromCamera(new THREE.Vector2(0,0), camera);
-        const hits = ray.intersectObjects(blocks);
-        if(hits.length > 0 && hits[0].distance < 5) {
-            bBlock = hits[0].object;
-            tStart = Date.now();
-            // Clique rápido coloca bloco
-            setTimeout(() => {
-                if(bBlock && (Date.now() - tStart < 200)) {
-                    if(selectedBlock !== 'none') {
-                        const p = hits[0].object.position.clone().add(hits[0].face.normal);
-                        const nb = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats[selectedBlock] || mats.stone);
-                        nb.position.copy(p);
-                        scene.add(nb); blocks.push(nb);
-                    }
-                    bBlock = null;
-                }
-            }, 200);
-        }
-    }
-    
-    // Qualquer lugar da tela inicia o "Olhar" se não for interrompido
+    // Inicia rotação de câmera
     lookId = e.pointerId;
     lastX = e.clientX;
     lastY = e.clientY;
+
+    // Tentar identificar bloco na mira (Centro da tela)
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const intersects = raycaster.intersectObjects(blocks);
+
+    if (intersects.length > 0 && intersects[0].distance < 4) {
+        targetBlock = intersects[0].object;
+        isBreaking = true;
+        breakProg = 0;
+    }
 });
 
-window.addEventListener('pointermove', e => {
-    if(e.pointerId === lookId) {
-        yaw -= (e.clientX - lastX) * 0.006;
-        pitch = Math.max(-1.5, Math.min(1.5, pitch - (e.clientY - lastY) * 0.006));
+window.addEventListener('pointermove', (e) => {
+    if (e.pointerId === lookId) {
+        const deltaX = e.clientX - lastX;
+        const deltaY = e.clientY - lastY;
+        yaw -= deltaX * 0.005;
+        pitch -= deltaY * 0.005;
+        pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
         camera.rotation.set(pitch, yaw, 0, 'YXZ');
         lastX = e.clientX;
         lastY = e.clientY;
     }
 });
 
-window.addEventListener('pointerup', () => { 
-    lookId = null; bBlock = null; bProg = 0; 
-    if(bBar) bBar.style.display = 'none';
-    crackMesh.visible = false;
+window.addEventListener('pointerup', () => {
+    lookId = null;
+    isBreaking = false;
+    targetBlock = null;
 });
 
-// ─── 8. LOOP ───
+// --- LOOP DE ANIMAÇÃO ---
 function animate() {
     requestAnimationFrame(animate);
-    updatePlayer();
 
-    // Lógica da Barra e Rachadura
-    if(bBlock) {
-        bProg += 1.5;
-        if(bBar) {
-            bBar.style.display = 'block';
-            bProgIn.style.width = bProg + '%';
+    // Movimento
+    const speed = input.sneak ? 0.05 : 0.12;
+    const height = input.sneak ? 1.4 : 1.7;
+    const dir = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
+    dir.applyEuler(new THREE.Euler(0, yaw, 0));
+    camera.position.x += dir.x * speed;
+    camera.position.z += dir.z * speed;
+
+    // Gravidade e Colisão simples
+    vY -= 0.01;
+    camera.position.y += vY;
+    onGround = false;
+    blocks.forEach(b => {
+        if (Math.abs(camera.position.x - b.position.x) < 0.6 && Math.abs(camera.position.z - b.position.z) < 0.6) {
+            if (camera.position.y - height < b.position.y + 0.5 && camera.position.y - height > b.position.y - 0.5) {
+                camera.position.y = b.position.y + 0.5 + height;
+                vY = 0;
+                onGround = true;
+            }
         }
-        crackMesh.visible = true;
-        crackMesh.position.copy(bBlock.position);
-        crackMesh.material.map = crackTexs[Math.min(Math.floor(bProg/10), 9)];
-        arm.position.z = -0.6 + Math.sin(Date.now() * 0.02) * 0.05; // Soco
-        
-        if(bProg >= 100) {
-            scene.remove(bBlock);
-            blocks.splice(blocks.indexOf(bBlock), 1);
-            bBlock = null; bProg = 0;
+    });
+
+    // Lógica de Quebrar
+    if (isBreaking && targetBlock) {
+        breakProg += 1.5;
+        arm.position.z = -0.7 + Math.sin(Date.now() * 0.015) * 0.1; // Balanço do braço
+        if (breakProg >= 100) {
+            scene.remove(targetBlock);
+            blocks.splice(blocks.indexOf(targetBlock), 1);
+            isBreaking = false;
         }
+    } else {
+        arm.position.z = -0.7;
     }
 
     renderer.render(scene, camera);
 }
 
-document.querySelectorAll('.slot').forEach(s => {
-    s.onpointerdown = () => {
-        document.querySelectorAll('.slot').forEach(x => x.classList.remove('selected'));
-        s.classList.add('selected');
-        selectedBlock = s.dataset.block;
+// Seleção da Hotbar
+document.querySelectorAll('.slot').forEach(slot => {
+    slot.onpointerdown = () => {
+        document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+        slot.classList.add('selected');
+        selectedBlock = slot.dataset.block;
     };
 });
 
