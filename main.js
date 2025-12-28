@@ -1,18 +1,18 @@
 import * as THREE from 'three';
 
-// --- 1. SETUP OTIMIZADO ---
+// --- 1. CONFIGURAÇÃO E PERFORMANCE ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500); // Reduzi o campo de visão (Far) para diminuir lag
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
 const renderer = new THREE.WebGLRenderer({ 
-    antialias: false, // Desativar antialias aumenta muito o FPS no celular
+    antialias: false, 
     powerPreference: "high-performance" 
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(1); // Forçar 1 em vez de window.devicePixelRatio economiza GPU
+renderer.setPixelRatio(1); // Melhora FPS em celulares
 document.getElementById('game-container').appendChild(renderer.domElement);
 
-// --- 2. TEXTURAS ---
+// --- 2. CARREGAMENTO DE TEXTURAS ---
 const loader = new THREE.TextureLoader();
 function loadT(f) {
     const t = loader.load(`./textures/${f}`);
@@ -32,7 +32,7 @@ const mats = {
     leaf: new THREE.MeshBasicMaterial({ map: loadT('leaf.png'), transparent: true, alphaTest: 0.5 })
 };
 
-// --- 3. CLASSE MOB (Zumbi/Animal) ---
+// --- 3. CLASSE MOB (IA SIMPLES) ---
 class Mob {
     constructor(x, y, z, color, isHostile = false) {
         this.mesh = new THREE.Mesh(
@@ -47,11 +47,10 @@ class Mob {
         this.isHostile = isHostile;
     }
 
-    update(blocks, playerPos) {
+    update(playerPos) {
         this.timer++;
         if(this.timer > 120) {
             if(this.isHostile && this.mesh.position.distanceTo(playerPos) < 10) {
-                // Persegue o jogador
                 this.dir.subVectors(playerPos, this.mesh.position).normalize();
             } else {
                 this.dir.set(Math.random()-0.5, 0, Math.random()-0.5).normalize();
@@ -62,23 +61,23 @@ class Mob {
         const speed = this.isHostile ? 0.04 : 0.02;
         this.mesh.position.x += this.dir.x * speed;
         this.mesh.position.z += this.dir.z * speed;
-
         this.vY -= 0.01;
         this.mesh.position.y += this.vY;
 
-        // Colisão simples do Mob com o chão
         if(this.mesh.position.y < 1.1) {
             this.mesh.position.y = 1.1;
             this.vY = 0;
-            if(Math.random() < 0.01) this.vY = 0.15; // Pulo aleatório
+            if(Math.random() < 0.01) this.vY = 0.15;
         }
         this.mesh.lookAt(this.mesh.position.clone().add(this.dir));
     }
 }
 
 const mobs = [];
+mobs.push(new Mob(5, 2, 5, 0x00ff00, true)); // Zumbi
+mobs.push(new Mob(-5, 2, -5, 0xffcccc, false)); // Porco
 
-// --- 4. MUNDO ---
+// --- 4. GERAÇÃO DO MUNDO (CAMADAS E ÁRVORES) ---
 const blocks = [];
 function addB(x, y, z, type) {
     const b = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), type === 'grass' ? mats.grass : mats[type]);
@@ -87,20 +86,28 @@ function addB(x, y, z, type) {
     blocks.push(b);
 }
 
-// Chão Otimizado (Plataforma 15x15)
-for(let x=-7; x<=7; x++) {
-    for(let z=-7; z<=7; z++) {
+// Plataforma 20x20 com camadas de Terra e Pedra
+for(let x=-10; x<=10; x++) {
+    for(let z=-10; z<=10; z++) {
         addB(x, 0, z, 'grass');
         addB(x, -1, z, 'dirt');
         addB(x, -2, z, 'stone');
     }
 }
 
-// Adicionar Mobs de teste
-mobs.push(new Mob(3, 2, 3, 0x00ff00, true)); // Zumbi Verde
-mobs.push(new Mob(-3, 2, -3, 0xffcccc, false)); // Porco Rosa
+function createTree(x, z) {
+    for(let y=1; y<=3; y++) addB(x, y, z, 'wood');
+    for(let lx=-1; lx<=1; lx++) {
+        for(let lz=-1; lz<=1; lz++) {
+            for(let ly=3; ly<=4; ly++) {
+                if(!(lx===0 && lz===0 && ly===3)) addB(x+lx, ly, z+lz, 'leaf');
+            }
+        }
+    }
+}
+createTree(6, 6); createTree(-6, -8);
 
-// --- 5. JOGADOR ---
+// --- 5. INTERFACE E CONTROLES ---
 const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.8), new THREE.MeshBasicMaterial({ color: 0xffdbac }));
 arm.position.set(0.5, -0.6, -0.7);
 camera.add(arm);
@@ -110,7 +117,6 @@ const crackMesh = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new TH
 crackMesh.visible = false;
 scene.add(crackMesh);
 
-// --- 6. CONTROLES ---
 let input = { f:0, b:0, l:0, r:0, sneak: false };
 let yaw = 0, pitch = 0, vY = 0, onG = false, selBlock = 'none';
 
@@ -127,12 +133,25 @@ const bind = (id, k) => {
 bind('btn-up','f'); bind('btn-down','b'); bind('btn-left','l'); bind('btn-right','r'); bind('btn-shift','sneak');
 document.getElementById('btn-jump').onpointerdown = () => { if(onG) vY = 0.22; };
 
-// --- 7. FÍSICA E LOOP ---
+// TELA CHEIA
+const fsBtn = document.getElementById('btn-fullscreen');
+if(fsBtn) {
+    fsBtn.onclick = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            fsBtn.innerText = "SAIR";
+        } else {
+            document.exitFullscreen();
+            fsBtn.innerText = "TELA CHEIA";
+        }
+    };
+}
+
+// --- 6. LÓGICA DE JOGO ---
 function updatePhysics() {
     const speed = input.sneak ? 0.05 : 0.13;
     const h = input.sneak ? 1.4 : 1.7;
-    let move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
-    move.applyEuler(new THREE.Euler(0, yaw, 0));
+    let move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize().applyEuler(new THREE.Euler(0, yaw, 0));
 
     let nx = camera.position.x + move.x * speed;
     let nz = camera.position.z + move.z * speed;
@@ -161,7 +180,6 @@ function updatePhysics() {
     });
 }
 
-// --- INTERAÇÃO ---
 let lookId = null, lastX, lastY, bBlock = null, bProg = 0, tStart = 0, moved = false;
 
 window.addEventListener('pointerdown', e => {
@@ -202,13 +220,10 @@ window.addEventListener('pointerup', e => {
 function animate() {
     requestAnimationFrame(animate);
     updatePhysics();
-    
-    // Mobs
-    mobs.forEach(m => m.update(blocks, camera.position));
+    mobs.forEach(m => m.update(camera.position));
 
-    // Quebra
     if(!moved && bBlock && Date.now() - tStart > 250) {
-        bProg += 2.5;
+        bProg += 2;
         crackMesh.visible = true;
         crackMesh.position.copy(bBlock.position);
         crackMesh.material.map = crackTexs[Math.min(Math.floor(bProg/10), 9)];
@@ -225,9 +240,14 @@ function animate() {
 document.querySelectorAll('.slot').forEach(s => {
     s.onpointerdown = () => {
         document.querySelectorAll('.slot').forEach(x => x.classList.remove('selected'));
-        s.classList.add('selected');
-        selBlock = s.dataset.block;
+        s.classList.add('selected'); selBlock = s.dataset.block;
     };
+});
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 camera.position.set(0, 5, 5);
