@@ -1,76 +1,35 @@
-body { margin: 0; overflow: hidden; font-family: sans-serif; user-select: none; touch-action: none; background: #000; }
-#game-container { position: absolute; width: 100%; height: 100%; }
+body { margin: 0; overflow: hidden; font-family: sans-serif; user-select: none; }
+#game-container { position: absolute; top: 0; width: 100%; height: 100%; }
 
-#ui { 
-    position: absolute; width: 100%; height: 100%; 
-    top: 0; left: 0; pointer-events: none; z-index: 10; 
+/* Barra de Quebra Estilo Mine */
+#breaking-bar-container {
+    position: fixed;
+    top: 60%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 8px;
+    border: 2px solid #000;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    z-index: 100;
 }
-#ui * { pointer-events: auto; }
-
-/* --- ESTILO DOS BOTÕES (IGUAL ORIGINAL) --- */
-.mc-btn {
-    width: 65px; height: 65px;
-    background-color: #8b8b8b; /* Cinza Base */
-    border: 4px solid;
-    /* Borda Clara em Cima/Esq, Escura em Baixo/Dir (Efeito 3D) */
-    border-color: #dbdbdb #555555 #555555 #dbdbdb; 
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 30px;
-    font-family: monospace;
-    box-shadow: 2px 2px 0px #000;
-}
-
-/* Efeito ao clicar nos botões normais */
-.mc-btn:active:not(.active) {
-    border-color: #555555 #dbdbdb #dbdbdb #555555; /* Inverte o relevo */
-    transform: translate(2px, 2px);
-    background-color: #7a7a7a;
+#breaking-bar-progress {
+    width: 0%;
+    height: 100%;
+    background: #ffff00;
 }
 
-/* --- ESTILO DO BOTÃO SNEAK QUANDO ATIVADO --- */
-.mc-btn.active {
-    background-color: #b0b0b0; /* Mais claro */
-    border-color: #ffffff;      /* Borda branca brilhante */
-    box-shadow: inset 0 0 10px #ffffff; /* Brilho interno */
-    color: #fff;
-}
+.ui { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+.mc-btn, .slot { pointer-events: auto; background: rgba(0,0,0,0.4); border: 2px solid #fff; color: white; }
 
-/* Layout D-PAD (Cruz) */
-.movement-controls {
-    position: absolute; bottom: 30px; left: 30px;
-    display: grid;
-    grid-template-areas: 
-        ". up ."
-        "left sneak right"
-        ". down .";
-    gap: 0; /* Botões colados como no original */
-}
-#btn-up { grid-area: up; }
-#btn-left { grid-area: left; }
-#btn-shift { grid-area: sneak; font-size: 15px; }
-#btn-right { grid-area: right; }
-#btn-down { grid-area: down; }
+.controls { position: absolute; bottom: 20px; left: 20px; display: flex; flex-direction: column; align-items: center; }
+.side-btns { display: flex; gap: 40px; }
+.mc-btn { width: 50px; height: 50px; font-size: 20px; }
+.mc-btn.active { background: rgba(255, 255, 255, 0.5); color: black; }
 
-/* Botão Pulo */
-.action-buttons { position: absolute; bottom: 50px; right: 40px; }
-.jump-btn { width: 85px; height: 85px; font-size: 18px; font-weight: bold; }
+.action-btns { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
 
-/* Hotbar */
-.hotbar {
-    position: absolute; bottom: 10px; left: 50%;
-    transform: translateX(-50%);
-    display: flex; background: rgba(0,0,0,0.5);
-    padding: 3px; border: 3px solid #333;
-}
-.slot {
-    width: 45px; height: 45px; border: 3px solid #8b8b8b;
-    margin: 1px; display: flex; align-items: center; justify-content: center;
-    background: #8b8b8b;
-}
-.slot.selected { border-color: #ffffff; box-shadow: inset 0 0 5px #fff; }
-.slot img { width: 80%; height: 80%; image-rendering: pixelated; }
-
-.crosshair {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    color: white; font-size: 24px; pointer-events: none; opacity: 0.8; text-shadow: 1px 1px 0 #000;
-}
+.hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+.slot { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+.slot.selected { border-color: yellow; background: rgba(255,255,255,0.2); }
