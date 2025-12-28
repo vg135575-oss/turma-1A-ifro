@@ -61,32 +61,27 @@ for(let x = -6; x < 6; x++) {
 const raycaster = new THREE.Raycaster();
 let selected = 'stone';
 
-// CORREÇÃO: Função de ação ajustada para detecção melhorada
 function action(place) {
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const hits = raycaster.intersectObjects(blocks);
-    
     armPivot.rotation.x = -0.5; 
     setTimeout(() => armPivot.rotation.x = 0, 100);
 
-    if (hits.length > 0) {
+    if (hits.length > 0 && hits[0].distance < 5) {
         const hit = hits[0];
-        if (hit.distance < 5) {
-            if (place) {
-                const pos = hit.object.position.clone().add(hit.face.normal);
-                addBlock(pos.x, pos.y, pos.z, selected);
-            } else {
-                scene.remove(hit.object);
-                blocks.splice(blocks.indexOf(hit.object), 1);
-                if(navigator.vibrate) navigator.vibrate(40);
-            }
+        if (place) {
+            const pos = hit.object.position.clone().add(hit.face.normal);
+            addBlock(pos.x, pos.y, pos.z, selected);
+        } else {
+            scene.remove(hit.object);
+            blocks.splice(blocks.indexOf(hit.object), 1);
+            if(navigator.vibrate) navigator.vibrate(40);
         }
     }
 }
 
 const input = { f: 0, b: 0, l: 0, r: 0, shift: false };
-let pitch = 0, yaw = 0, lookId = null, lastX = 0, lastY = 0;
-let isMovingDedo = false, touchStart = 0;
+let pitch = 0, yaw = 0, lookId = null, lastX = 0, lastY = 0, isMovingDedo = false, touchStart = 0;
 
 function bind(id, k) {
     const el = document.getElementById(id);
@@ -130,10 +125,8 @@ window.addEventListener('pointermove', e => {
 
 window.addEventListener('pointerup', e => {
     if (e.pointerId === lookId) {
-        const duration = Date.now() - touchStart;
-        // Se não moveu o dedo e foi um toque rápido (< 250ms), coloca bloco. 
-        // Se segurou um pouco mais sem mover, quebra.
         if (!isMovingDedo) {
+            const duration = Date.now() - touchStart;
             if (duration < 250) action(true);
             else action(false);
         }
@@ -144,7 +137,6 @@ window.addEventListener('pointerup', e => {
 let vy = 0, onGround = false, currentHeight = 1.8;
 camera.position.set(0, 4, 4);
 
-// FUNÇÃO AUXILIAR: Verifica se existe chão abaixo de uma posição específica
 function hasFloorAt(x, z) {
     for (const b of blocks) {
         if (Math.abs(b.position.x - x) < 0.6 && Math.abs(b.position.z - z) < 0.6) {
@@ -163,12 +155,10 @@ function animate() {
     const move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
     move.applyEuler(new THREE.Euler(0, yaw, 0));
     
-    // LÓGICA DO SNEAK (Não cair da borda)
     let nextX = camera.position.x + move.x * speed;
     let nextZ = camera.position.z + move.z * speed;
 
     if (input.shift && onGround) {
-        // Se a próxima posição X ou Z não tiver chão, trava o movimento naquele eixo
         if (!hasFloorAt(nextX, camera.position.z)) nextX = camera.position.x;
         if (!hasFloorAt(camera.position.x, nextZ)) nextZ = camera.position.z;
     }
