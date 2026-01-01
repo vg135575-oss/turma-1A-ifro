@@ -2,38 +2,102 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel Administrativo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle - Loja IFRO</title>
     <link rel="stylesheet" href="loja.css">
+    <style>
+        /* Estilo rápido caso o loja.css ainda não esteja pronto */
+        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; }
+        .admin-box { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #ff5722; max-width: 500px; margin: auto; }
+        h1 { color: #ff5722; text-align: center; }
+        label { display: block; margin-top: 10px; color: #ccc; }
+        input, textarea { width: 100%; padding: 10px; margin-top: 5px; background: #333; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #ff5722; color: white; border: none; border-radius: 5px; margin-top: 20px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #e64a19; }
+        .back-link { display: block; text-align: center; margin-top: 15px; color: #00ff66; text-decoration: none; font-size: 0.9em; }
+    </style>
 </head>
 <body>
-    <div class="header-loja" style="background: #333;">
-        <h1>⚙️ Gerenciar Loja</h1>
-    </div>
 
-    <div class="card-produto">
-        <input type="text" id="foto" placeholder="URL da Imagem">
-        <input type="text" id="nome" placeholder="Nome do Produto">
-        <input type="text" id="preco" placeholder="Preço (ex: 45,00)">
-        <textarea id="desc" placeholder="Descrição rápida"></textarea>
-        <button onclick="salvar()" class="btn-comprar" style="border:none; cursor:pointer;">POSTAR PRODUTO</button>
+    <div class="admin-box">
+        <h1>⚙️ Painel do Dono</h1>
+        <p style="text-align: center; font-size: 0.8em; color: #888;">Cadastre produtos para a Loja de Usados</p>
+
+        <label>Nome do Produto</label>
+        <input type="text" id="nome" placeholder="Ex: Mouse Gamer Usado">
+
+        <label>Preço (R$)</label>
+        <input type="text" id="preco" placeholder="Ex: 50,00">
+
+        <label>Link da Foto (URL)</label>
+        <input type="text" id="foto" placeholder="Cole o link da imagem aqui">
+
+        <label>Descrição Curta</label>
+        <textarea id="desc" rows="3" placeholder="Ex: Funcionando perfeitamente, 6 meses de uso."></textarea>
+
+        <button onclick="salvar()">PUBLICAR PRODUTO</button>
+
+        <a href="index.html" class="back-link">← Voltar para o Início</a>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-        // COLOQUE OS MESMOS DADOS DO FIREBASE AQUI
-        const firebaseConfig = { apiKey: "SUA_API_KEY", projectId: "SEU_ID", appId: "SEU_APP_ID" };
+        // CONFIGURAÇÃO DO SEU FIREBASE (REAIS)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCHCALx4lU9TPY6BOTM3rURYty0lZID95Q",
+            authDomain: "loja-80493.firebaseapp.com",
+            projectId: "loja-80493",
+            storageBucket: "loja-80493.firebasestorage.app",
+            messagingSenderId: "277540839718",
+            appId: "1:277540839718:web:8fac3c979552e6e1f1a1e7",
+            measurementId: "G-1VG84TW3Y2"
+        };
+
+        // Inicializa o Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // SEGURANÇA: Senha simples para abrir o painel
+        window.onload = function() {
+            const senha = prompt("Digite a senha de administrador:");
+            if (senha !== "1234") {
+                alert("Senha incorreta!");
+                document.body.innerHTML = "<h1 style='text-align:center; margin-top:50px; color:red;'>Acesso Negado</h1>";
+            }
+        };
+
+        // FUNÇÃO PARA SALVAR NO BANCO DE DADOS
         function salvar() {
+            const nomeProd = document.getElementById('nome').value;
+            const precoProd = document.getElementById('preco').value;
+            const fotoProd = document.getElementById('foto').value;
+            const descProd = document.getElementById('desc').value;
+
+            if (nomeProd == "" || precoProd == "") {
+                alert("Por favor, preencha o nome e o preço!");
+                return;
+            }
+
             db.collection("produtos_usados").add({
-                foto: document.getElementById('foto').value,
-                nome: document.getElementById('nome').value,
-                preco: document.getElementById('preco').value,
-                desc: document.getElementById('desc').value
-            }).then(() => alert("Postado!"));
+                nome: nomeProd,
+                preco: precoProd,
+                foto: fotoProd,
+                desc: descProd,
+                data: new Date().getTime()
+            })
+            .then(() => {
+                alert("✅ Produto postado com sucesso!");
+                // Limpar campos
+                document.getElementById('nome').value = "";
+                document.getElementById('preco').value = "";
+                document.getElementById('foto').value = "";
+                document.getElementById('desc').value = "";
+            })
+            .catch((error) => {
+                alert("❌ Erro ao salvar: " + error);
+            });
         }
     </script>
 </body>
