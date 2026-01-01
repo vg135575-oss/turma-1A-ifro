@@ -65,7 +65,7 @@
         const db = firebase.firestore();
 
         // SEU NÚMERO DE WHATSAPP (Apenas números, com DDD)
-        const SEU_NUMERO = "69 9932-1740"; 
+        const SEU_NUMERO = "+55(69)9932-1740"; 
 
         // Carregar produtos em tempo real
         db.collection("produtos_usados").orderBy("data", "desc").onSnapshot((snapshot) => {
