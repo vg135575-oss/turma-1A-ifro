@@ -3,102 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Controle - Loja IFRO</title>
-    <link rel="stylesheet" href="loja.css">
+    <title>Loja da Turma 1A</title>
     <style>
-        /* Estilo rápido caso o loja.css ainda não esteja pronto */
-        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; }
-        .admin-box { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #ff5722; max-width: 500px; margin: auto; }
-        h1 { color: #ff5722; text-align: center; }
-        label { display: block; margin-top: 10px; color: #ccc; }
-        input, textarea { width: 100%; padding: 10px; margin-top: 5px; background: #333; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #ff5722; color: white; border: none; border-radius: 5px; margin-top: 20px; font-weight: bold; cursor: pointer; }
-        button:hover { background: #e64a19; }
-        .back-link { display: block; text-align: center; margin-top: 15px; color: #00ff66; text-decoration: none; font-size: 0.9em; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #0d0d0d; color: white; margin: 0; padding: 0; }
+        header { background: #1e1e1e; padding: 20px; text-align: center; border-bottom: 2px solid #ff5722; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        h1 { margin: 0; color: #ff5722; font-size: 1.5rem; }
+        p.sub { color: #888; margin: 5px 0 0 0; font-size: 0.9rem; }
+        
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+        
+        /* Estilo do Cartão do Produto */
+        .card { background: #1e1e1e; border-radius: 12px; overflow: hidden; border: 1px solid #333; transition: transform 0.2s; display: flex; flex-direction: column; }
+        .card:hover { transform: translateY(-5px); border-color: #ff5722; }
+        
+        .card img { width: 100%; height: 150px; object-fit: cover; background: #2a2a2a; }
+        .card-body { padding: 12px; flex-grow: 1; display: flex; flex-direction: column; }
+        
+        .nome { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; color: #fff; }
+        .desc { font-size: 0.8rem; color: #aaa; margin-bottom: 10px; flex-grow: 1; }
+        .preco { font-size: 1.3rem; color: #00e676; font-weight: bold; margin-bottom: 12px; }
+        
+        .btn-zap { display: block; width: 100%; padding: 10px 0; background-color: #25D366; color: #000; text-align: center; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 0.9rem; }
+        .btn-zap:hover { background-color: #128c7e; color: white; }
+
+        .loading { text-align: center; grid-column: 1 / -1; padding: 50px; color: #666; }
+        
+        /* Ajuste para celular */
+        @media (min-width: 600px) {
+            .container { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+            .card img { height: 200px; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="admin-box">
-        <h1>⚙️ Painel do Dono</h1>
-        <p style="text-align: center; font-size: 0.8em; color: #888;">Cadastre produtos para a Loja de Usados</p>
+    <header>
+        <h1>🛍️ Classificados 1ºA</h1>
+        <p class="sub">Produtos usados e desapegos da turma</p>
+    </header>
 
-        <label>Nome do Produto</label>
-        <input type="text" id="nome" placeholder="Ex: Mouse Gamer Usado">
-
-        <label>Preço (R$)</label>
-        <input type="text" id="preco" placeholder="Ex: 50,00">
-
-        <label>Link da Foto (URL)</label>
-        <input type="text" id="foto" placeholder="Cole o link da imagem aqui">
-
-        <label>Descrição Curta</label>
-        <textarea id="desc" rows="3" placeholder="Ex: Funcionando perfeitamente, 6 meses de uso."></textarea>
-
-        <button onclick="salvar()">PUBLICAR PRODUTO</button>
-
-        <a href="index.html" class="back-link">← Voltar para o Início</a>
+    <div class="container" id="lista">
+        <div class="loading">🔄 Carregando produtos...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-        // CONFIGURAÇÃO DO SEU FIREBASE (REAIS)
+        // SEUS DADOS REAIS
         const firebaseConfig = {
-            apiKey: "AIzaSyCHCALx4lU9TPY6BOTM3rURYty0lZID95Q",
-            authDomain: "loja-80493.firebaseapp.com",
-            projectId: "loja-80493",
-            storageBucket: "loja-80493.firebasestorage.app",
-            messagingSenderId: "277540839718",
-            appId: "1:277540839718:web:8fac3c979552e6e1f1a1e7",
-            measurementId: "G-1VG84TW3Y2"
+          apiKey: "AIzaSyCHCALx4lU9TPY6BOTM3rURYty0lZID95Q",
+          authDomain: "loja-80493.firebaseapp.com",
+          projectId: "loja-80493",
+          storageBucket: "loja-80493.firebasestorage.app",
+          messagingSenderId: "277540839718",
+          appId: "1:277540839718:web:8fac3c979552e6e1f1a1e7",
+          measurementId: "G-1VG84TW3Y2"
         };
 
-        // Inicializa o Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // SEGURANÇA: Senha simples para abrir o painel
-        window.onload = function() {
-            const senha = prompt("Digite a senha de administrador:");
-            if (senha !== "1234") {
-                alert("Senha incorreta!");
-                document.body.innerHTML = "<h1 style='text-align:center; margin-top:50px; color:red;'>Acesso Negado</h1>";
-            }
-        };
+        // SEU NÚMERO DE WHATSAPP (Apenas números, com DDD)
+        const SEU_NUMERO = "5569999999999"; 
 
-        // FUNÇÃO PARA SALVAR NO BANCO DE DADOS
-        function salvar() {
-            const nomeProd = document.getElementById('nome').value;
-            const precoProd = document.getElementById('preco').value;
-            const fotoProd = document.getElementById('foto').value;
-            const descProd = document.getElementById('desc').value;
+        // Carregar produtos em tempo real
+        db.collection("produtos_usados").orderBy("data", "desc").onSnapshot((snapshot) => {
+            const lista = document.getElementById("lista");
+            lista.innerHTML = ""; // Limpa a tela
 
-            if (nomeProd == "" || precoProd == "") {
-                alert("Por favor, preencha o nome e o preço!");
+            if (snapshot.empty) {
+                lista.innerHTML = "<div class='loading'>Nenhum produto à venda agora. 😢</div>";
                 return;
             }
 
-            db.collection("produtos_usados").add({
-                nome: nomeProd,
-                preco: precoProd,
-                foto: fotoProd,
-                desc: descProd,
-                data: new Date().getTime()
-            })
-            .then(() => {
-                alert("✅ Produto postado com sucesso!");
-                // Limpar campos
-                document.getElementById('nome').value = "";
-                document.getElementById('preco').value = "";
-                document.getElementById('foto').value = "";
-                document.getElementById('desc').value = "";
-            })
-            .catch((error) => {
-                alert("❌ Erro ao salvar: " + error);
+            snapshot.forEach((doc) => {
+                const p = doc.data();
+                // Se não tiver foto, usa uma imagem cinza padrão
+                const imagem = p.foto ? p.foto : "https://via.placeholder.com/300?text=Sem+Foto";
+                
+                lista.innerHTML += `
+                    <div class="card">
+                        <img src="${imagem}" alt="${p.nome}">
+                        <div class="card-body">
+                            <div class="nome">${p.nome}</div>
+                            <div class="desc">${p.desc || ''}</div>
+                            <div class="preco">R$ ${p.preco}</div>
+                            <a href="https://wa.me/${SEU_NUMERO}?text=Olá! Vi o produto *${p.nome}* na loja e tenho interesse." 
+                               target="_blank" class="btn-zap">
+                               💬 QUERO COMPRAR
+                            </a>
+                        </div>
+                    </div>
+                `;
             });
-        }
+        });
     </script>
 </body>
 </html>
