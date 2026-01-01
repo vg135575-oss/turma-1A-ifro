@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Turma 1A IFRO 💚</title>
 
+  <!-- APP -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#001900">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
   <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
 
@@ -76,10 +81,7 @@
       .menu-btn { display: block; }
     }
 
-    main {
-      text-align: center;
-      padding: 40px 20px;
-    }
+    main { text-align: center; padding: 40px 20px; }
 
     .hero {
       padding: 60px 20px;
@@ -98,7 +100,7 @@
       margin-top: 60px;
       padding: 60px 20px;
       background: linear-gradient(rgba(0,25,0,.9), rgba(0,25,0,.9)),
-        url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80");
+      url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80");
       background-size: cover;
       border-radius: 20px;
       box-shadow: 0 0 25px #00ff66;
@@ -137,8 +139,7 @@
       padding: 20px;
       box-shadow: 0 -2px 10px #00ff66;
     }
-    
-    /* Estilo extra para o botão da loja */
+
     .btn-loja {
       background: #ff5722 !important;
       box-shadow: 0 0 15px #ff5722 !important;
@@ -158,13 +159,13 @@
     <a href="index.html">Início</a>
     <a href="#sobre">Sobre</a>
     <a href="galeria.html">Galeria</a>
-    <a href="vendas.html">Loja</a> <a href="Hacker.html" target="_blank">Hacker</a>
+    <a href="vendas.html">Loja</a>
+    <a href="Hacker.html" target="_blank">Hacker</a>
     <a href="comentarios.html">Comentários</a>
   </nav>
 </header>
 
 <main>
-
   <section class="hero">
     <h1>💚 Turma 1°A | Técnico em Informática – IFRO</h1>
     <p>Unidos pela tecnologia, amizade e conhecimento.</p>
@@ -172,34 +173,24 @@
 
   <section id="sobre" class="sobre">
     <h2>Sobre a Turma</h2>
-    <p>
-      Somos alunos do curso Técnico em Informática do IFRO – Campus Ariquemes.
-      Este site reúne nossos projetos, ideias e jogos feitos na prática.
-    </p>
+    <p>Somos alunos do curso Técnico em Informática do IFRO – Campus Ariquemes.</p>
   </section>
 
   <section class="memorias">
     <h2>📸 Nossas Memórias</h2>
-    <p>Clique abaixo para ver fotos, projetos e conquistas da turma.</p>
     <a href="galeria.html" class="btn">✨ Ver Galeria</a>
   </section>
 
   <section class="games">
     <h2>🎮 Jogos e Sistemas</h2>
-    <p style="color:#ccc;margin-bottom:25px;">
-      Acesse nossos projetos desenvolvidos
-    </p>
-
-    <a href="game.html" class="btn">jogar questionário</a>
+    <a href="game.html" class="btn">Jogar Questionário</a>
     <a href="Minecraft.html" class="btn">⛏️ Jogar Minecraft</a>
-    
-    <div style="margin-top: 30px; border-top: 1px solid #00ff66; padding-top: 20px;">
-        <h2 style="color: #ff5722;">🛍️ Loja de Usados</h2>
-        <p style="color: #ccc; margin-bottom: 15px;">Produtos baratos</p>
-        <a href="vendas.html" class="btn btn-loja">Acessar Loja</a>
+
+    <div style="margin-top:30px;border-top:1px solid #00ff66;padding-top:20px;">
+      <h2 style="color:#ff5722;">🛍️ Loja de Usados</h2>
+      <a href="vendas.html" class="btn btn-loja">Acessar Loja</a>
     </div>
   </section>
-
 </main>
 
 <footer>
@@ -209,7 +200,11 @@
 <script>
   const menuBtn = document.getElementById("menuBtn");
   const navMenu = document.getElementById("navMenu");
-  menuBtn.addEventListener("click", () => navMenu.classList.toggle("show"));
+  menuBtn.onclick = () => navMenu.classList.toggle("show");
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
+  }
 </script>
 
 </body>
