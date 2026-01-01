@@ -3,99 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loja da Turma 1A</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #0d0d0d; color: white; margin: 0; padding: 0; }
-        header { background: #1e1e1e; padding: 20px; text-align: center; border-bottom: 2px solid #ff5722; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        h1 { margin: 0; color: #ff5722; font-size: 1.5rem; }
-        p.sub { color: #888; margin: 5px 0 0 0; font-size: 0.9rem; }
-        
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-        
-        /* Estilo do Cartão do Produto */
-        .card { background: #1e1e1e; border-radius: 12px; overflow: hidden; border: 1px solid #333; transition: transform 0.2s; display: flex; flex-direction: column; }
-        .card:hover { transform: translateY(-5px); border-color: #ff5722; }
-        
-        .card img { width: 100%; height: 150px; object-fit: cover; background: #2a2a2a; }
-        .card-body { padding: 12px; flex-grow: 1; display: flex; flex-direction: column; }
-        
-        .nome { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; color: #fff; }
-        .desc { font-size: 0.8rem; color: #aaa; margin-bottom: 10px; flex-grow: 1; }
-        .preco { font-size: 1.3rem; color: #00e676; font-weight: bold; margin-bottom: 12px; }
-        
-        .btn-zap { display: block; width: 100%; padding: 10px 0; background-color: #25D366; color: #000; text-align: center; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 0.9rem; }
-        .btn-zap:hover { background-color: #128c7e; color: white; }
-
-        .loading { text-align: center; grid-column: 1 / -1; padding: 50px; color: #666; }
-        
-        /* Ajuste para celular */
-        @media (min-width: 600px) {
-            .container { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-            .card img { height: 200px; }
-        }
-    </style>
+    <title>Classificados 1ºA</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
         <h1>🛍️ Classificados 1ºA</h1>
-        <p class="sub">Produtos usados e desapegos da turma</p>
+        <p class="sub">Produtos e desapegos da turma</p>
     </header>
 
     <div class="container" id="lista">
-        <div class="loading">🔄 Carregando produtos...</div>
-    </div>
+        </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-        // SEUS DADOS REAIS
+        // ... (Seu código JavaScript do Firebase que já funciona)
         const firebaseConfig = {
           apiKey: "AIzaSyCHCALx4lU9TPY6BOTM3rURYty0lZID95Q",
           authDomain: "loja-80493.firebaseapp.com",
           projectId: "loja-80493",
           storageBucket: "loja-80493.firebasestorage.app",
           messagingSenderId: "277540839718",
-          appId: "1:277540839718:web:8fac3c979552e6e1f1a1e7",
-          measurementId: "G-1VG84TW3Y2"
+          appId: "1:277540839718:web:8fac3c979552e6e1f1a1e7"
         };
-
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const SEU_NUMERO = "556999321740"; 
 
-        // SEU NÚMERO DE WHATSAPP (Apenas números, com DDD)
-        const SEU_NUMERO = "+55(69)9932-1740"; 
-
-        // Carregar produtos em tempo real
         db.collection("produtos_usados").orderBy("data", "desc").onSnapshot((snapshot) => {
             const lista = document.getElementById("lista");
-            lista.innerHTML = ""; // Limpa a tela
-
-            if (snapshot.empty) {
-                lista.innerHTML = "<div class='loading'>Nenhum produto à venda agora. 😢</div>";
-                return;
-            }
-
+            lista.innerHTML = ""; 
             snapshot.forEach((doc) => {
                 const p = doc.data();
-                // Se não tiver foto, usa uma imagem cinza padrão
-                const imagem = p.foto ? p.foto : "https://via.placeholder.com/300?text=Sem+Foto";
-                
+                const imagem = p.foto || "https://via.placeholder.com/300";
                 lista.innerHTML += `
                     <div class="card">
-                        <img src="${imagem}" alt="${p.nome}">
+                        <div class="img-container"><img src="${imagem}"></div>
                         <div class="card-body">
                             <div class="nome">${p.nome}</div>
-                            <div class="desc">${p.desc || ''}</div>
                             <div class="preco">R$ ${p.preco}</div>
-                            <a href="https://wa.me/${SEU_NUMERO}?text=Olá! Vi o produto *${p.nome}* na loja e tenho interesse." 
-                               target="_blank" class="btn-zap">
-                               💬 QUERO COMPRAR
+                            <a href="https://wa.me/${SEU_NUMERO}?text=Interesse:${p.nome}" target="_blank" class="btn-zap">
+                                QUERO COMPRAR
                             </a>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
         });
     </script>
