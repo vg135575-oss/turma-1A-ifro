@@ -1,1 +1,40 @@
-m
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Administrativo</title>
+    <link rel="stylesheet" href="loja.css">
+</head>
+<body>
+    <div class="header-loja" style="background: #333;">
+        <h1>⚙️ Gerenciar Loja</h1>
+    </div>
+
+    <div class="card-produto">
+        <input type="text" id="foto" placeholder="URL da Imagem">
+        <input type="text" id="nome" placeholder="Nome do Produto">
+        <input type="text" id="preco" placeholder="Preço (ex: 45,00)">
+        <textarea id="desc" placeholder="Descrição rápida"></textarea>
+        <button onclick="salvar()" class="btn-comprar" style="border:none; cursor:pointer;">POSTAR PRODUTO</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        // COLOQUE OS MESMOS DADOS DO FIREBASE AQUI
+        const firebaseConfig = { apiKey: "SUA_API_KEY", projectId: "SEU_ID", appId: "SEU_APP_ID" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function salvar() {
+            db.collection("produtos_usados").add({
+                foto: document.getElementById('foto').value,
+                nome: document.getElementById('nome').value,
+                preco: document.getElementById('preco').value,
+                desc: document.getElementById('desc').value
+            }).then(() => alert("Postado!"));
+        }
+    </script>
+</body>
+</html>
