@@ -2,50 +2,79 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel Administrativo - Loja</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Loja 1A</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; text-align: center; }
-        .box { background: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #ff5722; max-width: 400px; margin: auto; }
-        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #ff5722; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .container { background-color: #1e1e1e; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 100%; max-width: 400px; border: 1px solid #333; }
+        h2 { text-align: center; color: #ff5722; margin-bottom: 20px; }
+        label { display: block; margin-top: 15px; font-size: 0.9em; color: #aaa; }
+        input, textarea { width: 100%; padding: 12px; margin-top: 5px; background-color: #2c2c2c; border: 1px solid #444; color: white; border-radius: 8px; box-sizing: border-box; outline: none; transition: 0.3s; }
+        input:focus, textarea:focus { border-color: #ff5722; background-color: #333; }
+        button { width: 100%; padding: 15px; background: linear-gradient(45deg, #ff5722, #ff9100); color: white; border: none; border-radius: 8px; margin-top: 25px; font-size: 1em; font-weight: bold; cursor: pointer; transition: transform 0.2s; }
+        button:active { transform: scale(0.98); }
+        .aviso { font-size: 0.8em; text-align: center; margin-top: 15px; color: #666; }
     </style>
 </head>
 <body>
 
-    <div class="box">
-        <h2>Adicionar Produto</h2>
-        <input type="text" id="nome" placeholder="Nome do Produto">
-        <input type="text" id="preco" placeholder="Preço (Ex: 50,00)">
-        <input type="text" id="foto" placeholder="Link da Foto (URL)">
-        <textarea id="desc" placeholder="Descrição rápida"></textarea>
-        <button onclick="enviar()">POSTAR NA LOJA</button>
+    <div class="container" id="painel" style="display:none;">
+        <h2>🔐 Adicionar Produto</h2>
+        
+        <label>Nome do Produto</label>
+        <input type="text" id="nome" placeholder="Ex: Mouse Gamer">
+
+        <label>Preço (R$)</label>
+        <input type="number" id="preco" placeholder="Ex: 50.00">
+
+        <label>Link da Foto (URL)</label>
+        <input type="text" id="foto" placeholder="Cole o link da imagem aqui">
+
+        <label>Descrição</label>
+        <textarea id="desc" rows="3" placeholder="Detalhes do produto..."></textarea>
+
+        <button onclick="salvar()">PUBLICAR AGORA</button>
+        <p class="aviso">O produto aparecerá na hora na página de vendas.</p>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-// Substitua o que estiver aqui pelo que você copiou do site
-const firebaseConfig = {
-  apiKey: "AIzaSyCHCALx4lU9TPY6BOTM3rURYty0lZID95Q",
-  authDomain: "loja-80493.firebaseapp.com",
-  projectId: "loja-80493",
-  storageBucket: "loja-80493.firebasestorage.app",
-  messagingSenderId: "277540839718",
-  appId: "1:277540839718:web:8fac3c979552e6e1f1a1e7",
-  measurementId: "G-1VG84TW3Y2"
-};
+        // CONFIGURAÇÃO DO SEU FIREBASE
+        const firebaseConfig = {
+          apiKey: "AIzaSyCHCALx4lU9TPY6BOTM3rURYty0lZID95Q",
+          authDomain: "loja-80493.firebaseapp.com",
+          projectId: "loja-80493",
+          storageBucket: "loja-80493.firebasestorage.app",
+          messagingSenderId: "277540839718",
+          appId: "1:277540839718:web:8fac3c979552e6e1f1a1e7",
+          measurementId: "G-1VG84TW3Y2"
+        };
 
-// Inicializa o Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
+        // SISTEMA DE SENHA SIMPLES
+        const senha = prompt("Digite a senha do administrador:");
+        if (senha === "1234") {
+            document.getElementById("painel").style.display = "block";
+        } else {
+            alert("Senha Incorreta!");
+            document.body.innerHTML = "<h1 style='color:red; text-align:center;'>ACESSO NEGADO 🚫</h1>";
+        }
 
-        function enviar() {
+        // FUNÇÃO DE SALVAR
+        function salvar() {
             const nome = document.getElementById('nome').value;
             const preco = document.getElementById('preco').value;
             const foto = document.getElementById('foto').value;
             const desc = document.getElementById('desc').value;
+
+            if (!nome || !preco) {
+                alert("Preencha pelo menos o Nome e o Preço!");
+                return;
+            }
 
             db.collection("produtos_usados").add({
                 nome: nome,
@@ -53,12 +82,12 @@ const db = firebase.firestore();
                 foto: foto,
                 desc: desc,
                 data: new Date().getTime()
-            })
-            .then(() => {
-                alert("Produto cadastrado com sucesso!");
+            }).then(() => {
+                alert("✅ Sucesso! Produto enviado para a loja.");
                 location.reload();
-            })
-            .catch((error) => alert("Erro: " + error));
+            }).catch((error) => {
+                alert("Erro: " + error.message);
+            });
         }
     </script>
 </body>
