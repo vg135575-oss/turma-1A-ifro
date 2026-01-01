@@ -25,19 +25,21 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-        // SEUS DADOS QUE VOCÊ ENVIOU
-        const firebaseConfig = {
-          apiKey: "AIzaSyCHCALx4lU9TPY6BOTM3rURYty0lZID95Q",
-          authDomain: "loja-80493.firebaseapp.com",
-          projectId: "loja-80493",
-          storageBucket: "loja-80493.firebasestorage.app",
-          messagingSenderId: "277540839718",
-          appId: "1:277540839718:web:8fac3c979552e6e1f1a1e7",
-          measurementId: "G-1VG84TW3Y2"
-        };
+// Substitua o que estiver aqui pelo que você copiou do site
+const firebaseConfig = {
+  apiKey: "AIzaSyCHCALx4lU9TPY6BOTM3rURYty0lZID95Q",
+  authDomain: "loja-80493.firebaseapp.com",
+  projectId: "loja-80493",
+  storageBucket: "loja-80493.firebasestorage.app",
+  messagingSenderId: "277540839718",
+  appId: "1:277540839718:web:8fac3c979552e6e1f1a1e7",
+  measurementId: "G-1VG84TW3Y2"
+};
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+// Inicializa o Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 
         function enviar() {
             const nome = document.getElementById('nome').value;
