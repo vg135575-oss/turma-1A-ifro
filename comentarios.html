@@ -3,98 +3,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastro de Usuários - Turma 1A IFRO 💚</title>
-  <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
+  <title>Mural de Comentários - Turma 1A</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Orbitron', sans-serif;
-      background-color: #0a0a0a;
-      color: #00ff66;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
+    body { font-family: 'Orbitron', sans-serif; background-color: #0a0a0a; color: #00ff66; text-align: center; margin: 0; padding: 20px; }
+    header { background: #001900; padding: 15px; box-shadow: 0 2px 10px #00ff66; margin-bottom: 20px; }
+    
+    .menu-botoes { margin-bottom: 20px; }
+    .btn-aba { background: #001900; color: #00ff66; border: 2px solid #00ff66; padding: 10px 20px; cursor: pointer; font-family: 'Orbitron'; margin: 5px; border-radius: 8px; }
+    .btn-aba.ativo { background: #00ff66; color: #000; }
 
-    header {
-      background: #001900;
-      padding: 15px;
-      box-shadow: 0 2px 10px #00ff66;
-    }
+    .secao { display: none; background: #001900; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px #00ff66; max-width: 500px; margin: auto; }
+    .secao.ativa { display: block; }
 
-    h1 {
-      margin-bottom: 20px;
-    }
-
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      background: #001900;
-      padding: 25px;
-      border-radius: 15px;
-      box-shadow: 0 0 15px #00ff66;
-      max-width: 400px;
-      margin: 40px auto;
-    }
-
-    input {
-      background: #000;
-      color: #00ff66;
-      border: 2px solid #00ff66;
-      border-radius: 8px;
-      padding: 10px;
-      font-size: 1em;
-    }
-
-    button {
-      background: #00ff66;
-      color: #000;
-      border: none;
-      padding: 12px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-
-    button:hover {
-      background: #000;
-      color: #00ff66;
-      box-shadow: 0 0 20px #00ff66;
-    }
-
-    footer {
-      margin-top: 40px;
-      background: #001900;
-      color: #00ff66;
-      padding: 15px;
-      box-shadow: 0 -2px 10px #00ff66;
-    }
+    input, textarea { background: #000; color: #00ff66; border: 2px solid #00ff66; border-radius: 8px; padding: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: 'Orbitron'; }
+    
+    .checkbox-container { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; font-size: 0.8em; }
+    
+    .comentario-card { background: #000; border: 1px solid #00ff66; padding: 15px; border-radius: 8px; margin-bottom: 10px; text-align: left; }
+    .comentario-autor { color: #fff; font-size: 0.9em; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 5px; }
+    
+    button#enviar { background: #00ff66; color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
   </style>
 </head>
 <body>
+
   <header>
-    <h1>👥 Cadastro de Usuários</h1>
+    <h1>💬 Mural de Feedback</h1>
   </header>
 
-  <main>
-    <form id="usuarioForm">
-      <input type="text" id="nome" placeholder="Nome completo" required>
-      <input type="email" id="email" placeholder="E-mail" required>
-      <input type="text" id="turma" placeholder="Turma (ex: 1°A)" required>
-      <input type="password" id="senha" placeholder="Senha" required>
-      <button type="submit">Cadastrar Usuário</button>
-    </form>
-  </main>
+  <div class="menu-botoes">
+    <button class="btn-aba ativo" onclick="mudarAba('ver')">VER MURAL</button>
+    <button class="btn-aba" onclick="mudarAba('enviar')">ENVIAR NOVO</button>
+  </div>
 
-  <footer>
-    <p>© 2025 Turma 1°A – IFRO | Sistema de Cadastro 💚</p>
-  </footer>
+  <div id="aba-ver" class="secao ativa">
+    <div id="lista-comentarios">Carregando mural...</div>
+  </div>
+
+  <div id="aba-enviar" class="secao">
+    <input type="text" id="autorNome" placeholder="Seu nome">
+    <textarea id="textoComentario" rows="4" placeholder="Escreva sua mensagem..."></textarea>
+    
+    <div class="checkbox-container">
+      <input type="checkbox" id="anonimo" style="width: auto;">
+      <label for="anonimo">Enviar como Anônimo 👤</label>
+    </div>
+
+    <button id="enviar">PUBLICAR NO MURAL</button>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDDP25sq9YORCe7x2FZalP_miA9bsQqDUU",
@@ -108,29 +69,61 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const form = document.getElementById('usuarioForm');
+    // FUNÇÃO PARA TROCAR ABAS
+    window.mudarAba = (aba) => {
+      document.querySelectorAll('.secao').forEach(s => s.classList.remove('ativa'));
+      document.querySelectorAll('.btn-aba').forEach(b => b.classList.remove('ativo'));
+      
+      if(aba === 'ver') {
+        document.getElementById('aba-ver').classList.add('ativa');
+        event.target.classList.add('ativo');
+      } else {
+        document.getElementById('aba-enviar').classList.add('ativa');
+        event.target.classList.add('ativo');
+      }
+    }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+    // ENVIAR COMENTÁRIO
+    document.getElementById('enviar').addEventListener('click', async () => {
+      const nomeInput = document.getElementById('autorNome').value;
+      const texto = document.getElementById('textoComentario').value;
+      const ehAnonimo = document.getElementById('anonimo').checked;
 
-      const nome = document.getElementById('nome').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const turma = document.getElementById('turma').value.trim();
-      const senha = document.getElementById('senha').value.trim();
+      if (!texto) return alert("Escreva algo antes de enviar!");
 
-      if (!nome || !email || !turma || !senha) return alert("Preencha todos os campos!");
+      const nomeFinal = ehAnonimo ? "Anônimo 👤" : (nomeInput || "Estudante");
 
-      await addDoc(collection(db, "usuarios"), {
-        nome,
-        email,
-        turma,
-        senha,
-        criadoEm: serverTimestamp()
+      try {
+        await addDoc(collection(db, "comentarios"), {
+          autor: nomeFinal,
+          mensagem: texto,
+          data: serverTimestamp()
+        });
+        alert("Mensagem enviada!");
+        document.getElementById('textoComentario').value = "";
+        mudarAba('ver');
+      } catch (e) {
+        alert("Erro ao enviar: " + e);
+      }
+    });
+
+    // CARREGAR COMENTÁRIOS EM TEMPO REAL
+    const q = query(collection(db, "comentarios"), orderBy("data", "desc"));
+    onSnapshot(q, (snapshot) => {
+      const lista = document.getElementById('lista-comentarios');
+      lista.innerHTML = "";
+      
+      snapshot.forEach((doc) => {
+        const c = doc.data();
+        lista.innerHTML += `
+          <div class="comentario-card">
+            <div class="comentario-autor">${c.autor}</div>
+            <div>${c.mensagem}</div>
+          </div>
+        `;
       });
 
-      alert("Usuário cadastrado com sucesso!");
-      form.reset();
-      window.location.href = "usuarios.html"; // redireciona
+      if(snapshot.empty) lista.innerHTML = "Mural vazio. Seja o primeiro!";
     });
   </script>
 </body>
