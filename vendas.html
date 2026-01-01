@@ -1,1 +1,48 @@
-m
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Loja de Usados</title>
+    <link rel="stylesheet" href="loja.css">
+</head>
+<body>
+    <div class="header-loja">
+        <h1>🛍️ Vitrine de Usados</h1>
+        <p>Retirada presencial combinada via WhatsApp</p>
+    </div>
+
+    <div id="lista-produtos">Carregando produtos...</div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        // COLOQUE SEUS DADOS DO FIREBASE AQUI
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY",
+            projectId: "SEU_ID",
+            appId: "SEU_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        db.collection("produtos_usados").onSnapshot(snapshot => {
+            const container = document.getElementById("lista-produtos");
+            container.innerHTML = "";
+            snapshot.forEach(doc => {
+                const p = doc.data();
+                container.innerHTML += `
+                    <div class="card-produto">
+                        <img src="${p.foto}">
+                        <h2>${p.nome}</h2>
+                        <p>${p.desc}</p>
+                        <div class="preco">R$ ${p.preco}</div>
+                        <a href="https://wa.me/SEU_NUMERO_AQUI?text=Tenho interesse no ${p.nome}" class="btn-comprar">RESERVAR NO WHATSAPP</a>
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>
