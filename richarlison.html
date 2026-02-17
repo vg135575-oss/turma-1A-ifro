@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Real Drive</title>
+    <title>Richarlison Engine Focus</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #loading-screen {
             position: absolute; width: 100%; height: 100%; background: #000;
             color: #0f0; display: flex; flex-direction: column; 
@@ -14,7 +14,7 @@
         .btn { 
             margin-top: 20px; padding: 15px 40px; background: #0f0; 
             border: none; font-weight: bold; cursor: pointer; border-radius: 30px; 
-            pointer-events: all; font-size: 18px; text-transform: uppercase;
+            font-size: 18px;
         }
         #speedo {
             position: absolute; bottom: 40px; right: 40px; color: #fff;
@@ -26,10 +26,9 @@
 <body>
 
     <div id="loading-screen">
-        <div id="status">LIGANDO O MOTOR...</div>
-        <button id="start-btn" class="btn" style="display:none" onclick="start()">DAR PARTIDA</button>
+        <div id="status">SINTONIZANDO V8...</div>
+        <button id="start-btn" class="btn" style="display:none" onclick="start()">LIGAR MÁQUINA</button>
     </div>
-    
     <div id="speedo">0 KM/H</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -38,26 +37,20 @@
     <script>
         let scene, camera, renderer, car, city;
         let moveSpeed = 0, carRotation = 0, gameActive = false;
+        let rpm = 0; // Nova variável para controlar o som
         
-        // FÍSICA AJUSTADA
         const physics = {
-            accel: 0.06,
-            decel: 0.12, // Força do freio
-            maxSpeed: 2.8,
-            maxReverse: -0.6,
+            accel: 0.05,
+            maxSpeed: 2.5,
             friction: 0.98
         };
 
-        let camAngleH = 0, currentCamRotation = 0;
-        const raycaster = new THREE.Raycaster();
-
-        // --- SISTEMA DE ÁUDIO REALISTA ---
+        // --- SISTEMA DE SOM AVANÇADO ---
         let audioCtx, engineSource, gainNode;
         let engineBuffer = null;
 
-        function loadRealEngineSound() {
+        function initAudio() {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            // Som de motor V8 em loop
             const url = 'https://raw.githubusercontent.com/nicolas-van/obsidian-racer/master/audio/engine.mp3';
             
             fetch(url)
@@ -65,47 +58,60 @@
                 .then(data => audioCtx.decodeAudioData(data))
                 .then(buffer => {
                     engineBuffer = buffer;
-                    checkReady();
-                })
-                .catch(() => {
-                    document.getElementById('status').innerText = "Erro no som, mas pronto!";
-                    checkReady();
+                    document.getElementById('start-btn').style.display = "block";
+                    document.getElementById('status').innerText = "MOTOR PRONTO";
                 });
         }
 
         function playEngine() {
-            if (!engineBuffer) return;
             engineSource = audioCtx.createBufferSource();
             engineSource.buffer = engineBuffer;
             engineSource.loop = true;
+            
             gainNode = audioCtx.createGain();
             engineSource.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-            gainNode.gain.value = 0.4;
+            
+            gainNode.gain.value = 0.3;
             engineSource.start(0);
         }
 
         function updateEngineSound() {
             if (!engineSource) return;
-            // O Pitch muda com a velocidade: 0.8 (marcha lenta) até 2.5 (cortando giro)
-            let pitch = 0.8 + (Math.abs(moveSpeed) * 0.7);
-            engineSource.playbackRate.setTargetAtTime(pitch, audioCtx.currentTime, 0.1);
+
+            // Simulação de RPM baseada na velocidade e aceleração
+            let targetRpm = Math.abs(moveSpeed) / physics.maxSpeed;
+            // Suaviza a subida do giro
+            rpm += (targetRpm - rpm) * 0.1;
+
+            // Pitch: de 0.7 (lento) até 2.2 (grito do motor)
+            let pitch = 0.7 + (rpm * 1.5);
+            
+            // Efeito de Corta Giro (Rev Limiter) em velocidade máxima
+            if (rpm > 0.98) {
+                pitch += Math.sin(Date.now() * 0.05) * 0.1;
+            }
+
+            engineSource.playbackRate.setTargetAtTime(pitch, audioCtx.currentTime, 0.05);
+            
+            // Aumenta o volume conforme o motor "esforça"
+            gainNode.gain.setTargetAtTime(0.2 + (rpm * 0.4), audioCtx.currentTime, 0.1);
         }
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050510);
-            scene.fog = new THREE.FogExp2(0x050510, 0.005);
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
+            scene.background = new THREE.Color(0x0a0a15);
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 2.0));
-            const loader = new THREE.GLTFLoader();
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
+            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
 
-            loader.load('./city_at_night.glb', (gltf) => { city = gltf.scene; city.scale.set(5, 5, 5); scene.add(city); checkReady(); });
+            const loader = new THREE.GLTFLoader();
+            loader.load('./city_at_night.glb', (gltf) => { 
+                city = gltf.scene; city.scale.set(5, 5, 5); scene.add(city); 
+            });
             loader.load('./carro.glb', (gltf) => { 
                 car = gltf.scene; 
                 const bbox = new THREE.Box3().setFromObject(car);
@@ -113,19 +119,9 @@
                 bbox.getSize(size);
                 car.scale.setScalar(10 / size.z); 
                 scene.add(car); 
-                checkReady(); 
             });
 
-            loadRealEngineSound();
-        }
-
-        let items = 0;
-        function checkReady() { 
-            items++; 
-            if(items >= 3) {
-                document.getElementById('status').innerText = "V8 PRONTO!";
-                document.getElementById('start-btn').style.display = "block";
-            }
+            initAudio();
         }
 
         function start() {
@@ -141,39 +137,17 @@
             const gp = gps[0] || gps[1];
 
             if (gp && gameActive && car) {
-                let jY = gp.axes[1]; // Acelerar/Ré
-                let jX = gp.axes[0]; // Direção
-                let cX = gp.axes[2]; // Câmera
-                let isBraking = gp.buttons[0].pressed || gp.buttons[1].pressed; // A ou B para freio
+                let jY = gp.axes[1]; 
+                let jX = gp.axes[0];
 
-                // ACELERAÇÃO E FREIO
-                if (jY < -0.1) { // Pra frente
-                    moveSpeed += Math.abs(jY) * physics.accel;
-                } else if (jY > 0.1) { // Ré
-                    moveSpeed -= Math.abs(jY) * physics.accel;
-                } else {
-                    moveSpeed *= physics.friction; // Desaceleração natural
-                }
+                if (Math.abs(jY) > 0.1) moveSpeed -= jY * physics.accel;
+                moveSpeed *= physics.friction;
 
-                // FREIO DE MÃO
-                if (isBraking) moveSpeed *= 0.85;
-
-                // LIMITES
                 if (moveSpeed > physics.maxSpeed) moveSpeed = physics.maxSpeed;
-                if (moveSpeed < physics.maxReverse) moveSpeed = physics.maxReverse;
+                if (moveSpeed < -0.8) moveSpeed = -0.8;
 
-                // DIREÇÃO PESADA EM ALTA VELOCIDADE
                 if (Math.abs(moveSpeed) > 0.05) {
-                    let steer = 0.05 * (1 - (Math.abs(moveSpeed) / (physics.maxSpeed * 1.5)));
-                    carRotation -= jX * steer * (moveSpeed > 0 ? 1 : -1);
-                }
-
-                // COLISÃO
-                const headDir = new THREE.Vector3(Math.sin(carRotation), 0, Math.cos(carRotation)).normalize();
-                raycaster.set(car.position, headDir);
-                const hit = raycaster.intersectObject(city, true);
-                if (hit.length > 0 && hit[0].distance < 3.8 && hit[0].point.y > 0.7 && moveSpeed > 0.1) {
-                    moveSpeed = -0.1;
+                    carRotation -= jX * 0.04 * (moveSpeed > 0 ? 1 : -1);
                 }
 
                 car.rotation.y = carRotation;
@@ -181,19 +155,13 @@
                 car.position.z += Math.cos(carRotation) * moveSpeed;
 
                 document.getElementById('speedo').innerText = Math.abs(Math.round(moveSpeed * 100)) + " KM/H";
-                if (Math.abs(cX) > 0.1) camAngleH += cX * 0.08;
-                
                 updateEngineSound();
             }
 
             if (car) {
-                currentCamRotation += (carRotation - currentCamRotation) * 0.08;
-                camera.fov = 70 + (Math.abs(moveSpeed) * 8);
-                camera.updateProjectionMatrix();
                 const dist = 22 + (Math.abs(moveSpeed) * 3);
-                const finalRot = currentCamRotation + camAngleH;
-                camera.position.x = car.position.x - Math.sin(finalRot) * dist;
-                camera.position.z = car.position.z - Math.cos(finalRot) * dist;
+                camera.position.x = car.position.x - Math.sin(carRotation) * dist;
+                camera.position.z = car.position.z - Math.cos(carRotation) * dist;
                 camera.position.y = car.position.y + 7;
                 camera.lookAt(car.position.x, car.position.y + 3, car.position.z);
             }
@@ -204,12 +172,6 @@
             updatePhysics();
             renderer.render(scene, camera);
         }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
 
         init();
     </script>
