@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison 3D - Ajustado</title>
+    <title>Richarlison Horizon 5</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #loading-screen {
@@ -13,17 +13,16 @@
         }
         .btn { 
             margin-top: 20px; padding: 15px 30px; background: #0f0; 
-            border: none; font-weight: bold; cursor: pointer; pointer-events: all;
-            border-radius: 8px;
+            border: none; font-weight: bold; cursor: pointer; border-radius: 8px;
         }
-        #status { font-family: monospace; text-align: center; padding: 0 20px; color: #0f0; }
+        #status { font-family: monospace; color: #0f0; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <div id="status">INICIANDO MOTORES...</div>
-        <button id="start-btn" class="btn" style="display:none" onclick="start()">ENTRAR NO CARRO</button>
+        <div id="status">CARREGANDO ENGINE...</div>
+        <button id="start-btn" class="btn" style="display:none" onclick="start()">START ENGINE</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -31,94 +30,68 @@
 
     <script>
         let scene, camera, renderer, car, city;
-        let moveSpeed = 0, maxSpeed = 1.2, acceleration = 0.03, friction = 0.96;
+        // FÍSICA MAIS RÁPIDA
+        let moveSpeed = 0, maxSpeed = 2.5, acceleration = 0.08, friction = 0.97;
         let carRotation = 0;
         let gameActive = false;
         
-        let cameraAngleH = 0;
-        let cameraAngleV = 0.4;
+        // SISTEMA DE CÂMERA (ESTILO FORZA)
+        let camAngleH = 0; // Ângulo manual (Joy Direito)
+        let camAngleV = 0.3;
+        let currentCamRotation = 0; // Rotação atual da câmera para suavização
 
-        function displayLog(msg) {
-            document.getElementById('status').innerText = msg;
-        }
+        function displayLog(msg) { document.getElementById('status').innerText = msg; }
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050515);
-            // Reduzi a neblina para você enxergar mais longe
-            scene.fog = new THREE.FogExp2(0x050515, 0.005);
+            scene.background = new THREE.Color(0x0a0a15);
+            scene.fog = new THREE.FogExp2(0x0a0a15, 0.008);
 
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 5000);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            // Deixa as cores mais vivas
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            // --- ILUMINAÇÃO (XÔ ESCURIDÃO) ---
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Luz geral bem forte
-            scene.add(ambientLight);
-            
-            const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+            // LUZES FORTES (CIDADE CLARA)
+            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
             sun.position.set(100, 200, 100);
             scene.add(sun);
 
-            // Luz azulada vindo de baixo para dar clima de cidade neon
-            const groundLight = new THREE.PointLight(0x00ffff, 1, 500);
-            groundLight.position.set(0, -10, 0);
-            scene.add(groundLight);
-
             const loader = new THREE.GLTFLoader();
 
-            // --- CARREGAR CIDADE ---
+            // CIDADE MENOR
             loader.load('./city_at_night.glb', (gltf) => {
                 city = gltf.scene;
-                city.scale.set(10, 10, 10); // Diminuí um pouco a escala da cidade para o carro encaixar
+                city.scale.set(4, 4, 4); 
                 scene.add(city);
-                displayLog("Cidade carregada!");
                 checkReady();
-            }, undefined, (e) => {
-                displayLog("Cidade não encontrada.");
-                checkReady();
-            });
+            }, undefined, () => checkReady());
 
-            // --- CARREGAR CARRO ---
+            // CARRO AJUSTADO
             loader.load('./carro.glb', (gltf) => {
                 car = gltf.scene;
-                
-                // Reset e medição
-                car.scale.set(1, 1, 1);
                 const bbox = new THREE.Box3().setFromObject(car);
                 const size = new THREE.Vector3();
                 bbox.getSize(size);
                 
-                // AUMENTEI O CARRO: targetSize de 6 para 25 para bater com a escala da cidade
-                const targetSize = 25; 
-                const scaleFactor = targetSize / size.z;
-                car.scale.setScalar(scaleFactor);
-                
-                car.position.y = 0.5; 
+                const targetSize = 8; // Carro médio/grande
+                car.scale.setScalar(targetSize / size.z);
                 scene.add(car);
-                displayLog("Carro pronto!");
                 checkReady();
-            }, undefined, (e) => {
-                displayLog("Usando carro reserva.");
-                const geo = new THREE.BoxGeometry(5, 3, 10);
+            }, undefined, () => {
+                const geo = new THREE.BoxGeometry(3, 2, 6);
                 car = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: 0xff0000}));
                 scene.add(car);
                 checkReady();
             });
         }
 
-        let itemsReady = 0;
-        function checkReady() {
-            itemsReady++;
-            if(itemsReady >= 2) {
-                document.getElementById('start-btn').style.display = "block";
-            }
-        }
+        let items = 0;
+        function checkReady() { if(++items >= 2) document.getElementById('start-btn').style.display = "block"; }
 
         function start() {
             document.getElementById('loading-screen').style.display = "none";
@@ -127,37 +100,51 @@
         }
 
         function updatePhysics() {
-            const gamepads = navigator.getGamepads();
-            const gp = gamepads[0] || gamepads[1];
+            const gps = navigator.getGamepads();
+            const gp = gps[0] || gps[1];
 
             if (gp && gameActive) {
-                let joyY = gp.axes[1]; 
-                let joyX = gp.axes[0];
-                let camX = gp.axes[2];
-                let camY = gp.axes[3];
+                // JOY ESQUERDO (CARRO)
+                let jY = gp.axes[1]; 
+                let jX = gp.axes[0];
+                
+                // JOY DIREITO (CÂMERA)
+                let cX = gp.axes[2];
+                let cY = gp.axes[3];
 
-                if (Math.abs(joyY) > 0.1) moveSpeed -= joyY * acceleration;
+                // ACELERAÇÃO
+                if (Math.abs(jY) > 0.1) moveSpeed -= jY * acceleration;
                 moveSpeed *= friction;
+                if(Math.abs(moveSpeed) > maxSpeed) moveSpeed = Math.sign(moveSpeed) * maxSpeed;
 
-                if (Math.abs(moveSpeed) > 0.1) {
-                    carRotation -= joyX * 0.05 * (moveSpeed > 0 ? 1 : -1);
+                // DIREÇÃO
+                if (Math.abs(moveSpeed) > 0.05) {
+                    carRotation -= jX * 0.05 * (moveSpeed > 0 ? 1 : -0.5);
                 }
 
                 car.rotation.y = carRotation;
                 car.position.x += Math.sin(carRotation) * moveSpeed;
                 car.position.z += Math.cos(carRotation) * moveSpeed;
 
-                if (Math.abs(camX) > 0.1) cameraAngleH += camX * 0.05;
-                if (Math.abs(camY) > 0.1) cameraAngleV = Math.max(0.1, Math.min(1.0, cameraAngleV + camY * 0.05));
+                // MOVIMENTO DO ANALÓGICO DIREITO (CÂMERA LIVRE)
+                if (Math.abs(cX) > 0.1) camAngleH += cX * 0.07;
+                if (Math.abs(cY) > 0.1) camAngleV = Math.max(0.1, Math.min(0.8, camAngleV + cY * 0.05));
             }
 
             if (car) {
-                // Afastei mais a câmera (dist = 40) para o carro grande
-                const dist = 45; 
-                camera.position.x = car.position.x - Math.sin(carRotation + cameraAngleH) * dist;
-                camera.position.z = car.position.z - Math.cos(carRotation + cameraAngleH) * dist;
-                camera.position.y = car.position.y + (cameraAngleV * 25);
-                camera.lookAt(car.position.x, car.position.y + 5, car.position.z);
+                // LÓGICA FORZA: Suavizar a rotação da câmera para seguir o carro
+                // O 0.08 é o que faz ela "atrasar" um pouco ao virar
+                currentCamRotation += (carRotation - currentCamRotation) * 0.08;
+
+                const dist = 18; // Distância da câmera
+                // Somamos a rotação suave do carro + o ângulo manual do joy direito
+                const finalRotation = currentCamRotation + camAngleH;
+
+                camera.position.x = car.position.x - Math.sin(finalRotation) * dist;
+                camera.position.z = car.position.z - Math.cos(finalRotation) * dist;
+                camera.position.y = car.position.y + (camAngleV * 15) + 4;
+                
+                camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
             }
         }
 
