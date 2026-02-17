@@ -62,8 +62,7 @@
 
             const loader = new THREE.GLTFLoader();
 
-            // Carregar Cidade
-            // --- CARREGAMENTO DA CIDADE (GIGANTE) ---
+                        // --- CARREGAMENTO DA CIDADE (GIGANTE) ---
             loader.load('./city_at_night.glb', (gltf) => {
                 city = gltf.scene;
                 // Aumentei para 5, se ainda estiver pequena, suba para 10
@@ -108,6 +107,7 @@
                 scene.add(car);
                 checkReady();
             });
+
         }
 
         function checkReady() {
