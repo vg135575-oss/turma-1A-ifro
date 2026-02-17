@@ -1,22 +1,21 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Richarlison Racer - Pro Controller</title>
+    <title>Richarlison Racer - Night City Edition</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-physics-system@v4.2.2/dist/aframe-physics-system.min.js"></script>
   </head>
   <body>
     
     <script>
       AFRAME.registerComponent('drive-car', {
         init: function () {
-          // --- CONFIGURAÇÕES DO CARRO ---
-          this.maxSpeed = 25;       // Velocidade máxima
-          this.accel = 15;          // Força de aceleração
-          this.breakForce = 20;     // Força de freio
-          this.friction = 0.96;     // Atrito natural (soltou o botão, ele para devagar)
-          this.turnSpeed = 80;      // Velocidade da curva
+          // Configurações de Dirigibilidade
+          this.maxSpeed = 20;
+          this.accel = 18;
+          this.friction = 0.98;
+          this.turnSpeed = 90;
           
-          // Variáveis internas
           this.currentSpeed = 0;
           this.currentTurn = 0;
           this.camRotationY = 0; 
@@ -24,7 +23,6 @@
           
           this.keys = { up: false, down: false, left: false, right: false };
 
-          // --- EVENTOS DE TECLADO ---
           window.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowUp' || e.key === 'w') this.keys.up = true;
             if (e.key === 'ArrowDown' || e.key === 's') this.keys.down = true;
@@ -40,12 +38,10 @@
           });
         },
 
-        // Função para ignorar toques muito leves no analógico (Zona Morta)
-        applyDeadzone: function(value, threshold = 0.15) {
-            return Math.abs(value) < threshold ? 0 : value;
+        applyDeadzone: function(value) {
+            return Math.abs(value) < 0.15 ? 0 : value;
         },
 
-        // Função de Suavização (Lerp) para movimentos mais fluidos
         lerp: function(start, end, amt) {
             return (1 - amt) * start + amt * end;
         },
@@ -53,48 +49,26 @@
         tick: function (time, timeDelta) {
           const delta = timeDelta / 1000;
           const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-          // Pega o primeiro controle ativo
           const gp = Object.values(gamepads).find(g => g !== null);
 
-          // --- INPUTS ---
-          // No seu controle: Botão 0 é geralmente A ou X, Botão 1 é B ou Bola.
-          // Também adicionei suporte aos gatilhos (R2/L2 - botões 7 e 6) caso seu controle suporte.
-          let gasInput = this.keys.up || (gp && (gp.buttons[0].pressed || (gp.buttons[7] && gp.buttons[7].pressed)));
-          let brakeInput = this.keys.down || (gp && (gp.buttons[1].pressed || (gp.buttons[6] && gp.buttons[6].pressed)));
+          // Inputs
+          let gasInput = this.keys.up || (gp && gp.buttons[0].pressed);
+          let brakeInput = this.keys.down || (gp && gp.buttons[1].pressed);
           
-          // Analógico Esquerdo (Eixo 0)
           let turnInput = 0;
           if (this.keys.left) turnInput = -1;
           if (this.keys.right) turnInput = 1;
           if (gp) turnInput += this.applyDeadzone(gp.axes[0]);
 
-          // --- FÍSICA DE ACELERAÇÃO ---
-          if (gasInput) {
-            this.currentSpeed -= this.accel * delta; // Negativo é para frente no A-Frame
-          } else if (brakeInput) {
-            this.currentSpeed += this.breakForce * delta;
-          }
+          // Lógica de Movimento
+          if (gasInput) this.currentSpeed -= this.accel * delta;
+          else if (brakeInput) this.currentSpeed += this.accel * delta;
           
-          // Aplica atrito (o carro para se soltar tudo)
           this.currentSpeed *= this.friction;
 
-          // Limita a velocidade máxima
-          if (Math.abs(this.currentSpeed) > this.maxSpeed) {
-             this.currentSpeed = Math.sign(this.currentSpeed) * this.maxSpeed;
-          }
-
-          // Evita que o carro fique deslizando infinitamente quando está quase parado
-          if (Math.abs(this.currentSpeed) < 0.1 && !gasInput && !brakeInput) {
-              this.currentSpeed = 0;
-          }
-
-          // --- FÍSICA DE CURVA ---
-          // Só vira se o carro estiver andando (realismo)
-          if (Math.abs(this.currentSpeed) > 0.5) {
-            // Inverte a curva se estiver de ré para controle mais natural
+          // Curva
+          if (Math.abs(this.currentSpeed) > 0.2) {
             let direction = this.currentSpeed < 0 ? 1 : -1;
-            
-            // Suaviza a entrada da curva (não vira de soco)
             let targetTurn = turnInput * this.turnSpeed * direction;
             this.currentTurn = this.lerp(this.currentTurn, targetTurn, 5 * delta);
 
@@ -103,7 +77,7 @@
             this.el.setAttribute('rotation', carRot);
           }
 
-          // Aplica posição baseada na rotação
+          // Aplicar Posição (O kinematic-body usará isso para detectar colisão)
           let carRot = this.el.getAttribute('rotation');
           let carPos = this.el.getAttribute('position');
           const angle = carRot.y * (Math.PI / 180);
@@ -112,49 +86,48 @@
           carPos.z += Math.cos(angle) * this.currentSpeed * delta;
           this.el.setAttribute('position', carPos);
 
-          // --- CONTROLE DA CÂMERA (Analógico Direito) ---
+          // Câmera com Analógico Direito
           if (gp) {
-            // Eixo 2 (Horizontal) e 3 (Vertical)
             let lookX = this.applyDeadzone(gp.axes[2]);
             let lookY = this.applyDeadzone(gp.axes[3]);
-
-            this.camRotationY -= lookX * 120 * delta;
-            this.camRotationX -= lookY * 80 * delta;
-
-            // Limites verticais da câmera
-            this.camRotationX = Math.max(-20, Math.min(45, this.camRotationX));
-
-            let rig = document.querySelector('#camera-rig');
-            // Suavização leve na câmera também
-            let currentRigRot = rig.getAttribute('rotation');
-            let smoothX = this.lerp(currentRigRot.x, this.camRotationX, 10 * delta);
-            let smoothY = this.lerp(currentRigRot.y, this.camRotationY, 10 * delta);
-            
-            rig.setAttribute('rotation', `${smoothX} ${smoothY} 0`);
+            this.camRotationY -= lookX * 100 * delta;
+            this.camRotationX -= lookY * 60 * delta;
+            this.camRotationX = Math.max(-20, Math.min(30, this.camRotationX));
+            document.querySelector('#camera-rig').setAttribute('rotation', `${this.camRotationX} ${this.camRotationY} 0`);
           }
         }
       });
     </script>
 
-    <a-scene background="color: #87CEEB">
+    <a-scene physics="debug: false; gravity: -9.8" background="color: #000510">
+      
       <a-assets>
         <a-asset-item id="modelo-carro" src="./carro.glb"></a-asset-item>
-        <img id="grama" src="https://cdn.aframe.io/a-painter/images/floor.jpg">
+        <a-asset-item id="modelo-cidade" src="./City_at_night.glb"></a-asset-item>
       </a-assets>
 
-      <a-plane src="#grama" rotation="-90 0 0" width="500" height="500" repeat="50 50"></a-plane>
-      
-      <a-entity id="player" position="0 0.5 0" drive-car>
-        <a-entity gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0"></a-entity>
+      <a-entity light="type: ambient; color: #555; intensity: 0.5"></a-entity>
+      <a-entity light="type: directional; color: #fff; intensity: 0.8" position="-1 10 1"></a-entity>
 
-        <a-entity id="camera-rig" position="0 1.5 0">
-           <a-entity camera position="0 1 5" look-controls="enabled: false"></a-entity>
-        </a-entity>
+      <a-entity 
+        gltf-model="#modelo-cidade" 
+        position="0 0 0" 
+        static-body="shape: mesh">
       </a-entity>
 
-      <a-box position="-10 1 -20" color="red" scale="2 2 2"></a-box>
-      <a-box position="10 1 -40" color="green" scale="2 2 2"></a-box>
-      <a-box position="0 1 -80" color="blue" scale="5 2 1"></a-box>
+      <a-plane rotation="-90 0 0" width="1000" height="1000" visible="false" static-body></a-plane>
+
+      <a-entity id="player" 
+                position="0 0.5 0" 
+                drive-car 
+                kinematic-body>
+        
+        <a-entity gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0"></a-entity>
+
+        <a-entity id="camera-rig" position="0 1.2 0">
+           <a-entity camera position="0 1.5 5" look-controls="enabled: false"></a-entity>
+        </a-entity>
+      </a-entity>
 
     </a-scene>
   </body>
