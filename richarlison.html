@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Horizon 5</title>
+    <title>Richarlison Horizon - Physics Edition</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #loading-screen {
@@ -15,39 +15,46 @@
             margin-top: 20px; padding: 15px 30px; background: #0f0; 
             border: none; font-weight: bold; cursor: pointer; border-radius: 8px;
         }
-        #status { font-family: monospace; color: #0f0; }
+        #speedo {
+            position: absolute; bottom: 20px; right: 20px; color: white;
+            font-size: 30px; font-weight: bold; font-style: italic; text-shadow: 2px 2px #000;
+        }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <div id="status">CARREGANDO ENGINE...</div>
-        <button id="start-btn" class="btn" style="display:none" onclick="start()">START ENGINE</button>
+        <div id="status">TUNANDO MOTORES...</div>
+        <button id="start-btn" class="btn" style="display:none" onclick="start()">DIRIGIR</button>
     </div>
+    
+    <div id="speedo">0 KM/H</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
     <script>
         let scene, camera, renderer, car, city;
-        // FÍSICA MAIS RÁPIDA
-        let moveSpeed = 0, maxSpeed = 2.5, acceleration = 0.08, friction = 0.97;
+        // FÍSICA ESTILO FORZA
+        let moveSpeed = 0;
+        let maxSpeed = 4.5; // Velocidade final muito alta
+        let acceleration = 0.12; 
+        let friction = 0.98;
         let carRotation = 0;
         let gameActive = false;
         
-        // SISTEMA DE CÂMERA (ESTILO FORZA)
-        let camAngleH = 0; // Ângulo manual (Joy Direito)
-        let camAngleV = 0.3;
-        let currentCamRotation = 0; // Rotação atual da câmera para suavização
-
-        function displayLog(msg) { document.getElementById('status').innerText = msg; }
+        // CÂMERA E COLISÃO
+        let camAngleH = 0;
+        let currentCamRotation = 0;
+        const raycaster = new THREE.Raycaster();
+        const colDir = new THREE.Vector3();
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0a0a15);
-            scene.fog = new THREE.FogExp2(0x0a0a15, 0.008);
+            scene.fog = new THREE.FogExp2(0x0a0a15, 0.005);
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -55,31 +62,25 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            // LUZES FORTES (CIDADE CLARA)
-            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-            sun.position.set(100, 200, 100);
-            scene.add(sun);
+            scene.add(new THREE.AmbientLight(0xffffff, 1.8));
 
             const loader = new THREE.GLTFLoader();
 
-            // CIDADE MENOR
+            // CIDADE
             loader.load('./city_at_night.glb', (gltf) => {
                 city = gltf.scene;
-                city.scale.set(4, 4, 4); 
+                city.scale.set(5, 5, 5);
                 scene.add(city);
                 checkReady();
             }, undefined, () => checkReady());
 
-            // CARRO AJUSTADO
+            // CARRO
             loader.load('./carro.glb', (gltf) => {
                 car = gltf.scene;
                 const bbox = new THREE.Box3().setFromObject(car);
                 const size = new THREE.Vector3();
                 bbox.getSize(size);
-                
-                const targetSize = 8; // Carro médio/grande
-                car.scale.setScalar(targetSize / size.z);
+                car.scale.setScalar(10 / size.z); 
                 scene.add(car);
                 checkReady();
             }, undefined, () => {
@@ -103,48 +104,58 @@
             const gps = navigator.getGamepads();
             const gp = gps[0] || gps[1];
 
-            if (gp && gameActive) {
-                // JOY ESQUERDO (CARRO)
+            if (gp && gameActive && car) {
                 let jY = gp.axes[1]; 
                 let jX = gp.axes[0];
-                
-                // JOY DIREITO (CÂMERA)
                 let cX = gp.axes[2];
-                let cY = gp.axes[3];
 
-                // ACELERAÇÃO
+                // ACELERAÇÃO PROGRESSIVA
                 if (Math.abs(jY) > 0.1) moveSpeed -= jY * acceleration;
                 moveSpeed *= friction;
-                if(Math.abs(moveSpeed) > maxSpeed) moveSpeed = Math.sign(moveSpeed) * maxSpeed;
 
                 // DIREÇÃO
-                if (Math.abs(moveSpeed) > 0.05) {
-                    carRotation -= jX * 0.05 * (moveSpeed > 0 ? 1 : -0.5);
+                if (Math.abs(moveSpeed) > 0.1) {
+                    carRotation -= jX * 0.06 * (moveSpeed > 0 ? 1 : -0.5);
                 }
 
+                // --- SISTEMA DE COLISÃO ---
+                colDir.set(Math.sin(carRotation), 0, Math.cos(carRotation)).normalize();
+                raycaster.set(car.position, colDir);
+                
+                // Detecta se há algo a 3 unidades de distância na frente
+                const intersects = raycaster.intersectObject(city, true);
+                if (intersects.length > 0 && intersects[0].distance < 4 && moveSpeed > 0) {
+                    moveSpeed = -0.2; // Bate e volta um pouco
+                }
+
+                // APLICAR MOVIMENTO
                 car.rotation.y = carRotation;
                 car.position.x += Math.sin(carRotation) * moveSpeed;
                 car.position.z += Math.cos(carRotation) * moveSpeed;
 
-                // MOVIMENTO DO ANALÓGICO DIREITO (CÂMERA LIVRE)
-                if (Math.abs(cX) > 0.1) camAngleH += cX * 0.07;
-                if (Math.abs(cY) > 0.1) camAngleV = Math.max(0.1, Math.min(0.8, camAngleV + cY * 0.05));
+                // VELOCÍMETRO
+                document.getElementById('speedo').innerText = Math.abs(Math.round(moveSpeed * 100)) + " KM/H";
+
+                // CÂMERA ANALÓGICO DIREITO
+                if (Math.abs(cX) > 0.1) camAngleH += cX * 0.08;
             }
 
             if (car) {
-                // LÓGICA FORZA: Suavizar a rotação da câmera para seguir o carro
-                // O 0.08 é o que faz ela "atrasar" um pouco ao virar
+                // EFEITO FORZA: Câmera afasta com a velocidade e inclina
                 currentCamRotation += (carRotation - currentCamRotation) * 0.08;
-
-                const dist = 18; // Distância da câmera
-                // Somamos a rotação suave do carro + o ângulo manual do joy direito
-                const finalRotation = currentCamRotation + camAngleH;
-
-                camera.position.x = car.position.x - Math.sin(finalRotation) * dist;
-                camera.position.z = car.position.z - Math.cos(finalRotation) * dist;
-                camera.position.y = car.position.y + (camAngleV * 15) + 4;
                 
-                camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
+                // FOV Dinâmico (Sente a velocidade)
+                camera.fov = 70 + (Math.abs(moveSpeed) * 10);
+                camera.updateProjectionMatrix();
+
+                const dist = 22 + (Math.abs(moveSpeed) * 2);
+                const finalRot = currentCamRotation + camAngleH;
+
+                camera.position.x = car.position.x - Math.sin(finalRot) * dist;
+                camera.position.z = car.position.z - Math.cos(finalRot) * dist;
+                camera.position.y = car.position.y + 7;
+                
+                camera.lookAt(car.position.x, car.position.y + 3, car.position.z);
             }
         }
 
