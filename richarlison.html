@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Richarlison Racer - Pro Controller Support</title>
+    <title>Richarlison Pro Racer</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
   </head>
   <body>
     
@@ -12,78 +13,64 @@
           this.speed = 0;
           this.rotationSpeed = 0;
           this.camRotationY = 0; 
-          this.camRotationX = -10; // Começa com uma leve inclinação para baixo
-          this.keys = { up: false, down: false, left: false, right: false };
-
-          // Teclado (Backup)
-          window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp' || e.key === 'w') this.keys.up = true;
-            if (e.key === 'ArrowDown' || e.key === 's') this.keys.down = true;
-            if (e.key === 'ArrowLeft' || e.key === 'a') this.keys.left = true;
-            if (e.key === 'ArrowRight' || e.key === 'd') this.keys.right = true;
-          });
-          window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowUp' || e.key === 'w') this.keys.up = false;
-            if (e.key === 'ArrowDown' || e.key === 's') this.keys.down = false;
-            if (e.key === 'ArrowLeft' || e.key === 'a') this.keys.left = false;
-            if (e.key === 'ArrowRight' || e.key === 'd') this.keys.right = false;
-          });
+          this.camRotationX = -15; 
+          this.hornTimeout = null;
         },
 
         tick: function (time, timeDelta) {
           const delta = timeDelta / 1000;
           const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
           const gp = gamepads[0];
-
-          // --- 1. MOVIMENTAÇÃO DO CARRO ---
-          let accelerate = this.keys.up;
-          let brake = this.keys.down;
-          let turnInput = (this.keys.left ? -1 : 0) + (this.keys.right ? 1 : 0);
+          const hornEl = document.querySelector('#horn-ui');
 
           if (gp) {
-            // Botão A (0) ou Gatilho R2 (7) para acelerar
-            if (gp.buttons[0].pressed || (gp.buttons[7] && gp.buttons[7].value > 0.1)) accelerate = true;
-            // Botão B (1) ou Gatilho L2 (6) para freio/ré
-            if (gp.buttons[1].pressed || (gp.buttons[6] && gp.buttons[6].value > 0.1)) brake = true;
-            // Analógico Esquerdo (Eixo 0)
-            if (Math.abs(gp.axes[0]) > 0.1) turnInput = gp.axes[0];
-          }
+            // --- 1. CONTROLES DE MOVIMENTO (Analógico Esquerdo + Gatilhos) ---
+            let accelerate = (gp.buttons[7].value > 0.1) || (gp.axes[1] < -0.2); // R2 ou Analógico Cima
+            let brake = (gp.buttons[6].value > 0.1) || (gp.axes[1] > 0.2);      // L2 ou Analógico Baixo
+            let turnInput = gp.axes[0]; // Analógico Esquerdo Horizontal
 
-          if (accelerate) this.speed -= 22 * delta;
-          if (brake) this.speed += 15 * delta;
-          this.speed *= 0.97; // Atrito natural
+            // Funções de Botões Extras
+            if (gp.buttons[2].pressed) this.speed = 0; // Botão X / Quadrado: Freio de mão
+            if (gp.buttons[3].pressed) { // Botão Y / Triângulo: Reset Camera
+                this.camRotationY = 0;
+                this.camRotationX = -15;
+            }
+            if (gp.buttons[0].pressed) { // Botão A / Cruz: Buzina
+                hornEl.setAttribute('visible', 'true');
+                if(this.hornTimeout) clearTimeout(this.hornTimeout);
+                this.hornTimeout = setTimeout(() => hornEl.setAttribute('visible', 'false'), 1000);
+            }
 
-          if (Math.abs(this.speed) > 0.1) {
-            this.rotationSpeed -= turnInput * 90 * delta;
-          }
-          this.rotationSpeed *= 0.90;
+            // Física de Velocidade
+            if (accelerate) this.speed -= 25 * delta;
+            if (brake) this.speed += 18 * delta;
+            this.speed *= 0.98; // Atrito suave
 
-          // Aplica Rotação e Posição ao Carro
-          let carRot = this.el.getAttribute('rotation');
-          carRot.y += this.rotationSpeed * delta;
-          this.el.setAttribute('rotation', carRot);
+            // Curva (Só vira se estiver movendo)
+            if (Math.abs(this.speed) > 0.1) {
+              this.rotationSpeed -= turnInput * 100 * delta;
+            }
+            this.rotationSpeed *= 0.90;
 
-          let carPos = this.el.getAttribute('position');
-          const angle = carRot.y * (Math.PI / 180);
-          carPos.x += Math.sin(angle) * this.speed * delta;
-          carPos.z += Math.cos(angle) * this.speed * delta;
-          this.el.setAttribute('position', carPos);
+            // Aplica no Carro
+            let carRot = this.el.getAttribute('rotation');
+            carRot.y += this.rotationSpeed * delta;
+            this.el.setAttribute('rotation', carRot);
 
-          // --- 2. CÂMERA (ANALÓGICO DIREITO) ---
-          if (gp) {
-            // Tentativa de ler múltiplos eixos comuns para o analógico direito no Android
-            // Geralmente: Horizontal (2 ou 3), Vertical (3 ou 5)
-            let lookH = (Math.abs(gp.axes[2]) > 0.15) ? gp.axes[2] : (Math.abs(gp.axes[3]) > 0.15 && Math.abs(gp.axes[0]) < 0.1 ? gp.axes[3] : 0);
-            let lookV = (Math.abs(gp.axes[5]) > 0.15) ? gp.axes[5] : (Math.abs(gp.axes[4]) > 0.15 ? gp.axes[4] : 0);
+            let carPos = this.el.getAttribute('position');
+            const angle = carRot.y * (Math.PI / 180);
+            carPos.x += Math.sin(angle) * this.speed * delta;
+            carPos.z += Math.cos(angle) * this.speed * delta;
+            this.el.setAttribute('position', carPos);
+
+            // --- 2. CÂMERA ORBITAL (Analógico Direito) ---
+            // Detecta eixos 2/3 ou 3/4 variando conforme o controle
+            let lookH = (Math.abs(gp.axes[2]) > 0.1) ? gp.axes[2] : (Math.abs(gp.axes[3]) > 0.1 && Math.abs(gp.axes[0]) < 0.1 ? gp.axes[3] : 0);
+            let lookV = (gp.axes[5] && Math.abs(gp.axes[5]) > 0.1) ? gp.axes[5] : (Math.abs(gp.axes[4]) > 0.1 ? gp.axes[4] : 0);
             
-            // Caso especial: alguns controles usam o eixo 3 para horizontal se o 2 estiver parado
-            if (lookH === 0 && Math.abs(gp.axes[3]) > 0.15) lookH = gp.axes[3];
-
             this.camRotationY -= lookH * 150 * delta;
             this.camRotationX -= lookV * 80 * delta;
-
-            // Limites para a câmera não girar demais verticalmente
-            this.camRotationX = Math.max(-35, Math.min(20, this.camRotationX));
+            this.camRotationX = Math.max(-40, Math.min(10, this.camRotationX)); // Limita inclinação
 
             let rig = document.querySelector('#camera-rig');
             rig.setAttribute('rotation', `${this.camRotationX} ${this.camRotationY} 0`);
@@ -92,30 +79,40 @@
       });
     </script>
 
-    <a-scene background="color: #222" fog="type: exponential; color: #AAA; density: 0.01">
+    <a-scene vr-mode-ui="enabled: false">
       
       <a-assets>
         <a-asset-item id="modelo-carro" src="./carro.glb"></a-asset-item>
-        </a-assets>
+      </a-assets>
 
-      <a-grid width="500" height="500" static-body></a-grid>
-      <a-sky color="#87CEEB"></a-sky>
+      <a-entity environment="preset: mountaineer; groundColor: #222; grid: dashed; fog: 0.6"></a-entity>
 
-      <a-light type="ambient" intensity="0.7"></a-light>
-      <a-light type="directional" position="-1 2 1" intensity="0.5"></a-light>
+      <a-circle position="0 0.01 0" radius="100" color="#111" rotation="-90 0 0" opacity="0.8"></a-circle>
+
+      <a-text id="horn-ui" value="BEEP BEEP!" position="0 3 -3" color="yellow" align="center" visible="false" scale="2 2 2"></a-text>
 
       <a-entity id="player" position="0 0 0" drive-car>
-        <a-entity gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0"></a-entity>
+        
+        <a-entity gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0">
+            <a-light type="spot" color="white" intensity="0.8" position="0.5 0.5 -1" rotation="0 180 0"></a-light>
+            <a-light type="spot" color="white" intensity="0.8" position="-0.5 0.5 -1" rotation="0 180 0"></a-light>
+        </a-entity>
 
         <a-entity id="camera-rig">
-           <a-entity camera position="0 2.8 6.5" look-controls="enabled: false"></a-entity>
+           <a-entity camera position="0 3.2 7.5" look-controls="enabled: false"></a-entity>
         </a-entity>
+
       </a-entity>
 
-      <a-box position="-5 1 -15" color="#FF4444"></a-box>
-      <a-box position="8 1 -30" color="#44FF44"></a-box>
-      <a-box position="-2 1 -50" color="#4444FF"></a-box>
+      <a-torus-knot position="10 3 -20" color="orange" radius="2"></a-torus-knot>
+      <a-box position="-15 1 -40" color="red" width="4" height="4" depth="4"></a-box>
+      <a-sphere position="20 1 10" color="blue" radius="3"></a-sphere>
 
     </a-scene>
+
+    <div style="position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 2px 2px black;">
+        Analógico Esq: Dirigir | Analógico Dir: Olhar | R2: Correr | L2: Frear | X: Freio de Mão | Y: Reset Cam | A: Buzina
+    </div>
+
   </body>
 </html>
