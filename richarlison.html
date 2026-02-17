@@ -3,127 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Horizon 5 - Gamepad Fix</title>
+    <title>Richarlison Horizon 5 - Full Gamepad</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #050510; font-family: 'Arial Black', sans-serif; }
+        
+        /* Ecrã de carregamento e aviso de controle */
         #overlay {
-            position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8);
+            position: absolute; width: 100%; height: 100%; background: radial-gradient(circle, #1a1a2e 0%, #000 100%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; z-index: 100; transition: 0.5s;
+            color: white; z-index: 1000; transition: opacity 0.8s;
         }
+        .btn-start {
+            padding: 20px 60px; background: #ff0055; color: white; border: none;
+            border-radius: 50px; font-size: 20px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 0 30px rgba(255, 0, 85, 0.5); display: none;
+        }
+
+        /* HUD estilo Racing */
         #hud {
-            position: absolute; bottom: 50px; right: 50px; color: white;
-            text-align: right; pointer-events: none; text-shadow: 0 0 15px rgba(0,255,255,0.7);
+            position: absolute; bottom: 40px; right: 50px; color: white;
+            text-align: right; pointer-events: none;
         }
-        #speed { font-size: 90px; font-style: italic; line-height: 0.8; }
-        .hint { color: #ff0055; font-size: 14px; margin-top: 10px; }
+        #speed-box { display: flex; align-items: baseline; justify-content: flex-end; }
+        #speed { font-size: 100px; font-style: italic; line-height: 0.8; margin-right: 10px; }
+        #unit { font-size: 25px; color: #00f2ff; text-transform: uppercase; }
+        
+        .hint { margin-top: 20px; font-size: 14px; opacity: 0.6; font-family: sans-serif; }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h1 id="status">CONECTE O CONTROLE</h1>
-        <p class="hint">Pressione qualquer botão no Gamepad para iniciar</p>
+        <h1 id="status">A CARREGAR ASSETS...</h1>
+        <button id="start-btn" class="btn-start" onclick="startGame()">PRESSIONA PARA DIRIGIR</button>
+        <p class="hint">RT: ACELERA | LT: TRAVA/RÉ | ANALÓGICO: VIRA</p>
     </div>
 
     <div id="hud">
-        <div id="speed">0</div>
-        <div style="font-size: 20px;">KM/H</div>
+        <div id="speed-box">
+            <span id="speed">0</span>
+            <span id="unit">km/h</span>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
     <script>
-        let scene, camera, renderer, car, city;
+        let scene, camera, renderer, car, city, brakeLight;
         let gameActive = false;
 
-        // FÍSICA PESADA ESTILO FORZA
+        // FÍSICA CALIBRADA (FORZA FEELING)
         const physics = {
             vel: 0,
             angle: 0,
             latVel: 0,
-            accel: 0.15, 
-            friction: 0.98,
-            maxSpeed: 8.0
+            accel: 0.06,
+            brake: 0.15,
+            friction: 0.985,
+            maxSpeed: 6.5,
+            steerSharpness: 0.04
         };
 
         function init() {
+            // Cena e Ambiente
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x020205);
-            scene.fog = new THREE.FogExp2(0x020205, 0.003);
+            scene.fog = new THREE.FogExp2(0x020205, 0.0035);
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.5, 5000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 1.0));
-            const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-            sun.position.set(10, 50, 10);
+            // Iluminação
+            const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambient);
+
+            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+            sun.position.set(50, 100, 50);
             scene.add(sun);
+
+            // Luz de travão (Glow vermelho atrás do carro)
+            brakeLight = new THREE.PointLight(0xff0000, 0, 15);
+            scene.add(brakeLight);
 
             const loader = new THREE.GLTFLoader();
 
-            // Cidade em escala menor para o carro não parecer formiga
+            // Carregar Cidade (Escala Ajustada)
             loader.load('./city_at_night.glb', (gltf) => {
                 city = gltf.scene;
-                city.scale.set(1.2, 1.2, 1.2); 
+                city.scale.set(1.3, 1.3, 1.3);
                 scene.add(city);
+                checkAssets();
             });
 
-            // Carro em escala maior para dar "peso"
+            // Carregar Carro (Escala Grande)
             loader.load('./carro.glb', (gltf) => {
                 car = gltf.scene;
                 const box = new THREE.Box3().setFromObject(car);
                 const size = box.getSize(new THREE.Vector3());
-                car.scale.setScalar(22 / size.z); // Carro GRANDE
+                car.scale.setScalar(24 / size.z); // Carro imponente
                 scene.add(car);
-                document.getElementById('status').innerText = "CONTROLE DETECTADO!";
+                checkAssets();
             });
+        }
+
+        let loadedCount = 0;
+        function checkAssets() {
+            loadedCount++;
+            if(loadedCount >= 2) {
+                document.getElementById('status').innerText = "V8 PRONTO!";
+                document.getElementById('start-btn').style.display = "block";
+            }
+        }
+
+        function startGame() {
+            document.getElementById('overlay').style.opacity = '0';
+            setTimeout(() => { document.getElementById('overlay').style.display = 'none'; }, 800);
+            gameActive = true;
+            animate();
         }
 
         function updateGamepad() {
             const gamepads = navigator.getGamepads();
             const gp = gamepads[0] || gamepads[1];
 
-            if (!gp) return;
+            if (!gp || !car) return;
 
-            // No Forza: RT (Button 7) ou Axis 5 | LT (Button 6) ou Axis 2
-            // Simplificando para eixos comuns e botões de gatilho
-            const drive = gp.buttons[7].value - gp.buttons[6].value; // Gatilhos RT/LT
-            const steer = gp.axes[0]; // Analógico esquerdo
+            // MAPEAMENTO RT (Acelera) e LT (Trava/Ré)
+            const rt = gp.buttons[7].value; // Aceleração
+            const lt = gp.buttons[6].value; // Travão / Ré
+            let steer = gp.axes[0]; // Direção
+            
+            // Deadzone do analógico
+            if(Math.abs(steer) < 0.12) steer = 0;
 
-            if (!gameActive && (Math.abs(drive) > 0.1 || gp.buttons[0].pressed)) {
-                gameActive = true;
-                document.getElementById('overlay').style.opacity = '0';
-                setTimeout(() => document.getElementById('overlay').style.display = 'none', 500);
-            }
+            if (gameActive) {
+                // Lógica de Tração
+                if (rt > 0) {
+                    physics.vel += rt * physics.accel;
+                }
+                if (lt > 0) {
+                    physics.vel -= lt * physics.brake;
+                    brakeLight.intensity = lt * 5; // Acende a luz de travão
+                } else {
+                    brakeLight.intensity = 0;
+                }
 
-            if (gameActive && car) {
-                // Aceleração
-                physics.vel += drive * physics.accel;
+                // Inércia
                 physics.vel *= physics.friction;
 
-                // Drift/Curva
-                if (Math.abs(physics.vel) > 0.1) {
-                    const steerEffect = steer * (physics.vel * 0.025);
-                    physics.angle -= steer * 0.04 * (physics.vel * 0.15);
-                    physics.latVel += steerEffect;
-                }
-                physics.latVel *= 0.92; // Resistencia lateral
+                // Limites
+                if(physics.vel > physics.maxSpeed) physics.vel = physics.maxSpeed;
+                if(physics.vel < -physics.maxSpeed/2) physics.vel = -physics.maxSpeed/2;
 
-                // Aplicar no 3D
+                // Direção Dinâmica (Forza Style)
+                if (Math.abs(physics.vel) > 0.05) {
+                    const moveDir = physics.vel > 0 ? 1 : -1;
+                    // Vira menos em alta velocidade para não capotar
+                    const turnAbility = 1.0 - (Math.abs(physics.vel) / (physics.maxSpeed * 1.5));
+                    physics.angle -= steer * physics.steerSharpness * turnAbility * moveDir;
+                    
+                    // Derrapagem (latVel)
+                    physics.latVel += steer * (physics.vel * 0.015);
+                }
+                physics.latVel *= 0.92;
+
+                // Aplicar ao Modelo 3D
                 car.rotation.y = physics.angle;
                 car.position.x += Math.sin(physics.angle) * physics.vel + Math.cos(physics.angle) * physics.latVel;
                 car.position.z += Math.cos(physics.angle) * physics.vel - Math.sin(physics.angle) * physics.latVel;
 
-                // Visual Tilt
-                car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -physics.latVel * 0.4, 0.1);
+                // Inclinação visual da carroceria
+                car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -physics.latVel * 0.35, 0.1);
+                car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, (rt * -0.025) + (lt * 0.025), 0.1);
 
-                document.getElementById('speed').innerText = Math.round(Math.abs(physics.vel) * 50);
+                // Posicionar luz de travão atrás do carro
+                brakeLight.position.set(
+                    car.position.x - Math.sin(physics.angle) * 5,
+                    2,
+                    car.position.z - Math.cos(physics.angle) * 5
+                );
+
+                // UI Speed
+                document.getElementById('speed').innerText = Math.round(Math.abs(physics.vel) * 48);
                 
                 updateCamera();
             }
@@ -131,17 +198,25 @@
 
         function updateCamera() {
             const speedFactor = Math.abs(physics.vel) / physics.maxSpeed;
-            camera.fov = 70 + (speedFactor * 30); // Efeito de velocidade
+            
+            // FOV Dinâmico (Abre a câmara na velocidade)
+            camera.fov = 70 + (speedFactor * 25);
             camera.updateProjectionMatrix();
 
-            const dist = 28 + (speedFactor * 12);
-            const height = 8;
+            // Distância e Altura (Câmara Forza Horizon)
+            const dist = 32 + (speedFactor * 12);
+            const height = 10;
 
             const camX = car.position.x - Math.sin(physics.angle) * dist;
             const camZ = car.position.z - Math.cos(physics.angle) * dist;
 
+            // Seguimento Suave (Lerp)
             camera.position.lerp(new THREE.Vector3(camX, car.position.y + height, camZ), 0.1);
-            camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
+            
+            // Foco à frente do carro
+            const lookAtPos = car.position.clone();
+            lookAtPos.y += 3;
+            camera.lookAt(lookAtPos);
         }
 
         function animate() {
@@ -150,14 +225,13 @@
             renderer.render(scene, camera);
         }
 
-        init();
-        animate();
-
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        init();
     </script>
 </body>
 </html>
