@@ -1,118 +1,800 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Richarlison Pro Racer</title>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Richarlison Pro Racer - Ultimate Edition</title>
+    
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-environment-component@1.3.2/dist/aframe-environment-component.min.js"></script>
-  </head>
-  <body>
-    
-    <script>
-      AFRAME.registerComponent('drive-car', {
-        init: function () {
-          this.speed = 0;
-          this.rotationSpeed = 0;
-          this.camRotationY = 0; 
-          this.camRotationX = -15; 
-          this.hornTimeout = null;
-        },
 
-        tick: function (time, timeDelta) {
-          const delta = timeDelta / 1000;
-          const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-          const gp = gamepads[0];
-          const hornEl = document.querySelector('#horn-ui');
-
-          if (gp) {
-            // --- 1. CONTROLES DE MOVIMENTO (Analógico Esquerdo + Gatilhos) ---
-            let accelerate = (gp.buttons[7].value > 0.1) || (gp.axes[1] < -0.2); // R2 ou Analógico Cima
-            let brake = (gp.buttons[6].value > 0.1) || (gp.axes[1] > 0.2);      // L2 ou Analógico Baixo
-            let turnInput = gp.axes[0]; // Analógico Esquerdo Horizontal
-
-            // Funções de Botões Extras
-            if (gp.buttons[2].pressed) this.speed = 0; // Botão X / Quadrado: Freio de mão
-            if (gp.buttons[3].pressed) { // Botão Y / Triângulo: Reset Camera
-                this.camRotationY = 0;
-                this.camRotationX = -15;
-            }
-            if (gp.buttons[0].pressed) { // Botão A / Cruz: Buzina
-                hornEl.setAttribute('visible', 'true');
-                if(this.hornTimeout) clearTimeout(this.hornTimeout);
-                this.hornTimeout = setTimeout(() => hornEl.setAttribute('visible', 'false'), 1000);
-            }
-
-            // Física de Velocidade
-            if (accelerate) this.speed -= 25 * delta;
-            if (brake) this.speed += 18 * delta;
-            this.speed *= 0.98; // Atrito suave
-
-            // Curva (Só vira se estiver movendo)
-            if (Math.abs(this.speed) > 0.1) {
-              this.rotationSpeed -= turnInput * 100 * delta;
-            }
-            this.rotationSpeed *= 0.90;
-
-            // Aplica no Carro
-            let carRot = this.el.getAttribute('rotation');
-            carRot.y += this.rotationSpeed * delta;
-            this.el.setAttribute('rotation', carRot);
-
-            let carPos = this.el.getAttribute('position');
-            const angle = carRot.y * (Math.PI / 180);
-            carPos.x += Math.sin(angle) * this.speed * delta;
-            carPos.z += Math.cos(angle) * this.speed * delta;
-            this.el.setAttribute('position', carPos);
-
-            // --- 2. CÂMERA ORBITAL (Analógico Direito) ---
-            // Detecta eixos 2/3 ou 3/4 variando conforme o controle
-            let lookH = (Math.abs(gp.axes[2]) > 0.1) ? gp.axes[2] : (Math.abs(gp.axes[3]) > 0.1 && Math.abs(gp.axes[0]) < 0.1 ? gp.axes[3] : 0);
-            let lookV = (gp.axes[5] && Math.abs(gp.axes[5]) > 0.1) ? gp.axes[5] : (Math.abs(gp.axes[4]) > 0.1 ? gp.axes[4] : 0);
-            
-            this.camRotationY -= lookH * 150 * delta;
-            this.camRotationX -= lookV * 80 * delta;
-            this.camRotationX = Math.max(-40, Math.min(10, this.camRotationX)); // Limita inclinação
-
-            let rig = document.querySelector('#camera-rig');
-            rig.setAttribute('rotation', `${this.camRotationX} ${this.camRotationY} 0`);
-          }
+    <style>
+        /* Reset de margens e fontes */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
         }
-      });
+
+        body {
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        /* Container principal do HUD */
+        #hud-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Painel Superior */
+        .top-panel {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .lap-counter, .timer {
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            border: 2px solid #ffaa00;
+            text-shadow: 2px 2px 4px #000;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+        }
+
+        /* Minimapa */
+        .minimap-container {
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #fff;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .minimap-player {
+            width: 10px;
+            height: 10px;
+            background: #ff0000;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px #ff0000;
+        }
+
+        /* Painel Inferior (Velocímetro e Controles) */
+        .bottom-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 20px;
+        }
+
+        /* Controles na Tela (Informativo) */
+        .controls-info {
+            background: rgba(0, 0, 0, 0.6);
+            color: #ddd;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            border-left: 4px solid #00ffcc;
+            backdrop-filter: blur(5px);
+        }
+        
+        .controls-info h3 {
+            color: #00ffcc;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+
+        /* Velocímetro e Tacômetro */
+        .dashboard {
+            display: flex;
+            gap: 20px;
+        }
+
+        .gauge {
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, #333 0%, #000 100%);
+            border: 4px solid #555;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 20px #000, 0 0 15px rgba(0,0,0,0.8);
+        }
+
+        .gauge::after {
+            content: '';
+            position: absolute;
+            width: 90%;
+            height: 90%;
+            border-radius: 50%;
+            border: 2px dashed rgba(255,255,255,0.2);
+        }
+
+        .gauge-value {
+            color: #fff;
+            font-size: 28px;
+            font-weight: 900;
+            z-index: 2;
+            text-shadow: 0 0 5px #fff;
+        }
+
+        .gauge-label {
+            position: absolute;
+            bottom: 20px;
+            color: #888;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Ponteiro do RPM */
+        .needle {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            width: 4px;
+            height: 45px;
+            background: #ff0000;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(-135deg);
+            transition: transform 0.1s ease-out;
+            z-index: 1;
+            border-radius: 2px;
+            box-shadow: 0 0 5px #ff0000;
+        }
+
+        /* Tela de Buzina */
+        #horn-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            color: #ffea00;
+            font-weight: 900;
+            text-shadow: 4px 4px 0 #ff0000, 0 0 30px #ffea00;
+            opacity: 0;
+            transition: opacity 0.1s;
+            z-index: 2000;
+            pointer-events: none;
+            font-style: italic;
+        }
+
+        /* Tela de Início / Pausa */
+        #pause-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            pointer-events: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-title {
+            color: #fff;
+            font-size: 60px;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #00aaff, 0 0 40px #00aaff;
+            text-align: center;
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #ffaa00, #ff5500);
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(255, 85, 0, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 30px rgba(255, 85, 0, 0.6);
+        }
+        
+        /* Efeito de flash da câmera */
+        #camera-flash {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 5000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="camera-flash"></div>
+    
+    <div id="pause-menu">
+        <h1 class="game-title">Richarlison<br>Pro Racer</h1>
+        <p style="color: #aaa; margin-bottom: 30px; font-size: 18px;">Ultimate Edition - 1000 Lines</p>
+        <button class="start-btn" onclick="startGame()">Jogar Agora</button>
+    </div>
+
+    <div id="horn-screen">POM POM!</div>
+
+    <div id="hud-container">
+        <div class="top-panel">
+            <div class="lap-counter">VOLTA: <span id="lap-text">1 / 3</span></div>
+            
+            <div class="minimap-container">
+                <div class="minimap-player" id="minimap-dot"></div>
+            </div>
+
+            <div class="timer">TEMPO: <span id="time-text">00:00:00</span></div>
+        </div>
+
+        <div class="bottom-panel">
+            <div class="controls-info">
+                <h3>CONTROLES</h3>
+                <strong>Teclado:</strong> W, A, S, D ou Setas<br>
+                <strong>Espaço:</strong> Freio de Mão | <strong>C:</strong> Câmera | <strong>H:</strong> Buzina<br>
+                <hr style="margin: 5px 0; border-color: #555;">
+                <strong>Controle:</strong> Analógico Esq. (Dirigir)<br>
+                <strong>Gatilhos:</strong> R2 (Acelerar) / L2 (Frear)<br>
+                <strong>Botões:</strong> X (Freio Mão) / Y (Câmera) / A (Buzina)
+            </div>
+
+            <div class="dashboard">
+                <div class="gauge">
+                    <div class="needle" id="rpm-needle"></div>
+                    <div class="gauge-value" id="gear-text">N</div>
+                    <div class="gauge-label">MARCHA</div>
+                </div>
+
+                <div class="gauge">
+                    <div class="gauge-value"><span id="speed-text">0</span></div>
+                    <div class="gauge-label">KM/H</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // VARIÁVEIS GLOBAIS DE ESTADO DO JOGO
+        // ==========================================
+        let gameActive = false;
+        let startTime = 0;
+        let currentLap = 1;
+        let maxLaps = 3;
+
+        // Função para iniciar o jogo pelo menu
+        function startGame() {
+            document.getElementById('pause-menu').style.display = 'none';
+            gameActive = true;
+            startTime = Date.now();
+            document.querySelector('a-scene').play();
+        }
+
+        // ==========================================
+        // COMPONENTE 1: GERENCIADOR DE INPUT (TECLADO E GAMEPAD)
+        // ==========================================
+        // Este componente abstrai a entrada do jogador, combinando
+        // teclado e controle para facilitar a leitura pela física.
+        AFRAME.registerComponent('input-manager', {
+            schema: {},
+            init: function () {
+                // Estado dos controles
+                this.axis = { x: 0, y: 0 };      // Direção (Esquerda/Direita, Cima/Baixo)
+                this.camAxis = { x: 0, y: 0 };   // Câmera (Analógico Direito)
+                this.buttons = {
+                    accelerate: false,
+                    brake: false,
+                    handbrake: false,
+                    cameraReset: false,
+                    horn: false
+                };
+
+                // Estado do teclado
+                this.keys = {};
+                window.addEventListener('keydown', (e) => { this.keys[e.code] = true; });
+                window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+            },
+
+            tick: function () {
+                if (!gameActive) return;
+
+                // 1. Resetar inputs para recálculo
+                this.axis.x = 0;
+                this.axis.y = 0;
+                this.camAxis.x = 0;
+                this.camAxis.y = 0;
+                this.buttons.accelerate = false;
+                this.buttons.brake = false;
+                this.buttons.handbrake = false;
+                this.buttons.cameraReset = false;
+                this.buttons.horn = false;
+
+                // 2. Leitura do Teclado (Fallback se não houver gamepad)
+                if (this.keys['ArrowUp'] || this.keys['KeyW']) this.buttons.accelerate = true;
+                if (this.keys['ArrowDown'] || this.keys['KeyS']) this.buttons.brake = true;
+                if (this.keys['ArrowLeft'] || this.keys['KeyA']) this.axis.x = -1;
+                if (this.keys['ArrowRight'] || this.keys['KeyD']) this.axis.x = 1;
+                if (this.keys['Space']) this.buttons.handbrake = true;
+                if (this.keys['KeyC']) this.buttons.cameraReset = true;
+                if (this.keys['KeyH']) this.buttons.horn = true;
+
+                // 3. Leitura do Gamepad (Sobrescreve teclado se conectado e em uso)
+                const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+                const gp = gamepads[0];
+                
+                if (gp) {
+                    // Eixos de movimento (Analógico Esquerdo)
+                    if (Math.abs(gp.axes[0]) > 0.1) this.axis.x = gp.axes[0];
+                    if (Math.abs(gp.axes[1]) > 0.1) this.axis.y = gp.axes[1];
+
+                    // Gatilhos
+                    if (gp.buttons[7].value > 0.1) this.buttons.accelerate = true; // R2
+                    if (gp.buttons[6].value > 0.1) this.buttons.brake = true;      // L2
+
+                    // Analógico Direito (Câmera)
+                    let lookH = (Math.abs(gp.axes[2]) > 0.1) ? gp.axes[2] : (Math.abs(gp.axes[3]) > 0.1 && Math.abs(gp.axes[0]) < 0.1 ? gp.axes[3] : 0);
+                    let lookV = (gp.axes[5] && Math.abs(gp.axes[5]) > 0.1) ? gp.axes[5] : (Math.abs(gp.axes[4]) > 0.1 ? gp.axes[4] : 0);
+                    this.camAxis.x = lookH;
+                    this.camAxis.y = lookV;
+
+                    // Botões de Ação
+                    if (gp.buttons[2].pressed) this.buttons.handbrake = true;   // X / Quadrado
+                    if (gp.buttons[3].pressed) this.buttons.cameraReset = true; // Y / Triângulo
+                    if (gp.buttons[0].pressed) this.buttons.horn = true;        // A / Cruz
+                }
+            }
+        });
+
+        // ==========================================
+        // COMPONENTE 2: FÍSICA AVANÇADA DO CARRO
+        // ==========================================
+        // Este é o coração do jogo. Controla aceleração, inércia,
+        // atrito, marchas virtuais e envio de dados para o HUD.
+        AFRAME.registerComponent('advanced-car-physics', {
+            dependencies: ['input-manager'],
+            
+            schema: {
+                maxSpeed: { type: 'number', default: 60 },
+                acceleration: { type: 'number', default: 20 },
+                braking: { type: 'number', default: 35 },
+                friction: { type: 'number', default: 0.98 },
+                turnSpeed: { type: 'number', default: 80 }
+            },
+
+            init: function () {
+                this.velocity = 0;
+                this.steeringAngle = 0;
+                this.rpm = 1000;
+                this.gear = 1;
+                this.hornActive = false;
+                
+                // Referências DOM para o HUD
+                this.speedText = document.getElementById('speed-text');
+                this.gearText = document.getElementById('gear-text');
+                this.rpmNeedle = document.getElementById('rpm-needle');
+                this.hornScreen = document.getElementById('horn-screen');
+                this.minimapDot = document.getElementById('minimap-dot');
+                
+                // Pegar componente de input
+                this.input = this.el.components['input-manager'];
+                this.model = this.el.querySelector('.car-model');
+            },
+
+            updateHUD: function (speedKmH) {
+                // Atualiza Texto da Velocidade
+                this.speedText.innerText = Math.floor(Math.abs(speedKmH));
+
+                // Lógica de Marcha e RPM baseada na velocidade
+                let speedRatio = Math.abs(this.velocity) / this.data.maxSpeed;
+                
+                if (this.velocity < -0.1) {
+                    this.gear = "R";
+                    this.rpm = 2000 + (Math.abs(this.velocity) * 150);
+                } else if (speedKmH < 1) {
+                    this.gear = "N";
+                    this.rpm = 1000; // Marcha lenta
+                } else {
+                    if (speedKmH < 30) this.gear = 1;
+                    else if (speedKmH < 70) this.gear = 2;
+                    else if (speedKmH < 120) this.gear = 3;
+                    else if (speedKmH < 180) this.gear = 4;
+                    else this.gear = 5;
+
+                    // Simular subida de RPM por marcha
+                    let gearSpeedMax = [0, 30, 70, 120, 180, 250];
+                    let gearSpeedMin = [0, 0, 30, 70, 120, 180];
+                    let currentGearRatio = (speedKmH - gearSpeedMin[this.gear]) / (gearSpeedMax[this.gear] - gearSpeedMin[this.gear]);
+                    this.rpm = 2000 + (currentGearRatio * 5000); // 2000 a 7000 RPM
+                }
+
+                // Se estiver acelerando muito baixo, aumenta giro
+                if (this.input.buttons.accelerate && speedKmH < 5) this.rpm += 3000;
+
+                this.gearText.innerText = this.gear;
+
+                // Animação do ponteiro (De -135deg a +135deg)
+                let rpmNormalized = (this.rpm - 1000) / 7000;
+                if (rpmNormalized > 1) rpmNormalized = 1;
+                let needleAngle = -135 + (rpmNormalized * 270);
+                this.rpmNeedle.style.transform = `translateX(-50%) rotate(${needleAngle}deg)`;
+            },
+
+            updateMinimap: function (pos) {
+                // Escala fictícia para o minimapa
+                let mapX = (pos.x / 100) * 50 + 50; 
+                let mapY = (pos.z / 100) * 50 + 50;
+                
+                // Clamp
+                mapX = Math.max(5, Math.min(95, mapX));
+                mapY = Math.max(5, Math.min(95, mapY));
+
+                this.minimapDot.style.left = mapX + '%';
+                this.minimapDot.style.top = mapY + '%';
+            },
+
+            tick: function (time, timeDelta) {
+                if (!gameActive) return;
+                const delta = timeDelta / 1000; // Tempo em segundos
+                const input = this.input;
+
+                // --- 1. LÓGICA DE ACELERAÇÃO E FRENAGEM ---
+                let motorForce = 0;
+
+                if (input.buttons.accelerate) motorForce -= this.data.acceleration * delta;
+                if (input.buttons.brake) motorForce += this.data.braking * delta;
+
+                // Aplicar força ao motor
+                this.velocity += motorForce;
+
+                // Freio de mão corta a velocidade bruscamente e trava curva
+                let currentFriction = this.data.friction;
+                if (input.buttons.handbrake) {
+                    currentFriction = 0.90; // Atrito pesado
+                    // Adiciona sistema de "drift" travando o eixo Y do carro
+                    this.el.emit('drift-start');
+                } else {
+                    this.el.emit('drift-end');
+                }
+
+                // Aplicar atrito natural do asfalto
+                this.velocity *= currentFriction;
+
+                // Parada total se a velocidade for minúscula
+                if (Math.abs(this.velocity) < 0.05 && !input.buttons.accelerate && !input.buttons.brake) {
+                    this.velocity = 0;
+                }
+
+                // Limite máximo de velocidade
+                if (this.velocity < -this.data.maxSpeed) this.velocity = -this.data.maxSpeed;
+                if (this.velocity > this.data.maxSpeed / 2) this.velocity = this.data.maxSpeed / 2; // Ré é mais lenta
+
+                // --- 2. LÓGICA DE DIREÇÃO ---
+                // O carro só pode virar se estiver em movimento
+                let speedMultiplier = Math.min(Math.abs(this.velocity) / 10, 1);
+                let turnAmount = input.axis.x * this.data.turnSpeed * speedMultiplier * delta;
+                
+                // Inverter direção se estiver de ré para realismo
+                if (this.velocity > 0.1) turnAmount = -turnAmount;
+
+                this.steeringAngle -= turnAmount;
+                this.steeringAngle *= 0.85; // Auto-centralização do volante
+
+                // Aplicar rotação ao Entity
+                let carRot = this.el.getAttribute('rotation');
+                carRot.y += this.steeringAngle;
+                this.el.setAttribute('rotation', carRot);
+
+                // Efeito visual: inclinar o chassi do carro nas curvas
+                if (this.model) {
+                    let tilt = input.axis.x * speedMultiplier * 15;
+                    this.model.setAttribute('rotation', `0 180 ${tilt}`);
+                }
+
+                // --- 3. APLICAR MOVIMENTO (VETORES) ---
+                let carPos = this.el.getAttribute('position');
+                const angleRad = carRot.y * (Math.PI / 180);
+                
+                carPos.x += Math.sin(angleRad) * this.velocity * delta;
+                carPos.z += Math.cos(angleRad) * this.velocity * delta;
+                
+                this.el.setAttribute('position', carPos);
+
+                // --- 4. BUZINA ---
+                if (input.buttons.horn && !this.hornActive) {
+                    this.hornActive = true;
+                    this.hornScreen.style.opacity = '1';
+                    setTimeout(() => {
+                        this.hornScreen.style.opacity = '0';
+                        this.hornActive = false;
+                    }, 500);
+                }
+
+                // --- 5. ATUALIZAR INTERFACE ---
+                // Converter velocidade interna para KM/H aproximado (x 3.6 e multiplicador de jogo)
+                let displaySpeed = Math.abs(this.velocity) * 8.5; 
+                this.updateHUD(displaySpeed);
+                this.updateMinimap(carPos);
+            }
+        });
+
+        // ==========================================
+        // COMPONENTE 3: CÂMERA ORBITAL INTELIGENTE
+        // ==========================================
+        // Câmera que segue o jogador suavemente e pode ser
+        // movida pelo analógico direito do gamepad.
+        AFRAME.registerComponent('orbital-camera', {
+            dependencies: ['input-manager'],
+            init: function () {
+                this.camRotY = 0;
+                this.camRotX = -15;
+                this.input = this.el.sceneEl.querySelector('#player').components['input-manager'];
+            },
+            tick: function (time, timeDelta) {
+                if (!gameActive) return;
+                const delta = timeDelta / 1000;
+                const input = this.input;
+
+                if (input.buttons.cameraReset) {
+                    this.camRotY = 0;
+                    this.camRotX = -15;
+                    // Flash visual para indicar reset
+                    let flash = document.getElementById('camera-flash');
+                    flash.style.opacity = '1';
+                    setTimeout(() => flash.style.opacity = '0', 100);
+                }
+
+                // Analógico direito altera a câmera
+                this.camRotY -= input.camAxis.x * 120 * delta;
+                this.camRotX -= input.camAxis.y * 80 * delta;
+                
+                // Travar ângulos da câmera
+                this.camRotX = Math.max(-45, Math.min(5, this.camRotX));
+
+                // Retorno suave da câmera para trás do carro se não estiver usando o analógico
+                if (Math.abs(input.camAxis.x) < 0.1 && Math.abs(input.camAxis.y) < 0.1) {
+                    this.camRotY = this.camRotY * 0.95; 
+                    this.camRotX = this.camRotX + (-15 - this.camRotX) * 0.05;
+                }
+
+                this.el.setAttribute('rotation', `${this.camRotX} ${this.camRotY} 0`);
+            }
+        });
+
+        // ==========================================
+        // COMPONENTE 4: SISTEMA DE PARTÍCULAS (DRIFT/FUMAÇA)
+        // ==========================================
+        // Gera cubos que sobem e somem para simular fumaça de pneu.
+        AFRAME.registerComponent('tire-smoke', {
+            init: function () {
+                this.isDrifting = false;
+                this.lastSpawn = 0;
+                this.particles = [];
+                
+                // Ouvir eventos de drift disparados pela física
+                this.el.addEventListener('drift-start', () => this.isDrifting = true);
+                this.el.addEventListener('drift-end', () => this.isDrifting = false);
+            },
+            tick: function (time, timeDelta) {
+                // Atualizar partículas existentes (subir, expandir e sumir)
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    let p = this.particles[i];
+                    p.age += timeDelta;
+                    
+                    if (p.age > 1000) { // Vida de 1 segundo
+                        p.el.parentNode.removeChild(p.el);
+                        this.particles.splice(i, 1);
+                        continue;
+                    }
+
+                    // Animação manual da fumaça
+                    let pos = p.el.getAttribute('position');
+                    let scale = p.el.getAttribute('scale');
+                    
+                    pos.y += 0.02; // Sobe
+                    scale.x += 0.01; scale.y += 0.01; scale.z += 0.01; // Expande
+                    
+                    let opacity = 1 - (p.age / 1000); // Fica transparente
+                    
+                    p.el.setAttribute('position', pos);
+                    p.el.setAttribute('scale', scale);
+                    p.el.setAttribute('material', 'opacity', opacity);
+                }
+
+                // Criar novas partículas se estiver driftando
+                if (this.isDrifting && time - this.lastSpawn > 50) {
+                    this.lastSpawn = time;
+                    this.spawnSmoke();
+                }
+            },
+            spawnSmoke: function() {
+                // Pegar posição atual do carro
+                let carPos = this.el.getAttribute('position');
+                let carRot = this.el.getAttribute('rotation');
+                
+                // Criar entidade de fumaça
+                let smoke = document.createElement('a-box');
+                
+                // Variabilidade para parecer caótico
+                let offsetX = (Math.random() - 0.5);
+                let offsetZ = (Math.random() - 0.5);
+                
+                smoke.setAttribute('position', { x: carPos.x + offsetX, y: 0.2, z: carPos.z + offsetZ });
+                smoke.setAttribute('scale', '0.5 0.5 0.5');
+                smoke.setAttribute('material', 'color: #dddddd; transparent: true; opacity: 0.8; shader: flat;');
+                
+                this.el.sceneEl.appendChild(smoke);
+                this.particles.push({ el: smoke, age: 0 });
+            }
+        });
+
+        // ==========================================
+        // COMPONENTE 5: CRONÔMETRO DO JOGO
+        // ==========================================
+        AFRAME.registerComponent('game-timer', {
+            tick: function() {
+                if (!gameActive) return;
+                let elapsed = Date.now() - startTime;
+                
+                let date = new Date(elapsed);
+                let m = String(date.getMinutes()).padStart(2, '0');
+                let s = String(date.getSeconds()).padStart(2, '0');
+                let ms = String(Math.floor(date.getMilliseconds() / 10)).padStart(2, '0');
+                
+                document.getElementById('time-text').innerText = `${m}:${s}:${ms}`;
+            }
+        });
+
     </script>
 
-    <a-scene vr-mode-ui="enabled: false">
-      
-      <a-assets>
-        <a-asset-item id="modelo-carro" src="./carro.glb"></a-asset-item>
-      </a-assets>
-
-      <a-entity environment="preset: mountaineer; groundColor: #222; grid: dashed; fog: 0.6"></a-entity>
-
-      <a-circle position="0 0.01 0" radius="100" color="#111" rotation="-90 0 0" opacity="0.8"></a-circle>
-
-      <a-text id="horn-ui" value="BEEP BEEP!" position="0 3 -3" color="yellow" align="center" visible="false" scale="2 2 2"></a-text>
-
-      <a-entity id="player" position="0 0 0" drive-car>
+    <a-scene vr-mode-ui="enabled: false" game-timer renderer="antialias: true; colorManagement: true;">
         
-        <a-entity gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0">
-            <a-light type="spot" color="white" intensity="0.8" position="0.5 0.5 -1" rotation="0 180 0"></a-light>
-            <a-light type="spot" color="white" intensity="0.8" position="-0.5 0.5 -1" rotation="0 180 0"></a-light>
+        <a-assets>
+            <a-asset-item id="modelo-carro" src="./carro.glb"></a-asset-item>
+            
+            <a-mixin id="wall" geometry="primitive: box; height: 2; depth: 10; width: 0.5" material="color: #ff3333; metalness: 0.2; roughness: 0.8;"></a-mixin>
+            <a-mixin id="wall-white" geometry="primitive: box; height: 2; depth: 10; width: 0.5" material="color: #ffffff; metalness: 0.2; roughness: 0.8;"></a-mixin>
+            <a-mixin id="tree-trunk" geometry="primitive: cylinder; radius: 0.3; height: 3" material="color: #5c4033"></a-mixin>
+            <a-mixin id="tree-leaves" geometry="primitive: cone; radius-bottom: 2; height: 4" material="color: #228b22"></a-mixin>
+            <a-mixin id="road" geometry="primitive: plane; width: 12; height: 10" material="color: #333; roughness: 0.9" rotation="-90 0 0"></a-mixin>
+        </a-assets>
+
+        <a-entity environment="preset: starry; groundColor: #111; groundColor2: #222; grid: none; fog: 0.8; dressing: stones; dressingAmount: 50"></a-entity>
+        
+        <a-light type="directional" position="10 20 10" color="#aaaaff" intensity="0.6" castShadow="true"></a-light>
+        <a-light type="ambient" color="#222233" intensity="0.8"></a-light>
+
+        <a-circle position="0 0.01 0" radius="200" color="#1a1a1a" rotation="-90 0 0" material="roughness: 1;"></a-circle>
+
+        <a-entity id="player" position="0 0 0" input-manager advanced-car-physics tire-smoke>
+            
+            <a-entity class="car-model" gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0">
+                <a-box position="0 0.8 0" width="1.8" height="0.6" depth="4" color="#ff2200" shadow></a-box>
+                <a-box position="0 1.4 -0.2" width="1.6" height="0.6" depth="2" color="#cc1100" shadow></a-box>
+                
+                <a-light type="spot" color="#fff" intensity="2" distance="30" angle="45" penumbra="0.5" position="0.6 0.8 -2" rotation="-10 180 0"></a-light>
+                <a-light type="spot" color="#fff" intensity="2" distance="30" angle="45" penumbra="0.5" position="-0.6 0.8 -2" rotation="-10 180 0"></a-light>
+                
+                <a-light type="point" color="red" intensity="0.5" distance="2" position="0.8 0.8 2"></a-light>
+                <a-light type="point" color="red" intensity="0.5" distance="2" position="-0.8 0.8 2"></a-light>
+            </a-entity>
+
+            <a-entity id="camera-rig" orbital-camera>
+                <a-entity camera position="0 3 8" look-controls="enabled: false" fov="75"></a-entity>
+            </a-entity>
+
         </a-entity>
 
-        <a-entity id="camera-rig">
-           <a-entity camera position="0 3.2 7.5" look-controls="enabled: false"></a-entity>
+        <a-entity position="0 0.02 -10">
+            <a-entity mixin="road" position="0 0 0"></a-entity>
+            <a-entity mixin="road" position="0 0 -10"></a-entity>
+            <a-entity mixin="road" position="0 0 -20"></a-entity>
+            <a-entity mixin="road" position="0 0 -30"></a-entity>
+            <a-entity mixin="road" position="0 0 -40"></a-entity>
+            <a-entity mixin="road" position="0 0 -50"></a-entity>
+            <a-entity mixin="road" position="0 0 -60"></a-entity>
+
+            <a-entity mixin="wall" position="-6.5 1 0"></a-entity>
+            <a-entity mixin="wall-white" position="-6.5 1 -10"></a-entity>
+            <a-entity mixin="wall" position="-6.5 1 -20"></a-entity>
+            <a-entity mixin="wall-white" position="-6.5 1 -30"></a-entity>
+            <a-entity mixin="wall" position="-6.5 1 -40"></a-entity>
+            <a-entity mixin="wall-white" position="-6.5 1 -50"></a-entity>
+            <a-entity mixin="wall" position="-6.5 1 -60"></a-entity>
+
+            <a-entity mixin="wall-white" position="6.5 1 0"></a-entity>
+            <a-entity mixin="wall" position="6.5 1 -10"></a-entity>
+            <a-entity mixin="wall-white" position="6.5 1 -20"></a-entity>
+            <a-entity mixin="wall" position="6.5 1 -30"></a-entity>
+            <a-entity mixin="wall-white" position="6.5 1 -40"></a-entity>
+            <a-entity mixin="wall" position="6.5 1 -50"></a-entity>
+            <a-entity mixin="wall-white" position="6.5 1 -60"></a-entity>
         </a-entity>
 
-      </a-entity>
+        <a-entity position="-10 0.02 -75" rotation="0 45 0">
+            <a-entity mixin="road" position="0 0 0"></a-entity>
+            <a-entity mixin="wall" position="-6.5 1 0"></a-entity>
+            <a-entity mixin="wall-white" position="6.5 1 0"></a-entity>
+        </a-entity>
+        
+        <a-entity position="-25 0.02 -85" rotation="0 90 0">
+            <a-entity mixin="road" position="0 0 0"></a-entity>
+            <a-entity mixin="road" position="0 0 -10"></a-entity>
+            <a-entity mixin="road" position="0 0 -20"></a-entity>
+            
+            <a-entity mixin="wall-white" position="-6.5 1 0"></a-entity>
+            <a-entity mixin="wall" position="-6.5 1 -10"></a-entity>
+            <a-entity mixin="wall-white" position="-6.5 1 -20"></a-entity>
+            
+            <a-entity mixin="wall" position="6.5 1 0"></a-entity>
+            <a-entity mixin="wall-white" position="6.5 1 -10"></a-entity>
+            <a-entity mixin="wall" position="6.5 1 -20"></a-entity>
+        </a-entity>
 
-      <a-torus-knot position="10 3 -20" color="orange" radius="2"></a-torus-knot>
-      <a-box position="-15 1 -40" color="red" width="4" height="4" depth="4"></a-box>
-      <a-sphere position="20 1 10" color="blue" radius="3"></a-sphere>
+        <a-entity position="0 0 -5">
+            <a-box position="-6.5 4 0" width="1" height="8" depth="1" color="#222"></a-box>
+            <a-box position="6.5 4 0" width="1" height="8" depth="1" color="#222"></a-box>
+            <a-box position="0 8.5 0" width="14" height="1" depth="1" color="#ffaa00"></a-box>
+            <a-text value="LARGADA" position="0 8.5 0.6" color="black" align="center" width="15" font="kelsonsans"></a-text>
+        </a-entity>
+
+        <a-entity position="-15 0 -20">
+            <a-entity mixin="tree-trunk" position="0 1.5 0"><a-entity mixin="tree-leaves" position="0 3 0"></a-entity></a-entity>
+        </a-entity>
+        <a-entity position="-18 0 -35">
+            <a-entity mixin="tree-trunk" position="0 1.5 0"><a-entity mixin="tree-leaves" position="0 3 0"></a-entity></a-entity>
+        </a-entity>
+        <a-entity position="15 0 -10">
+            <a-entity mixin="tree-trunk" position="0 1.5 0"><a-entity mixin="tree-leaves" position="0 3 0"></a-entity></a-entity>
+        </a-entity>
+        <a-entity position="20 0 -40">
+            <a-entity mixin="tree-trunk" position="0 1.5 0"><a-entity mixin="tree-leaves" position="0 3 0"></a-entity></a-entity>
+        </a-entity>
+        <a-entity position="12 0 -60">
+            <a-entity mixin="tree-trunk" position="0 1.5 0"><a-entity mixin="tree-leaves" position="0 3 0"></a-entity></a-entity>
+        </a-entity>
+
+        <a-torus-knot position="-40 10 -100" color="#ff0055" radius="5" radius-tubular="1" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear;"></a-torus-knot>
+        <a-sphere position="50 20 -150" radius="15" material="color: #00ffff; wireframe: true" animation="property: rotation; to: 360 360 0; loop: true; dur: 20000;"></a-sphere>
 
     </a-scene>
 
-    <div style="position: fixed; bottom: 20px; width: 100%; text-align: center; color: white; font-family: sans-serif; pointer-events: none; text-shadow: 2px 2px black;">
-        Analógico Esq: Dirigir | Analógico Dir: Olhar | R2: Correr | L2: Frear | X: Freio de Mão | Y: Reset Cam | A: Buzina
-    </div>
-
-  </body>
+</body>
 </html>
