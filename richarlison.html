@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Richarlison Racer - Full Controller</title>
+    <title>Richarlison Racer - Pro Controller Support</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   </head>
   <body>
@@ -11,18 +11,17 @@
         init: function () {
           this.speed = 0;
           this.rotationSpeed = 0;
-          this.camRotationY = 0; // Rotação da câmera
-          this.camRotationX = 0; 
-          
+          this.camRotationY = 0; 
+          this.camRotationX = -10; // Começa com uma leve inclinação para baixo
           this.keys = { up: false, down: false, left: false, right: false };
 
+          // Teclado (Backup)
           window.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowUp' || e.key === 'w') this.keys.up = true;
             if (e.key === 'ArrowDown' || e.key === 's') this.keys.down = true;
             if (e.key === 'ArrowLeft' || e.key === 'a') this.keys.left = true;
             if (e.key === 'ArrowRight' || e.key === 'd') this.keys.right = true;
           });
-
           window.addEventListener('keyup', (e) => {
             if (e.key === 'ArrowUp' || e.key === 'w') this.keys.up = false;
             if (e.key === 'ArrowDown' || e.key === 's') this.keys.down = false;
@@ -36,21 +35,30 @@
           const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
           const gp = gamepads[0];
 
-          // --- CONTROLES DE MOVIMENTO (Esquerdo / Botões) ---
-          let gpAccelerate = gp?.buttons[0].pressed || this.keys.up;
-          let gpBrake = gp?.buttons[1].pressed || this.keys.down;
-          let gpTurn = (gp ? gp.axes[0] : 0) + (this.keys.left ? -1 : 0) + (this.keys.right ? 1 : 0);
+          // --- 1. MOVIMENTAÇÃO DO CARRO ---
+          let accelerate = this.keys.up;
+          let brake = this.keys.down;
+          let turnInput = (this.keys.left ? -1 : 0) + (this.keys.right ? 1 : 0);
 
-          if (gpAccelerate) this.speed -= 18 * delta;
-          if (gpBrake) this.speed += 12 * delta;
-          this.speed *= 0.96;
+          if (gp) {
+            // Botão A (0) ou Gatilho R2 (7) para acelerar
+            if (gp.buttons[0].pressed || (gp.buttons[7] && gp.buttons[7].value > 0.1)) accelerate = true;
+            // Botão B (1) ou Gatilho L2 (6) para freio/ré
+            if (gp.buttons[1].pressed || (gp.buttons[6] && gp.buttons[6].value > 0.1)) brake = true;
+            // Analógico Esquerdo (Eixo 0)
+            if (Math.abs(gp.axes[0]) > 0.1) turnInput = gp.axes[0];
+          }
+
+          if (accelerate) this.speed -= 22 * delta;
+          if (brake) this.speed += 15 * delta;
+          this.speed *= 0.97; // Atrito natural
 
           if (Math.abs(this.speed) > 0.1) {
-            this.rotationSpeed -= gpTurn * 70 * delta;
+            this.rotationSpeed -= turnInput * 90 * delta;
           }
           this.rotationSpeed *= 0.90;
 
-          // Aplica Movimento ao Carro
+          // Aplica Rotação e Posição ao Carro
           let carRot = this.el.getAttribute('rotation');
           carRot.y += this.rotationSpeed * delta;
           this.el.setAttribute('rotation', carRot);
@@ -61,17 +69,21 @@
           carPos.z += Math.cos(angle) * this.speed * delta;
           this.el.setAttribute('position', carPos);
 
-          // --- CONTROLE DA CÂMERA (Analógico Direito) ---
+          // --- 2. CÂMERA (ANALÓGICO DIREITO) ---
           if (gp) {
-            // Eixo 2 e 3 são geralmente o analógico direito
-            let lookX = gp.axes[2]; // Horizontal
-            let lookY = gp.axes[3]; // Vertical
+            // Tentativa de ler múltiplos eixos comuns para o analógico direito no Android
+            // Geralmente: Horizontal (2 ou 3), Vertical (3 ou 5)
+            let lookH = (Math.abs(gp.axes[2]) > 0.15) ? gp.axes[2] : (Math.abs(gp.axes[3]) > 0.15 && Math.abs(gp.axes[0]) < 0.1 ? gp.axes[3] : 0);
+            let lookV = (Math.abs(gp.axes[5]) > 0.15) ? gp.axes[5] : (Math.abs(gp.axes[4]) > 0.15 ? gp.axes[4] : 0);
+            
+            // Caso especial: alguns controles usam o eixo 3 para horizontal se o 2 estiver parado
+            if (lookH === 0 && Math.abs(gp.axes[3]) > 0.15) lookH = gp.axes[3];
 
-            if (Math.abs(lookX) > 0.1) this.camRotationY -= lookX * 100 * delta;
-            if (Math.abs(lookY) > 0.1) this.camRotationX -= lookY * 50 * delta;
+            this.camRotationY -= lookH * 150 * delta;
+            this.camRotationX -= lookV * 80 * delta;
 
-            // Limitar rotação vertical para não virar de ponta cabeça
-            this.camRotationX = Math.max(-30, Math.min(20, this.camRotationX));
+            // Limites para a câmera não girar demais verticalmente
+            this.camRotationX = Math.max(-35, Math.min(20, this.camRotationX));
 
             let rig = document.querySelector('#camera-rig');
             rig.setAttribute('rotation', `${this.camRotationX} ${this.camRotationY} 0`);
@@ -80,24 +92,30 @@
       });
     </script>
 
-    <a-scene background="color: #87CEEB">
+    <a-scene background="color: #222" fog="type: exponential; color: #AAA; density: 0.01">
+      
       <a-assets>
         <a-asset-item id="modelo-carro" src="./carro.glb"></a-asset-item>
-        <img id="grama" src="https://cdn.aframe.io/a-painter/images/floor.jpg">
-      </a-assets>
+        </a-assets>
 
-      <a-plane src="#grama" rotation="-90 0 0" width="500" height="500" repeat="50 50"></a-plane>
-      
+      <a-grid width="500" height="500" static-body></a-grid>
+      <a-sky color="#87CEEB"></a-sky>
+
+      <a-light type="ambient" intensity="0.7"></a-light>
+      <a-light type="directional" position="-1 2 1" intensity="0.5"></a-light>
+
       <a-entity id="player" position="0 0 0" drive-car>
         <a-entity gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0"></a-entity>
 
-        <a-entity id="camera-rig" position="0 0 0">
-           <a-entity camera position="0 2.5 6" look-controls="enabled: false"></a-entity>
+        <a-entity id="camera-rig">
+           <a-entity camera position="0 2.8 6.5" look-controls="enabled: false"></a-entity>
         </a-entity>
       </a-entity>
 
-      <a-box position="-10 1 -20" color="red"></a-box>
-      <a-box position="10 1 -40" color="green"></a-box>
+      <a-box position="-5 1 -15" color="#FF4444"></a-box>
+      <a-box position="8 1 -30" color="#44FF44"></a-box>
+      <a-box position="-2 1 -50" color="#4444FF"></a-box>
+
     </a-scene>
   </body>
 </html>
