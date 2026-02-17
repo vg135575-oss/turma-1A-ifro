@@ -3,37 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Engine Focus - V2</title>
+    <title>Richarlison Horizon - Real Engine</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; }
         #loading-screen {
             position: absolute; width: 100%; height: 100%; background: #000;
             color: #0f0; display: flex; flex-direction: column; 
             align-items: center; justify-content: center; z-index: 100;
         }
         .btn { 
-            margin-top: 20px; padding: 15px 40px; background: #0f0; 
-            border: none; font-weight: bold; cursor: pointer; border-radius: 30px; 
-            font-size: 18px; display: none;
+            margin-top: 20px; padding: 15px 30px; background: #0f0; 
+            border: none; font-weight: bold; cursor: pointer; border-radius: 8px; pointer-events: all;
         }
         #speedo {
-            position: absolute; bottom: 40px; right: 40px; color: #fff;
-            font-size: 45px; font-weight: 900; font-style: italic; 
-            text-shadow: 4px 4px 0px #ff0055; font-family: 'Arial Black', sans-serif;
-            pointer-events: none;
+            position: absolute; bottom: 30px; right: 30px; color: white;
+            font-size: 35px; font-weight: 900; font-style: italic; 
+            text-shadow: 3px 3px 0px #ff00ff; font-family: 'Arial Black', sans-serif;
         }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <div id="status">SINTONIZANDO MOTOR E TURBO...</div>
-        <button id="start-btn" class="btn" onclick="start()">LIGAR MÁQUINA</button>
+        <div id="status">CARREGANDO MOTOR REALISTA...</div>
+        <button id="start-btn" class="btn" style="display:none" onclick="start()">DIRIGIR</button>
     </div>
-    <div id="speedo">0 KM/H</div>
+    
+    <div id="ui">
+        <div id="speedo">0 KM/H</div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script>
+        let scene, camera, renderer, car, city;
+        let moveSpeed = 0, carRotation = 0, gameActive = false;
+        
+        const stats = {
+            accel: 0.05,
+            turboAccel: 0.15,
+            maxSpeed: 2.2,
+            maxTurboSpeed: 5.0,
+            maxReverse: -0.5,
+            friction: 0.97
+        };
+
+        let camAngleH = 0, currentCamRotation = 0;
+        const raycaster = new THREE.Raycaster();
+
+        // --- SISTEMA DE SOM REALISTA ---
+        let audioCtx, engineSource, gainNode;
+        let engineBuffer = null;
+
+        function loadEngineSound() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            // Link de um som de motor em loop (V8 Engine)
+            const soundUrl = 'https://raw.githubusercontent.com/nicolas-van/obsidian-racer/master/audio/engine.mp3';
+            
+            fetch(soundUrl)
+                .then(response => response.arrayBuffer())
+                .then(data => audioCtx.decodeAudioData(data))
+                .then(buffer => {
+                    engineBuffer = buffer;
+                    displayStatus("Motor pronto!");
+                    checkReady();
+                })
+                .catch(e => {
+                    console.error("Erro ao carregar som", e);
+                    displayStatus("Erro no som, mas pode jogar.");
+                    checkReady();
+                });
+        }
+
+        function playEngine() {
+            if (!engineBuffer) return;
+            engineSource = audioCtx.createBufferSource();
+            engineSource.buffer = engineBuffer;
+            engineSource.loop = true;
+
+            gainNode = audioCtx.createGain();
+            engineSource.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            gainNode.gain.value = 0.3; // Volume
+            engineSource.start(0);
+        }
+
+        function updateEnginePitch() {
+            if (!engineSource) return;
+            // O pitch (playbackRate) muda com base na velocidade
+            // 1.0 é o som normal, 2.5 é o motor gritando
+            let pitch = 0.8 + (Math.abs(moveSpeed) * 0.6);
+            engineSource.playbackRate.setTargetAtTime(pitch, audioCtx.currentTime, 0.1);
+        }
+
+        function displayStatus(msg) { document.getElementById('status').innerText = msg; }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a15);
+            scene.fog = new THREE.FogExp2(0x0a0a15, 0.005);
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            document.body.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 2.0));
+            const loader = new THREE.GLTFLoader();
+
+            // Carregar Cidade e Carro
+            loader.load('./city_at_night.glb', (gltf) => { 
+                city = gltf.scene; 
+                city.scale.set(5, 5, 5); 
+                scene.add(city); 
+                checkReady(); 
+            });
+            
+            loader.load('./carro.glb', (gltf) => { 
+                car = gltf.scene; 
+                const bbox = new THREE.Box3().setFromObject(car);
+                const size = new THREE.Vector3();
+                bbox.getSize(size);
+                car.scale.setScalar(10 / size.z); 
+                scene.add(car); 
+                checkReady(); 
+            });
+
+            loadEngineSound();
+        }
+
+        let items = 0;
+        function checkReady() { 
+            items++; 
+            if(items >= 3) { // Cidade + Carro + Som
+                document.getElementById('start-btn').style.display = "block";
+                displayStatus("TUDO PRONTO!");
+            }
+        }
+
+        function start() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            playEngine();
+            document.getElementById('loading-screen').style.display = "none";
+            gameActive = true;
+            animate();
+        }
+
+        function updatePhysics() {
+            const gps = navigator.getGamepads();
+            const gp = gps[0] || gps[1];
+
+            if (gp && gameActive && car) {
+                let jY = gp.axes[1], jX = gp.axes[0], cX = gp.axes[2];
+                let btnL1 = gp.buttons[4].pressed;
+
+                let currentMax = btnL1 ? stats.maxTurboSpeed : stats.maxSpeed;
+                let currentAccel = btnL1 ? stats.turboAccel : stats.accel;
+
+                if (Math.abs(jY) > 0.1) moveSpeed -= jY * currentAccel;
+                moveSpeed *= stats.friction;
+
+                if (moveSpeed > currentMax) moveSpeed = currentMax;
+                if (moveSpeed < stats.maxReverse) moveSpeed = stats.maxReverse;
+
+                if (Math.abs(moveSpeed) > 0.05) {
+                    let steerFactor = btnL1 ? 0.03 : 0.05;
+                    carRotation -= jX * steerFactor * (moveSpeed > 0 ? 1 : -1);
+                }
+
+                // Colisão Simples
+                const headDir = new THREE.Vector3(Math.sin(carRotation), 0, Math.cos(carRotation)).normalize();
+                raycaster.set(car.position, headDir);
+                const intersects = raycaster.intersectObject(city, true);
+                if (intersects.length > 0 && intersects[0].distance < 3.8 && intersects[0].point.y > 0.7 && moveSpeed > 0.1) {
+                    moveSpeed = -0.2;
+                }
+
+                car.rotation.y = carRotation;
+                car.position.x += Math.sin(carRotation) * moveSpeed;
+                car.position.z += Math.cos(carRotation) * moveSpeed;
+
+                document.getElementById('speedo').innerText = Math.abs(Math.round(moveSpeed * 100)) + " KM/H";
+                if (Math.abs(cX) > 0.1) camAngleH += cX * 0.08;
+                
+                updateEnginePitch();
+            }
+
+            if (car) {
+                currentCamRotation += (carRotation - currentCamRotation) * 0.08;
+                camera.fov = 70 + (Math.abs(moveSpeed) * 8);
+                camera.updateProjectionMatrix();
+
+                const dist = 22 + (Math.abs(moveSpeed) * 4);
+                const finalRot = currentCamRotation + camAngleH;
+                camera.position.x = car.position.x - Math.sin(finalRot) * dist;
+                camera.position.z = car.position.z - Math.cos(finalRot) * dist;
+                camera.position.y = car.position.y + 7;
+                camera.lookAt(car.position.x, car.position.y + 3, car.position.z);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            updatePhysics();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        init();
+    </script>
+</body>
+</html>
 
     <script>
         let scene, camera, renderer, car, city;
