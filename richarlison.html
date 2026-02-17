@@ -1,330 +1,331 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Richarlison Racer - Night City Edition</title>
-  <style>
-    html, body { 
-        height:100%; margin:0; 
-        background:#050510; /* Fundo escuro */
-        overflow:hidden; 
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    #container { width:100%; height:100%; position:relative; }
-    canvas { display:block; width: 100%; height: 100%; }
-    
-    /* Interface (HUD) */
-    #ui-layer {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        pointer-events: none;
-        display: flex; flex-direction: column; justify-content: space-between;
-    }
-    .hud-top {
-        padding: 20px;
-        color: #00ffff;
-        text-shadow: 0 0 10px #00ffff;
-        font-size: 24px;
-        font-weight: bold;
-        display: flex; justify-content: space-between;
-    }
-    .controls-hint {
-        text-align: center;
-        color: rgba(255,255,255,0.5);
-        padding-bottom: 20px;
-        font-size: 14px;
-    }
-    #loading {
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        color: white; font-size: 20px; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px;
-        pointer-events: none; transition: opacity 0.5s;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Richarlison Racer - Controller Fix</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        #game-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        /* Interface */
+        #ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .hud-top { padding: 20px; color: yellow; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 0 #000; }
+        
+        /* Tela de Carregamento / Debug */
+        #debug-console {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9); color: #0f0; padding: 20px;
+            border: 2px solid #0f0; max-width: 90%; font-family: monospace;
+            z-index: 100; text-align: center;
+        }
+        .error-msg { color: red; margin-top: 10px; font-size: 12px; }
+        #start-btn {
+            display: none; margin-top: 15px; padding: 10px 20px;
+            background: #0f0; color: #000; border: none; font-weight: bold; cursor: pointer; pointer-events: all;
+        }
+    </style>
 </head>
 <body>
 
-  <div id="container">
-    <div id="loading">Carregando Cidade e Carro...</div>
-    <div id="ui-layer">
-        <div class="hud-top">
-            <span id="score">DISTÂNCIA: 0m</span>
+    <div id="game-container"></div>
+
+    <div id="ui">
+        <div class="hud-top" id="score">SCORE: 0</div>
+        <div id="debug-console">
+            <div>CARREGANDO SISTEMA...</div>
+            <div id="log-output" class="error-msg"></div>
+            <button id="start-btn" onclick="startGame()">JOGAR MESMO ASSIM</button>
         </div>
-        <div class="controls-hint">Toque esq/dir ou use as Setas | Desvie dos Cubos</div>
     </div>
-  </div>
 
-  <script src="https://unpkg.com/three@0.154.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.154.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://unpkg.com/three@0.154.0/examples/js/utils/SkeletonUtils.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
-  <script>
-    // --- CONFIGURAÇÕES GERAIS ---
-    const CONFIG = {
-        speed: 40,           // Velocidade do jogo
-        laneWidth: 3.5,      // Largura das pistas
-        cityScale: 1.0,      // AJUSTE AQUI SE A CIDADE FICAR MUITO GRANDE OU PEQUENA
-        cityY: -2,           // Altura da cidade (para ficar abaixo do carro)
-        fogDist: 120         // Distância da neblina
-    };
-
-    // Variáveis de Jogo
-    let scoreDist = 0;
-    let gameActive = true;
-    let currentLane = 1; // 0=Esq, 1=Centro, 2=Dir
-    const lanePositions = [-CONFIG.laneWidth, 0, CONFIG.laneWidth];
-    let carPositionX = 0;
-    
-    // Cena e Câmera
-    const container = document.getElementById('container');
-    const scene = new THREE.Scene();
-    // Neblina para esconder o fim do cenário e dar clima noturno
-    scene.fog = new THREE.Fog(0x050510, 20, CONFIG.fogDist);
-    scene.background = new THREE.Color(0x050510);
-
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 300);
-    camera.position.set(0, 3, 7);
-    camera.lookAt(0, 1, 0);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    container.appendChild(renderer.domElement);
-
-    // --- ILUMINAÇÃO (Night Mode) ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Luz base fraca
-    scene.add(ambientLight);
-
-    const dirLight = new THREE.DirectionalLight(0xffccaa, 1.5); // Luz principal (poste/lua)
-    dirLight.position.set(-5, 10, 5);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    scene.add(dirLight);
-
-    // Luzes dos faróis do carro (simuladas)
-    const carLight = new THREE.SpotLight(0xffffff, 20);
-    carLight.position.set(0, 2, 0);
-    carLight.target.position.set(0, 0, -20);
-    carLight.angle = 0.5;
-    carLight.penumbra = 0.5;
-    carLight.distance = 50;
-    scene.add(carLight);
-    scene.add(carLight.target);
-
-    // --- OBJETOS ---
-    const loader = new THREE.GLTFLoader();
-    let carModel = null;
-    let city1 = null;
-    let city2 = null;
-    let cityLength = 0; // Será calculado automaticamente
-
-    // 1. CARREGAR O CARRO
-    loader.load('carro.glb', function(gltf) {
-        carModel = gltf.scene;
+    <script>
+        // --- SISTEMA DE LOG NA TELA (PARA MOBILE) ---
+        const logOut = document.getElementById('log-output');
+        const debugPanel = document.getElementById('debug-console');
+        const startBtn = document.getElementById('start-btn');
         
-        // Ajustes do Carro
-        carModel.rotation.y = Math.PI; // Vira o carro para frente se necessário
+        function log(msg, isError = false) {
+            console.log(msg);
+            logOut.innerHTML += `<br>${isError ? '[ERRO]: ' : ''}${msg}`;
+            // Se der erro, mostra botão para forçar inicio
+            if(isError) startBtn.style.display = 'inline-block';
+        }
+
+        // --- VARIÁVEIS DO JOGO ---
+        let scene, camera, renderer, clock;
+        let car, city1, city2;
+        let obstacles = [];
+        let gameActive = false;
+        let speed = 20;
+        let score = 0;
         
-        // Normaliza tamanho do carro (evita carro gigante)
-        const box = new THREE.Box3().setFromObject(carModel);
-        const size = new THREE.Vector3(); box.getSize(size);
-        const scale = 2.0 / size.z; // Força o carro a ter aprox 2 unidades de comprimento
-        carModel.scale.setScalar(scale);
-        
-        carModel.position.set(0, 0, 0);
-        carModel.traverse(c => { 
-            if(c.isMesh) {
-                c.castShadow = true; 
-                c.receiveShadow = true;
-                // Deixa o carro um pouco brilhante (reflexo)
-                if(c.material) c.material.envMapIntensity = 1;
+        // Pistas: -3 (Esq), 0 (Meio), 3 (Dir)
+        const LANES = [-3.5, 0, 3.5]; 
+        let currentLane = 1; 
+        let carX = 0;
+
+        // Controle
+        let canSwitchLane = true; // Evita movimento duplo rápido demais
+
+        function init() {
+            // 1. Cena
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050510, 0.02);
+            scene.background = new THREE.Color(0x050510);
+
+            // 2. Câmera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+            camera.position.set(0, 3, 6);
+            camera.lookAt(0, 1, 0);
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            // 4. Luzes
+            const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambient);
+            const dirLight = new THREE.DirectionalLight(0xff00ff, 1.5); // Luz Neon
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            // 5. Chão Infinito (Caso a cidade falhe)
+            const grid = new THREE.GridHelper(200, 50, 0xff00ff, 0x222222);
+            grid.position.y = -0.1;
+            scene.add(grid);
+
+            // --- CARREGAMENTO DE MODELOS (COM PROTEÇÃO DE ERRO) ---
+            const loader = new THREE.GLTFLoader();
+            let itemsToLoad = 2;
+
+            function checkLoading() {
+                itemsToLoad--;
+                if(itemsToLoad <= 0) {
+                    log("Tudo pronto! Iniciando...");
+                    setTimeout(() => {
+                        debugPanel.style.display = 'none';
+                        gameActive = true;
+                    }, 1000);
+                }
             }
-        });
-        
-        scene.add(carModel);
-        checkLoadComplete();
-    }, undefined, function(e) { console.error("Erro carro:", e); });
 
-    // 2. CARREGAR A CIDADE
-    loader.load('city_at_night.glb', function(gltf) {
-        const originalCity = gltf.scene;
+            // Carregar Carro
+            loader.load('./carro.glb', (gltf) => {
+                car = gltf.scene;
+                car.scale.set(0.5, 0.5, 0.5); // Ajuste de escala genérico
+                car.rotation.y = Math.PI; // Vira pra frente
+                scene.add(car);
+                log("Carro carregado.");
+                checkLoading();
+            }, undefined, (err) => {
+                log("ERRO: carro.glb não achado. Usando cubo.", true);
+                // Fallback: Cria um cubo vermelho se falhar
+                const geo = new THREE.BoxGeometry(1, 0.5, 2);
+                const mat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+                car = new THREE.Mesh(geo, mat);
+                scene.add(car);
+                checkLoading();
+            });
 
-        // Calcula o tamanho da cidade para fazer o loop
-        const box = new THREE.Box3().setFromObject(originalCity);
-        const size = new THREE.Vector3(); box.getSize(size);
-        cityLength = size.z * CONFIG.cityScale; // Comprimento real após escala
-        
-        console.log("Comprimento da Cidade:", cityLength);
+            // Carregar Cidade
+            loader.load('./city_at_night.glb', (gltf) => {
+                const model = gltf.scene;
+                // Cria duas cidades para o loop
+                city1 = model;
+                city2 = model.clone();
+                
+                // Ajustes de posição
+                city1.scale.set(1, 1, 1);
+                city2.scale.set(1, 1, 1);
+                
+                // Tenta calcular o tamanho da cidade automaticamente
+                const box = new THREE.Box3().setFromObject(city1);
+                const zSize = box.max.z - box.min.z;
+                
+                city1.position.z = 0;
+                city2.position.z = -zSize; // Coloca a segunda cidade atrás da primeira
+                
+                // Guarda o tamanho no objeto pra usar no loop
+                city1.userData = { size: zSize }; 
+                city2.userData = { size: zSize };
 
-        // Função para configurar a cidade
-        function setupCity(obj, zPos) {
-            obj.scale.setScalar(CONFIG.cityScale);
-            obj.position.set(0, CONFIG.cityY, zPos);
-            // Se a cidade estiver virada errada, descomente abaixo:
-            // obj.rotation.y = Math.PI; 
-            scene.add(obj);
-            return obj;
-        }
+                scene.add(city1);
+                scene.add(city2);
+                log("Cidade carregada.");
+                checkLoading();
 
-        // Cria duas instâncias da cidade para o loop infinito
-        city1 = setupCity(originalCity, 0);
-        // Usamos Clone para a segunda parte
-        city2 = setupCity(originalCity.clone(), -cityLength); 
-
-        checkLoadComplete();
-    }, undefined, function(e) { console.error("Erro cidade:", e); });
-
-    // Remove loading quando tudo estiver pronto
-    let itemsLoaded = 0;
-    function checkLoadComplete() {
-        itemsLoaded++;
-        if(itemsLoaded >= 2) {
-            document.getElementById('loading').style.opacity = 0;
-            setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
-        }
-    }
-
-    // --- ESTRADA (CHÃO INVISÍVEL PARA SOMBRAS/REFERÊNCIA) ---
-    // Mantemos um plano simples para receber sombras caso a cidade não tenha chão perfeito na coordenada 0
-    const roadGeo = new THREE.PlaneGeometry(10, 200);
-    const roadMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.0 });
-    const roadProxy = new THREE.Mesh(roadGeo, roadMat);
-    roadProxy.rotation.x = -Math.PI/2;
-    roadProxy.position.y = 0.05;
-    scene.add(roadProxy);
-
-    // --- OBSTÁCULOS (NEON CUBES) ---
-    const obstacles = [];
-    function spawnObstacle() {
-        if(!gameActive) return;
-        
-        const geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-        // Material Neon
-        const mat = new THREE.MeshStandardMaterial({ 
-            color: 0xff0055, 
-            emissive: 0xff0055,
-            emissiveIntensity: 0.8,
-            roughness: 0.1 
-        });
-        
-        const obs = new THREE.Mesh(geo, mat);
-        
-        // Escolhe pista aleatória
-        const lane = Math.floor(Math.random() * 3);
-        obs.position.set(lanePositions[lane], 0.75, -100); // Nasce longe
-        obs.castShadow = true;
-        
-        scene.add(obs);
-        obstacles.push(obs);
-    }
-
-    // Gerador de obstáculos
-    setInterval(spawnObstacle, 1500); // A cada 1.5 segundos
-
-    // --- CONTROLES ---
-    function moveLeft() { if(currentLane > 0) currentLane--; }
-    function moveRight() { if(currentLane < 2) currentLane++; }
-
-    // Teclado
-    window.addEventListener('keydown', (e) => {
-        if(e.key === 'ArrowLeft' || e.key === 'a') moveLeft();
-        if(e.key === 'ArrowRight' || e.key === 'd') moveRight();
-    });
-
-    // Toque (Touch)
-    window.addEventListener('touchstart', (e) => {
-        const touchX = e.changedTouches[0].clientX;
-        if(touchX < window.innerWidth / 2) moveLeft();
-        else moveRight();
-    });
-
-    // --- LOOP PRINCIPAL DO JOGO ---
-    const clock = new THREE.Clock();
-
-    function animate() {
-        requestAnimationFrame(animate);
-
-        const dt = Math.min(clock.getDelta(), 0.1);
-        const time = clock.getElapsedTime();
-
-        if (gameActive) {
-            // 1. Movimento do Carro (Lerp para suavizar a troca de faixa)
-            const targetX = lanePositions[currentLane];
-            carPositionX += (targetX - carPositionX) * 10 * dt;
+            }, undefined, (err) => {
+                log("ERRO: city_at_night.glb falhou. Usando modo Grid.", true);
+                // Se falhar a cidade, não faz nada (o GridHelper já está lá)
+                checkLoading();
+            });
             
-            if(carModel) {
-                carModel.position.x = carPositionX;
-                // Efeito de balanço (suspensão)
-                carModel.position.y = Math.sin(time * 15) * 0.05;
-                // Inclinação nas curvas
-                carModel.rotation.z = (carPositionX - targetX) * -0.1;
+            // Inicia loop
+            clock = new THREE.Clock();
+            animate();
+        }
+
+        function startGame() {
+            debugPanel.style.display = 'none';
+            gameActive = true;
+        }
+
+        // --- LÓGICA DO JOGO ---
+
+        // Input Controle e Teclado
+        function handleInput() {
+            // Teclado
+            if (keyState['ArrowLeft'] || keyState['a']) changeLane(-1);
+            if (keyState['ArrowRight'] || keyState['d']) changeLane(1);
+
+            // Gamepad (Controle)
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            const gp = gamepads[0] || gamepads[1]; // Tenta pegar o primeiro controle ativo
+
+            if (gp) {
+                // Eixo 0 é geralmente o analógico esquerdo Horizontal
+                // Botão 14 é D-Pad Left, 15 é D-Pad Right (padrão xbox/ps)
                 
-                // Atualiza luz do farol
-                carLight.position.x = carPositionX;
-                carLight.target.position.x = carPositionX;
+                const axisX = gp.axes[0];
+                const dpadLeft = gp.buttons[14] ? gp.buttons[14].pressed : false;
+                const dpadRight = gp.buttons[15] ? gp.buttons[15].pressed : false;
+
+                if (axisX < -0.5 || dpadLeft) {
+                    if(canSwitchLane) changeLane(-1);
+                } else if (axisX > 0.5 || dpadRight) {
+                    if(canSwitchLane) changeLane(1);
+                } else {
+                    // Se soltou o controle, libera pra mudar de novo
+                    canSwitchLane = true;
+                }
+            }
+        }
+
+        function changeLane(dir) {
+            // Só muda se o "gatilho" estiver liberado (para teclado, precisa soltar a tecla; para controle, precisa centralizar ou usar flag)
+            if (!canSwitchLane) return;
+
+            if (dir === -1 && currentLane > 0) {
+                currentLane--;
+                canSwitchLane = false; // Bloqueia até soltar (simulação simples)
+            } 
+            if (dir === 1 && currentLane < 2) {
+                currentLane++;
+                canSwitchLane = false;
+            }
+            
+            // Pequeno timeout para permitir movimento rápido no teclado, mas não instantâneo
+            setTimeout(() => { canSwitchLane = true }, 200);
+        }
+
+        // Estado das teclas
+        const keyState = {};
+        window.addEventListener('keydown', (e) => { keyState[e.key] = true; });
+        window.addEventListener('keyup', (e) => { 
+            keyState[e.key] = false; 
+            canSwitchLane = true; // Reseta ao soltar tecla
+        });
+
+        // Loop de Animação
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!gameActive) return;
+
+            const dt = clock.getDelta();
+            
+            handleInput();
+
+            // Mover Carro (Suavização / Lerp)
+            const targetX = LANES[currentLane];
+            carX += (targetX - carX) * 10 * dt;
+            
+            if (car) {
+                car.position.x = carX;
+                // Efeito visual de curva
+                car.rotation.z = (carX - targetX) * -0.1;
+                car.rotation.y = Math.PI + (carX - targetX) * -0.1; // Vira levemente nas curvas
             }
 
-            // 2. Movimento da Cidade (Efeito Esteira)
-            // Movemos a cidade em direção à câmera (+Z)
-            if(city1 && city2 && cityLength > 0) {
-                const moveStep = CONFIG.speed * dt;
+            // Mover Cidade (Ilusão de movimento)
+            // Se as cidades existirem:
+            if (city1 && city2) {
+                const zSize = city1.userData.size;
+                const moveSpeed = speed * dt;
                 
-                city1.position.z += moveStep;
-                city2.position.z += moveStep;
+                city1.position.z += moveSpeed;
+                city2.position.z += moveSpeed;
 
-                // Se a cidade passou completamente pela câmera, joga lá para trás
-                // O ponto de corte ideal depende de onde está a origem do modelo, ajustamos com um offset seguro
-                if(city1.position.z > cityLength/2 + 20) {
-                    city1.position.z = city2.position.z - cityLength + 1; // +1 para evitar gap visual
-                }
-                if(city2.position.z > cityLength/2 + 20) {
-                    city2.position.z = city1.position.z - cityLength + 1;
-                }
+                // Resetar posição para loop infinito
+                if (city1.position.z > 20) city1.position.z = city2.position.z - zSize;
+                if (city2.position.z > 20) city2.position.z = city1.position.z - zSize;
+            } else {
+                // Se não tiver cidade, move o chão grid
+                scene.children.forEach(child => {
+                    if(child.type === 'GridHelper') {
+                        child.position.z = (child.position.z + speed * dt) % 10;
+                    }
+                });
             }
 
-            // 3. Movimento dos Obstáculos
-            for(let i = obstacles.length - 1; i >= 0; i--) {
+            // Gerar Obstáculos
+            if (Math.random() < 0.02) spawnObstacle();
+
+            // Mover Obstáculos
+            for (let i = obstacles.length - 1; i >= 0; i--) {
                 const obs = obstacles[i];
-                obs.position.z += CONFIG.speed * dt;
-                
-                // Rotação do obstáculo para ficar estiloso
-                obs.rotation.x += dt;
-                obs.rotation.y += dt;
+                obs.position.z += speed * dt;
 
-                // Colisão simples (Bounding Box)
-                if(obs.position.z > -2 && obs.position.z < 2) {
-                    // Está na mesma profundidade do carro, checa X
-                    if(Math.abs(obs.position.x - carPositionX) < 1.0) {
-                        console.log("Crash!");
-                        // Efeito simples de batida: empurra obstáculo e treme
-                        camera.position.x = (Math.random() - 0.5) * 0.5;
-                        // Opcional: GameOver ou Reset
-                        // gameActive = false; alert("Bateu!"); location.reload();
+                // Colisão simples
+                if (obs.position.z > -1 && obs.position.z < 1) {
+                    if (Math.abs(obs.position.x - carX) < 1.0) {
+                        // Game Over simples (pisca tela)
+                        document.body.style.backgroundColor = 'red';
+                        setTimeout(()=> document.body.style.backgroundColor = 'black', 100);
+                        score = 0;
                     }
                 }
 
-                // Remove se passou da câmera
-                if(obs.position.z > 10) {
+                if (obs.position.z > 10) {
                     scene.remove(obs);
                     obstacles.splice(i, 1);
-                    scoreDist += 10;
-                    document.getElementById('score').innerText = `DISTÂNCIA: ${scoreDist}m`;
+                    score += 10;
+                    document.getElementById('score').innerText = "SCORE: " + score;
                 }
             }
+
+            renderer.render(scene, camera);
         }
 
-        renderer.render(scene, camera);
-    }
+        function spawnObstacle() {
+            const lane = Math.floor(Math.random() * 3);
+            const geo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x550000 });
+            const obs = new THREE.Mesh(geo, mat);
+            obs.position.set(LANES[lane], 0.6, -100);
+            scene.add(obs);
+            obstacles.push(obs);
+        }
 
-    // Ajuste de Janela
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+        // Ajuste de Tela
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
-    animate();
-  </script>
+        // Inicia tudo
+        init();
+
+    </script>
 </body>
 </html>
