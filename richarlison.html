@@ -3,36 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Horizon 5 - Pro Edition</title>
+    <title>Richarlison Horizon 5 - Gamepad Fix</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
-        #loading {
-            position: absolute; width: 100%; height: 100%; background: #000; z-index: 1000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;
-        }
-        .btn-ready {
-            padding: 20px 50px; background: #ff0055; color: white; border: none;
-            font-size: 24px; cursor: pointer; display: none; border-radius: 50px;
-            box-shadow: 0 10px 20px rgba(255,0,85,0.4);
+        #overlay {
+            position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; z-index: 100; transition: 0.5s;
         }
         #hud {
-            position: absolute; bottom: 40px; right: 40px; color: white;
-            text-align: right; pointer-events: none;
+            position: absolute; bottom: 50px; right: 50px; color: white;
+            text-align: right; pointer-events: none; text-shadow: 0 0 15px rgba(0,255,255,0.7);
         }
-        #speed { font-size: 80px; font-style: italic; line-height: 0.8; }
-        #unit { font-size: 20px; color: #ff0055; }
+        #speed { font-size: 90px; font-style: italic; line-height: 0.8; }
+        .hint { color: #ff0055; font-size: 14px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="loading">
-        <h1 id="msg">SINCRONIZANDO MOTOR...</h1>
-        <button id="start-btn" class="btn-ready" onclick="start()">DIRIGIR</button>
+    <div id="overlay">
+        <h1 id="status">CONECTE O CONTROLE</h1>
+        <p class="hint">Pressione qualquer botão no Gamepad para iniciar</p>
     </div>
 
     <div id="hud">
         <div id="speed">0</div>
-        <div id="unit">KM/H</div>
+        <div style="font-size: 20px;">KM/H</div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -42,854 +38,126 @@
         let scene, camera, renderer, car, city;
         let gameActive = false;
 
-        // --- CONFIGURAÇÃO ESTILO FORZA ---
-        const config = {
-            accel: 0.08,        
-            maxSpeed: 6.0,      
-            friction: 0.985,    
-            driftFactor: 0.92,  // Faz a traseira deslizar
-            turnSpeed: 0.035,
-            camEase: 0.12       // Suavidade da câmera
-        };
-
-        const state = {
+        // FÍSICA PESADA ESTILO FORZA
+        const physics = {
             vel: 0,
-            rot: 0,
-            latVel: 0,          // Velocidade lateral (Drift)
-            targetFOV: 70
+            angle: 0,
+            latVel: 0,
+            accel: 0.15, 
+            friction: 0.98,
+            maxSpeed: 8.0
         };
-
-        const keys = { w:0, s:0, a:0, d:0 };
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x020205);
-            scene.fog = new THREE.FogExp2(0x020205, 0.004);
+            scene.fog = new THREE.FogExp2(0x020205, 0.003);
 
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.5, 5000);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.outputEncoding = THREE.sRGBEncoding;
-            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            const light = new THREE.AmbientLight(0xffffff, 1.2);
-            scene.add(light);
-
+            scene.add(new THREE.AmbientLight(0xffffff, 1.0));
             const sun = new THREE.DirectionalLight(0xffffff, 1.0);
             sun.position.set(10, 50, 10);
             scene.add(sun);
 
             const loader = new THREE.GLTFLoader();
 
-            // CIDADE (Ajustada para não ser gigante)
+            // Cidade em escala menor para o carro não parecer formiga
             loader.load('./city_at_night.glb', (gltf) => {
                 city = gltf.scene;
-                city.scale.set(1.5, 1.5, 1.5); // ESCALA REALISTA
+                city.scale.set(1.2, 1.2, 1.2); 
                 scene.add(city);
-                checkReady();
             });
 
-            // CARRO (Aumentado para presença de tela)
+            // Carro em escala maior para dar "peso"
             loader.load('./carro.glb', (gltf) => {
                 car = gltf.scene;
                 const box = new THREE.Box3().setFromObject(car);
                 const size = box.getSize(new THREE.Vector3());
-                car.scale.setScalar(18 / size.z); // CARRO ROBUSTO
+                car.scale.setScalar(22 / size.z); // Carro GRANDE
                 scene.add(car);
-                checkReady();
+                document.getElementById('status').innerText = "CONTROLE DETECTADO!";
             });
         }
 
-        let loaded = 0;
-        function checkReady() {
-            loaded++;
-            if(loaded >= 2) {
-                document.getElementById('msg').innerText = "V8 PRONTO";
-                document.getElementById('start-btn').style.display = "block";
-            }
-        }
+        function updateGamepad() {
+            const gamepads = navigator.getGamepads();
+            const gp = gamepads[0] || gamepads[1];
 
-        function start() {
-            document.getElementById('loading').style.display = 'none';
-            gameActive = true;
-            animate();
-        }
+            if (!gp) return;
 
-        window.onkeydown = (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = 1 };
-        window.onkeyup = (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = 0 };
+            // No Forza: RT (Button 7) ou Axis 5 | LT (Button 6) ou Axis 2
+            // Simplificando para eixos comuns e botões de gatilho
+            const drive = gp.buttons[7].value - gp.buttons[6].value; // Gatilhos RT/LT
+            const steer = gp.axes[0]; // Analógico esquerdo
 
-        function updatePhysics() {
-            if(!car) return;
-
-            // Aceleração com inércia
-            if(keys.w) state.vel += config.accel;
-            if(keys.s) state.vel -= config.accel * 0.5;
-            
-            state.vel *= config.friction;
-
-            // Drift e Curva
-            let turnInput = (keys.a ? 1 : 0) - (keys.d ? 1 : 0);
-            if(Math.abs(state.vel) > 0.1) {
-                // Quanto mais rápido, mais a inércia lateral (drift) afeta o carro
-                let driftEffect = turnInput * (state.vel * 0.015);
-                state.rot += turnInput * config.turnSpeed * (state.vel * 0.2);
-                state.latVel += driftEffect;
+            if (!gameActive && (Math.abs(drive) > 0.1 || gp.buttons[0].pressed)) {
+                gameActive = true;
+                document.getElementById('overlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('overlay').style.display = 'none', 500);
             }
 
-            state.latVel *= config.driftFactor;
+            if (gameActive && car) {
+                // Aceleração
+                physics.vel += drive * physics.accel;
+                physics.vel *= physics.friction;
 
-            // Aplicar movimento
-            car.rotation.y = state.rot;
-            car.position.x += Math.sin(state.rot) * state.vel + Math.cos(state.rot) * state.latVel;
-            car.position.z += Math.cos(state.rot) * state.vel - Math.sin(state.rot) * state.latVel;
+                // Drift/Curva
+                if (Math.abs(physics.vel) > 0.1) {
+                    const steerEffect = steer * (physics.vel * 0.025);
+                    physics.angle -= steer * 0.04 * (physics.vel * 0.15);
+                    physics.latVel += steerEffect;
+                }
+                physics.latVel *= 0.92; // Resistencia lateral
 
-            // Efeito visual de inclinação (Weight Shift)
-            car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -state.latVel * 0.5, 0.1);
-            car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, keys.w ? -0.02 : 0, 0.1);
+                // Aplicar no 3D
+                car.rotation.y = physics.angle;
+                car.position.x += Math.sin(physics.angle) * physics.vel + Math.cos(physics.angle) * physics.latVel;
+                car.position.z += Math.cos(physics.angle) * physics.vel - Math.sin(physics.angle) * physics.latVel;
 
-            // Atualizar HUD
-            document.getElementById('speed').innerText = Math.round(Math.abs(state.vel) * 45);
-        }
+                // Visual Tilt
+                car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -physics.latVel * 0.4, 0.1);
 
-        function updateCamera() {
-            if(!car) return;
-
-            // DINAMIC FOV (Igual Forza)
-            let speedFactor = Math.abs(state.vel) / config.maxSpeed;
-            camera.fov = THREE.MathUtils.lerp(70, 95, speedFactor);
-            camera.updateProjectionMatrix();
-
-            // Posição de perseguição suave
-            const idealOffset = new THREE.Vector3(0, 7, -25 - (speedFactor * 10));
-            idealOffset.applyQuaternion(car.quaternion);
-            idealOffset.add(car.position);
-
-            const idealLookat = new THREE.Vector3(0, 3, 10);
-            idealLookat.applyQuaternion(car.quaternion);
-            idealLookat.add(car.position);
-
-            camera.position.lerp(idealOffset, config.camEase);
-            camera.lookAt(idealLookat);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if(gameActive) {
-                updatePhysics();
+                document.getElementById('speed').innerText = Math.round(Math.abs(physics.vel) * 50);
+                
                 updateCamera();
             }
-            renderer.render(scene, camera);
-        }
-
-        init();
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
-</body>
-</html>
-        #mobile-controls:hover { opacity: 1; }
-        .touch-btn {
-            width: 80px; height: 80px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 24px; user-select: none;
-        }
-        .touch-btn:active { background: rgba(0, 255, 204, 0.3); border-color: #00ffcc; }
-        
-        /* Esconder controles se estiver no PC (opcional) */
-        @media (min-width: 1024px) { #mobile-controls { display: none; } }
-    </style>
-</head>
-<body>
-
-    <div id="loading">
-        <h2 id="status-text">CARREGANDO ASSETS...</h2>
-        <button id="start-btn" class="btn-start" onclick="startGame()">INICIAR MOTOR</button>
-    </div>
-
-    <div id="ui-layer">
-        <div id="speedometer">
-            <span id="speed-val">0</span>
-            <span id="speed-label">KM/H</span>
-        </div>
-        
-        <div id="mobile-controls">
-            <div style="display: flex; gap: 10px;">
-                <div class="touch-btn" id="btn-left">◀</div>
-                <div class="touch-btn" id="btn-right">▶</div>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <div class="touch-btn" id="btn-brake">brake</div>
-                <div class="touch-btn" id="btn-gas">▲</div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-
-    <script>
-        // --- CONFIGURAÇÕES GERAIS ---
-        const SETTINGS = {
-            maxSpeed: 4.5,         // Velocidade máxima
-            acceleration: 0.04,    // Força do motor
-            friction: 0.97,        // Atrito do chão (quanto menor, mais o carro desliza)
-            turnSpeed: 0.04,       // Velocidade da curva
-            cameraSmooth: 0.08,    // 0.01 = muito atraso, 1.0 = sem atraso
-            carSmooth: 0.1         // Suavidade visual do carro virando
-        };
-
-        let scene, camera, renderer;
-        let city, car;
-        let gameActive = false;
-        
-        // Estado do Carro
-        const carState = {
-            speed: 0,
-            angle: 0,
-            x: 0,
-            z: 0,
-            visualAngle: 0 // Para suavizar a rotação do modelo 3D
-        };
-
-        // Inputs
-        const inputs = { up: false, down: false, left: false, right: false };
-
-        // --- SISTEMA DE ÁUDIO ---
-        let audioCtx, engineSource, gainNode;
-        
-        function initAudio() {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const url = 'https://raw.githubusercontent.com/nicolas-van/obsidian-racer/master/audio/engine.mp3';
-            
-            fetch(url)
-                .then(r => r.arrayBuffer())
-                .then(buffer => audioCtx.decodeAudioData(buffer))
-                .then(decoded => {
-                    const src = audioCtx.createBufferSource();
-                    src.buffer = decoded;
-                    src.loop = true;
-                    gainNode = audioCtx.createGain();
-                    gainNode.gain.value = 0.1;
-                    src.connect(gainNode);
-                    gainNode.connect(audioCtx.destination);
-                    engineSource = src;
-                })
-                .catch(e => console.warn("Audio não carregou (CORS ou erro):", e));
-        }
-
-        function updateAudio() {
-            if(!engineSource || audioCtx.state === 'suspended') return;
-            // Pitch baseado na velocidade
-            const pitch = 0.5 + (Math.abs(carState.speed) * 0.5);
-            engineSource.playbackRate.setTargetAtTime(pitch, audioCtx.currentTime, 0.1);
-        }
-
-        // --- INICIALIZAÇÃO 3D ---
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050510);
-            scene.fog = new THREE.FogExp2(0x050510, 0.003); // Neblina para esconder o fim do mapa
-
-            // Câmera
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-            camera.position.set(0, 10, -20);
-
-            // Renderizador
-            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Otimização para celular
-            renderer.outputEncoding = THREE.sRGBEncoding;
-            renderer.shadowMap.enabled = true;
-            document.body.appendChild(renderer.domElement);
-
-            // Luzes
-            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambient);
-
-            const dirLight = new THREE.DirectionalLight(0xffccaa, 1.5);
-            dirLight.position.set(50, 100, 50);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
-
-            // Luz do farol do carro (simulada)
-            const carLight = new THREE.PointLight(0x00ffff, 2, 40);
-            scene.add(carLight);
-            carState.light = carLight; // Referência para mover com o carro
-
-            loadModels();
-            setupControls();
-        }
-
-        function loadModels() {
-            const loader = new THREE.GLTFLoader();
-            let loadedCount = 0;
-
-            const checkLoad = () => {
-                loadedCount++;
-                if(loadedCount === 2) {
-                    document.getElementById('status-text').innerText = "PRONTO PARA RODAR";
-                    document.getElementById('start-btn').style.display = "block";
-                    initAudio();
-                }
-            };
-
-            // Carregar Cidade
-            loader.load('./city_at_night.glb', (gltf) => {
-                city = gltf.scene;
-                city.scale.set(5, 5, 5);
-                scene.add(city);
-                checkLoad();
-            }, undefined, (e) => {
-                console.error("Erro cidade:", e);
-                // Fallback se falhar: chão simples
-                const plane = new THREE.Mesh(new THREE.PlaneGeometry(500,500), new THREE.MeshPhongMaterial({color:0x222222}));
-                plane.rotation.x = -Math.PI/2;
-                scene.add(plane);
-                checkLoad();
-            });
-
-            // Carregar Carro
-            loader.load('./carro.glb', (gltf) => {
-                car = gltf.scene;
-                // Ajustar escala automaticamente
-                const box = new THREE.Box3().setFromObject(car);
-                const size = box.getSize(new THREE.Vector3()).length();
-                car.scale.setScalar(8 / size); // Normaliza para tamanho ~8 unidades
-                
-                car.traverse(c => { if(c.isMesh) c.castShadow = true; });
-                scene.add(car);
-                checkLoad();
-            }, undefined, (e) => {
-                console.error("Erro carro:", e);
-                // Fallback: cubo
-                car = new THREE.Mesh(new THREE.BoxGeometry(2,1,4), new THREE.MeshNormalMaterial());
-                scene.add(car);
-                checkLoad();
-            });
-        }
-
-        function setupControls() {
-            // Teclado
-            document.addEventListener('keydown', (e) => {
-                if(e.key === 'ArrowUp' || e.key === 'w') inputs.up = true;
-                if(e.key === 'ArrowDown' || e.key === 's') inputs.down = true;
-                if(e.key === 'ArrowLeft' || e.key === 'a') inputs.left = true;
-                if(e.key === 'ArrowRight' || e.key === 'd') inputs.right = true;
-            });
-            document.addEventListener('keyup', (e) => {
-                if(e.key === 'ArrowUp' || e.key === 'w') inputs.up = false;
-                if(e.key === 'ArrowDown' || e.key === 's') inputs.down = false;
-                if(e.key === 'ArrowLeft' || e.key === 'a') inputs.left = false;
-                if(e.key === 'ArrowRight' || e.key === 'd') inputs.right = false;
-            });
-
-            // Touch (Mobile)
-            const bindTouch = (id, key) => {
-                const el = document.getElementById(id);
-                el.addEventListener('touchstart', (e) => { e.preventDefault(); inputs[key] = true; });
-                el.addEventListener('touchend', (e) => { e.preventDefault(); inputs[key] = false; });
-            };
-            bindTouch('btn-gas', 'up');
-            bindTouch('btn-brake', 'down');
-            bindTouch('btn-left', 'left');
-            bindTouch('btn-right', 'right');
-        }
-
-        function startGame() {
-            document.getElementById('loading').style.display = 'none';
-            if(audioCtx) audioCtx.resume();
-            if(engineSource) engineSource.start(0);
-            gameActive = true;
-            animate();
-        }
-
-        // --- FÍSICA E LÓGICA DO JOGO ---
-        function updatePhysics() {
-            if(!car) return;
-
-            // 1. Verificar Gamepad (prioridade sobre teclado se conectado)
-            const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
-            let throttle = 0;
-            let steering = 0;
-
-            if (gp) {
-                // Gamepad (Acelerador no eixo Y ou gatilhos)
-                throttle = -gp.axes[1] || (gp.buttons[7].value - gp.buttons[6].value); 
-                steering = gp.axes[0];
-                if (Math.abs(throttle) < 0.1) throttle = 0;
-                if (Math.abs(steering) < 0.1) steering = 0;
-            } else {
-                // Teclado/Touch
-                if (inputs.up) throttle = 1;
-                if (inputs.down) throttle = -1;
-                if (inputs.left) steering = -1;
-                if (inputs.right) steering = 1;
-            }
-
-            // 2. Aplicar Aceleração
-            if (throttle > 0) {
-                carState.speed += SETTINGS.acceleration;
-            } else if (throttle < 0) {
-                carState.speed -= SETTINGS.acceleration * 0.6; // Ré é mais fraca
-            }
-
-            // 3. Aplicar Atrito (Friction)
-            carState.speed *= SETTINGS.friction;
-
-            // Limitar velocidade
-            if (carState.speed > SETTINGS.maxSpeed) carState.speed = SETTINGS.maxSpeed;
-            if (carState.speed < -SETTINGS.maxSpeed / 3) carState.speed = -SETTINGS.maxSpeed / 3;
-
-            // 4. Virar (Só vira se estiver andando)
-            if (Math.abs(carState.speed) > 0.1) {
-                // Inverte a direção se estiver de ré para ser realista
-                const dir = carState.speed > 0 ? 1 : -1;
-                carState.angle -= steering * SETTINGS.turnSpeed * dir;
-            }
-
-            // 5. Atualizar Posição (Matemática simples: X e Z baseados no ângulo)
-            carState.x += Math.sin(carState.angle) * carState.speed;
-            carState.z += Math.cos(carState.angle) * carState.speed;
-
-            // --- SUAVIZAÇÃO VISUAL (LERP) ---
-            
-            // Suavizar a rotação visual do carro (Carro "inclina" na curva)
-            // LERP: Posição Atual = Posição Atual + (Alvo - Atual) * Fator
-            carState.visualAngle += (carState.angle - carState.visualAngle) * SETTINGS.carSmooth;
-            
-            car.position.set(carState.x, 0.5, carState.z);
-            car.rotation.y = carState.visualAngle;
-            
-            // Inclinação da carroceria na curva (Body Roll)
-            const roll = (steering * carState.speed) * -0.05;
-            car.rotation.z = roll; 
-            car.rotation.x = -(carState.speed * 0.02); // Empina ao acelerar
-
-            // Atualizar luz do carro
-            if(carState.light) {
-                carState.light.position.set(carState.x, 2, carState.z);
-            }
-
-            // Atualizar HUD
-            document.getElementById('speed-val').innerText = Math.abs(Math.round(carState.speed * 40)); // Multiplicador fake p/ parecer rápido
-            
-            updateCamera();
-            updateAudio();
         }
 
         function updateCamera() {
-            if(!car) return;
+            const speedFactor = Math.abs(physics.vel) / physics.maxSpeed;
+            camera.fov = 70 + (speedFactor * 30); // Efeito de velocidade
+            camera.updateProjectionMatrix();
 
-            // Calcular onde a câmera DEVERIA estar (atrás do carro)
-            // Distância aumenta com a velocidade
-            const dist = 15 + (Math.abs(carState.speed) * 2);
-            const height = 6 + (Math.abs(carState.speed) * 0.5);
+            const dist = 28 + (speedFactor * 12);
+            const height = 8;
 
-            const targetX = car.position.x - Math.sin(carState.angle) * dist;
-            const targetZ = car.position.z - Math.cos(carState.angle) * dist;
+            const camX = car.position.x - Math.sin(physics.angle) * dist;
+            const camZ = car.position.z - Math.cos(physics.angle) * dist;
 
-            // Mover câmera suavemente para a posição alvo (Smooth Follow)
-            camera.position.x += (targetX - camera.position.x) * SETTINGS.cameraSmooth;
-            camera.position.z += (targetZ - camera.position.z) * SETTINGS.cameraSmooth;
-            camera.position.y += ((car.position.y + height) - camera.position.y) * SETTINGS.cameraSmooth;
-
-            // Câmera sempre olha um pouco à frente do carro
-            const lookTargetX = car.position.x + Math.sin(carState.angle) * 10;
-            const lookTargetZ = car.position.z + Math.cos(carState.angle) * 10;
-            camera.lookAt(lookTargetX, car.position.y, lookTargetZ);
+            camera.position.lerp(new THREE.Vector3(camX, car.position.y + height, camZ), 0.1);
+            camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            if(gameActive) updatePhysics();
+            updateGamepad();
             renderer.render(scene, camera);
         }
-
-        // Redimensionar tela
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
 
         init();
-    </script>
-</body>
-</html>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-
-    <script>
-        let scene, camera, renderer, car, city;
-        let moveSpeed = 0, carRotation = 0, gameActive = false;
-        
-        const stats = {
-            accel: 0.05,
-            turboAccel: 0.15,
-            maxSpeed: 2.2,
-            maxTurboSpeed: 5.0,
-            maxReverse: -0.5,
-            friction: 0.97
-        };
-
-        let camAngleH = 0, currentCamRotation = 0;
-        const raycaster = new THREE.Raycaster();
-
-        // --- SISTEMA DE SOM REALISTA ---
-        let audioCtx, engineSource, gainNode;
-        let engineBuffer = null;
-
-        function loadEngineSound() {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            // Link de um som de motor em loop (V8 Engine)
-            const soundUrl = 'https://raw.githubusercontent.com/nicolas-van/obsidian-racer/master/audio/engine.mp3';
-            
-            fetch(soundUrl)
-                .then(response => response.arrayBuffer())
-                .then(data => audioCtx.decodeAudioData(data))
-                .then(buffer => {
-                    engineBuffer = buffer;
-                    displayStatus("Motor pronto!");
-                    checkReady();
-                })
-                .catch(e => {
-                    console.error("Erro ao carregar som", e);
-                    displayStatus("Erro no som, mas pode jogar.");
-                    checkReady();
-                });
-        }
-
-        function playEngine() {
-            if (!engineBuffer) return;
-            engineSource = audioCtx.createBufferSource();
-            engineSource.buffer = engineBuffer;
-            engineSource.loop = true;
-
-            gainNode = audioCtx.createGain();
-            engineSource.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            gainNode.gain.value = 0.3; // Volume
-            engineSource.start(0);
-        }
-
-        function updateEnginePitch() {
-            if (!engineSource) return;
-            // O pitch (playbackRate) muda com base na velocidade
-            // 1.0 é o som normal, 2.5 é o motor gritando
-            let pitch = 0.8 + (Math.abs(moveSpeed) * 0.6);
-            engineSource.playbackRate.setTargetAtTime(pitch, audioCtx.currentTime, 0.1);
-        }
-
-        function displayStatus(msg) { document.getElementById('status').innerText = msg; }
-
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a15);
-            scene.fog = new THREE.FogExp2(0x0a0a15, 0.005);
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.outputEncoding = THREE.sRGBEncoding;
-            document.body.appendChild(renderer.domElement);
-
-            scene.add(new THREE.AmbientLight(0xffffff, 2.0));
-            const loader = new THREE.GLTFLoader();
-
-            // Carregar Cidade e Carro
-            loader.load('./city_at_night.glb', (gltf) => { 
-                city = gltf.scene; 
-                city.scale.set(5, 5, 5); 
-                scene.add(city); 
-                checkReady(); 
-            });
-            
-            loader.load('./carro.glb', (gltf) => { 
-                car = gltf.scene; 
-                const bbox = new THREE.Box3().setFromObject(car);
-                const size = new THREE.Vector3();
-                bbox.getSize(size);
-                car.scale.setScalar(10 / size.z); 
-                scene.add(car); 
-                checkReady(); 
-            });
-
-            loadEngineSound();
-        }
-
-        let items = 0;
-        function checkReady() { 
-            items++; 
-            if(items >= 3) { // Cidade + Carro + Som
-                document.getElementById('start-btn').style.display = "block";
-                displayStatus("TUDO PRONTO!");
-            }
-        }
-
-        function start() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            playEngine();
-            document.getElementById('loading-screen').style.display = "none";
-            gameActive = true;
-            animate();
-        }
-
-        function updatePhysics() {
-            const gps = navigator.getGamepads();
-            const gp = gps[0] || gps[1];
-
-            if (gp && gameActive && car) {
-                let jY = gp.axes[1], jX = gp.axes[0], cX = gp.axes[2];
-                let btnL1 = gp.buttons[4].pressed;
-
-                let currentMax = btnL1 ? stats.maxTurboSpeed : stats.maxSpeed;
-                let currentAccel = btnL1 ? stats.turboAccel : stats.accel;
-
-                if (Math.abs(jY) > 0.1) moveSpeed -= jY * currentAccel;
-                moveSpeed *= stats.friction;
-
-                if (moveSpeed > currentMax) moveSpeed = currentMax;
-                if (moveSpeed < stats.maxReverse) moveSpeed = stats.maxReverse;
-
-                if (Math.abs(moveSpeed) > 0.05) {
-                    let steerFactor = btnL1 ? 0.03 : 0.05;
-                    carRotation -= jX * steerFactor * (moveSpeed > 0 ? 1 : -1);
-                }
-
-                // Colisão Simples
-                const headDir = new THREE.Vector3(Math.sin(carRotation), 0, Math.cos(carRotation)).normalize();
-                raycaster.set(car.position, headDir);
-                const intersects = raycaster.intersectObject(city, true);
-                if (intersects.length > 0 && intersects[0].distance < 3.8 && intersects[0].point.y > 0.7 && moveSpeed > 0.1) {
-                    moveSpeed = -0.2;
-                }
-
-                car.rotation.y = carRotation;
-                car.position.x += Math.sin(carRotation) * moveSpeed;
-                car.position.z += Math.cos(carRotation) * moveSpeed;
-
-                document.getElementById('speedo').innerText = Math.abs(Math.round(moveSpeed * 100)) + " KM/H";
-                if (Math.abs(cX) > 0.1) camAngleH += cX * 0.08;
-                
-                updateEnginePitch();
-            }
-
-            if (car) {
-                currentCamRotation += (carRotation - currentCamRotation) * 0.08;
-                camera.fov = 70 + (Math.abs(moveSpeed) * 8);
-                camera.updateProjectionMatrix();
-
-                const dist = 22 + (Math.abs(moveSpeed) * 4);
-                const finalRot = currentCamRotation + camAngleH;
-                camera.position.x = car.position.x - Math.sin(finalRot) * dist;
-                camera.position.z = car.position.z - Math.cos(finalRot) * dist;
-                camera.position.y = car.position.y + 7;
-                camera.lookAt(car.position.x, car.position.y + 3, car.position.z);
-            }
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            updatePhysics();
-            renderer.render(scene, camera);
-        }
+        animate();
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
-        init();
-    </script>
-</body>
-</html>
-
-    <script>
-        let scene, camera, renderer, car, city;
-        let moveSpeed = 0, carRotation = 0, gameActive = false;
-        let rpm = 0;
-        let wasAccelerating = false; // Para detectar quando solta o pé e o turbo espirrar
-        
-        // FÍSICA RECALIBRADA (PROGRESSIVA)
-        const physics = {
-            accel: 0.025,      // Aceleração mais lenta e realista
-            maxSpeed: 3.5,     // Velocidade final maior
-            friction: 0.985    // Menos atrito para manter a inércia
-        };
-
-        let audioCtx, engineSource, gainNode;
-        let engineBuffer = null;
-
-        function initAudio() {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const url = 'https://raw.githubusercontent.com/nicolas-van/obsidian-racer/master/audio/engine.mp3';
-            
-            fetch(url)
-                .then(res => res.arrayBuffer())
-                .then(data => audioCtx.decodeAudioData(data))
-                .then(buffer => {
-                    engineBuffer = buffer;
-                    document.getElementById('start-btn').style.display = "block";
-                    document.getElementById('status').innerText = "MOTOR PRONTO";
-                });
-        }
-
-        // Função para o espirro do Turbo (Som sintético realista)
-        function playTurboSneeze() {
-            if(!audioCtx) return;
-            const noise = audioCtx.createBufferSource();
-            const bufferSize = audioCtx.sampleRate * 0.5;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-            
-            noise.buffer = buffer;
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'highpass';
-            filter.frequency.value = 2000;
-            
-            const envelope = audioCtx.createGain();
-            noise.connect(filter);
-            filter.connect(envelope);
-            envelope.connect(audioCtx.destination);
-            
-            envelope.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            envelope.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-            
-            noise.start();
-            noise.stop(audioCtx.currentTime + 0.5);
-        }
-
-        function playEngine() {
-            engineSource = audioCtx.createBufferSource();
-            engineSource.buffer = engineBuffer;
-            engineSource.loop = true;
-            gainNode = audioCtx.createGain();
-            engineSource.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            gainNode.gain.value = 0.3;
-            engineSource.start(0);
-        }
-
-        function updateEngineSound(isAccelerating) {
-            if (!engineSource) return;
-
-            let targetRpm = Math.abs(moveSpeed) / physics.maxSpeed;
-            if (isAccelerating) targetRpm += 0.2; // Aumenta o giro ao acelerar
-
-            rpm += (targetRpm - rpm) * 0.05; // Subida suave do giro
-            let pitch = 0.6 + (rpm * 1.8);
-            
-            if (rpm > 0.97) pitch += Math.sin(Date.now() * 0.06) * 0.12; // Corta giro
-
-            engineSource.playbackRate.setTargetAtTime(pitch, audioCtx.currentTime, 0.05);
-            gainNode.gain.setTargetAtTime(0.15 + (rpm * 0.5), audioCtx.currentTime, 0.1);
-
-            // Se parou de acelerar bruscamente em alto giro: ESPIRRA!
-            if (wasAccelerating && !isAccelerating && rpm > 0.5) {
-                playTurboSneeze();
-            }
-            wasAccelerating = isAccelerating;
-        }
-
-        function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050510);
-            
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            document.body.appendChild(renderer.domElement);
-
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-
-            const loader = new THREE.GLTFLoader();
-            loader.load('./city_at_night.glb', (gltf) => { 
-                city = gltf.scene; city.scale.set(5, 5, 5); scene.add(city); 
-            });
-            loader.load('./carro.glb', (gltf) => { 
-                car = gltf.scene; 
-                const bbox = new THREE.Box3().setFromObject(car);
-                const size = new THREE.Vector3();
-                bbox.getSize(size);
-                car.scale.setScalar(12 / size.z); 
-                scene.add(car); 
-            });
-
-            initAudio();
-        }
-
-        function start() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            playEngine();
-            document.getElementById('loading-screen').style.display = "none";
-            gameActive = true;
-            animate();
-        }
-
-        function updatePhysics() {
-            const gps = navigator.getGamepads();
-            const gp = gps[0] || gps[1];
-            let accelerating = false;
-
-            if (gp && gameActive && car) {
-                let jY = gp.axes[1]; 
-                let jX = gp.axes[0];
-
-                if (jY < -0.1) { // Acelerar
-                    moveSpeed += Math.abs(jY) * physics.accel;
-                    accelerating = true;
-                } else if (jY > 0.1) { // Ré
-                    moveSpeed -= Math.abs(jY) * (physics.accel * 0.5);
-                } else {
-                    moveSpeed *= physics.friction;
-                }
-
-                if (moveSpeed > physics.maxSpeed) moveSpeed = physics.maxSpeed;
-                if (moveSpeed < -0.8) moveSpeed = -0.8;
-
-                if (Math.abs(moveSpeed) > 0.05) {
-                    let steerSpeed = 0.04 * (1 - (Math.abs(moveSpeed) / (physics.maxSpeed * 1.5)));
-                    carRotation -= jX * steerSpeed * (moveSpeed > 0 ? 1 : -1);
-                }
-
-                car.rotation.y = carRotation;
-                car.position.x += Math.sin(carRotation) * moveSpeed;
-                car.position.z += Math.cos(carRotation) * moveSpeed;
-
-                document.getElementById('speedo').innerText = Math.abs(Math.round(moveSpeed * 110)) + " KM/H";
-                updateEngineSound(accelerating);
-            }
-
-            if (car) {
-                const dist = 25 + (Math.abs(moveSpeed) * 4);
-                camera.position.x = car.position.x - Math.sin(carRotation) * dist;
-                camera.position.z = car.position.z - Math.cos(carRotation) * dist;
-                camera.position.y = car.position.y + 8;
-                camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
-            }
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if(gameActive) updatePhysics();
-            renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        init();
     </script>
 </body>
 </html>
