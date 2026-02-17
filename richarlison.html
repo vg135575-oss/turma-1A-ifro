@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Richarlison Racer</title>
+    <title>Richarlison Racer - Controller Support</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   </head>
@@ -13,47 +13,87 @@
           this.speed = 0;
           this.rotationSpeed = 0;
           
-          // Escuta quando aperta as teclas
+          // Estados de controle (Teclado)
+          this.keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+          };
+
+          // Ouvintes do Teclado
           window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp' || e.key === 'w') this.accelerating = true;
-            if (e.key === 'ArrowDown' || e.key === 's') this.braking = true;
-            if (e.key === 'ArrowLeft' || e.key === 'a') this.turningLeft = true;
-            if (e.key === 'ArrowRight' || e.key === 'd') this.turningRight = true;
+            if (e.key === 'ArrowUp' || e.key === 'w') this.keys.up = true;
+            if (e.key === 'ArrowDown' || e.key === 's') this.keys.down = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a') this.keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd') this.keys.right = true;
           });
 
-          // Escuta quando solta as teclas
           window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowUp' || e.key === 'w') this.accelerating = false;
-            if (e.key === 'ArrowDown' || e.key === 's') this.braking = false;
-            if (e.key === 'ArrowLeft' || e.key === 'a') this.turningLeft = false;
-            if (e.key === 'ArrowRight' || e.key === 'd') this.turningRight = false;
+            if (e.key === 'ArrowUp' || e.key === 'w') this.keys.up = false;
+            if (e.key === 'ArrowDown' || e.key === 's') this.keys.down = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a') this.keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') this.keys.right = false;
           });
         },
 
         tick: function (time, timeDelta) {
           const rotation = this.el.getAttribute('rotation');
           const position = this.el.getAttribute('position');
-          const delta = timeDelta / 1000; // Tempo em segundos
+          const delta = timeDelta / 1000;
 
-          // Aceleração
-          if (this.accelerating) this.speed -= 10 * delta;
-          if (this.braking) this.speed += 10 * delta;
+          // --- LÓGICA DO CONTROLE (GAMEPAD) ---
+          let gpAccelerate = false;
+          let gpBrake = false;
+          let gpTurn = 0; // -1 (esquerda) a 1 (direita)
 
-          // Atrito (o carro para sozinho devagar)
+          // Pega os controles conectados
+          const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+          // Pega o primeiro controle ativo (index 0)
+          const gp = gamepads[0];
+
+          if (gp) {
+            // Botão 0 (Geralmente A ou X) para Acelerar
+            if (gp.buttons[0].pressed) gpAccelerate = true;
+            // Botão 1 (Geralmente B ou Bola) para Freiar
+            if (gp.buttons[1].pressed) gpBrake = true;
+            // Eixo 0 (Analógico Esquerdo horizontal)
+            if (Math.abs(gp.axes[0]) > 0.1) gpTurn = gp.axes[0]; // Zona morta de 0.1
+          }
+
+          // --- FÍSICA ---
+
+          // Acelerar (Teclado OU Controle)
+          if (this.keys.up || gpAccelerate) {
+            this.speed -= 15 * delta; // Aumentei um pouco a potência
+          }
+          
+          // Freiar (Teclado OU Controle)
+          if (this.keys.down || gpBrake) {
+            this.speed += 15 * delta;
+          }
+
+          // Atrito
           this.speed *= 0.95;
 
           // Curvas (só vira se estiver andando)
           if (Math.abs(this.speed) > 0.1) {
-            if (this.turningLeft) this.rotationSpeed += 50 * delta;
-            if (this.turningRight) this.rotationSpeed -= 50 * delta;
+            // Teclado
+            if (this.keys.left) this.rotationSpeed += 60 * delta;
+            if (this.keys.right) this.rotationSpeed -= 60 * delta;
+            
+            // Controle (Entrada Analógica deixa a curva mais suave)
+            if (gpTurn !== 0) {
+              this.rotationSpeed -= gpTurn * 60 * delta;
+            }
           }
-          this.rotationSpeed *= 0.90; // Atrito da direção
+          
+          this.rotationSpeed *= 0.90; // Estabiliza a direção
 
-          // Aplica rotação
+          // Aplica rotação e posição
           rotation.y += this.rotationSpeed * delta;
           this.el.setAttribute('rotation', rotation);
 
-          // Aplica movimento baseado na rotação
           const angle = rotation.y * (Math.PI / 180);
           position.x += Math.sin(angle) * this.speed * delta;
           position.z += Math.cos(angle) * this.speed * delta;
@@ -71,19 +111,17 @@
       </a-assets>
 
       <a-plane src="#grama" position="0 0 0" rotation="-90 0 0" width="200" height="200" repeat="20 20"></a-plane>
-      
       <a-sky color="#87CEEB"></a-sky>
 
       <a-box position="-5 0.5 -10" color="red"></a-box>
       <a-box position="5 0.5 -20" color="blue"></a-box>
       <a-box position="0 0.5 -40" color="yellow"></a-box>
 
-      <a-entity id="player" position="0 0 0" drive-car>
-        
-        <a-entity gltf-model="#modelo-carro" scale="1 1 1"></a-entity>
+      <a-text value="Conecte o Controle e aperte qualquer botao!" position="-2 3 -5" color="black" align="center"></a-text>
 
+      <a-entity id="player" position="0 0 0" drive-car>
+        <a-entity gltf-model="#modelo-carro" scale="1 1 1"></a-entity>
         <a-entity camera position="0 2 5" look-controls="enabled: false"></a-entity>
-      
       </a-entity>
 
     </a-scene>
