@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Horizon - Ajustado</title>
+    <title>Richarlison Horizon - Road Fix</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #loading-screen {
@@ -25,7 +25,7 @@
 <body>
 
     <div id="loading-screen">
-        <div id="status">ESTABILIZANDO FÍSICA...</div>
+        <div id="status">LIMPANDO ESTRADA...</div>
         <button id="start-btn" class="btn" style="display:none" onclick="start()">DIRIGIR</button>
     </div>
     
@@ -37,10 +37,9 @@
     <script>
         let scene, camera, renderer, car, city;
         
-        // FÍSICA RECALIBRADA (MENOS VELOCIDADE)
         let moveSpeed = 0;
-        let maxForwardSpeed = 2.2; // Top speed reduzida
-        let maxReverseSpeed = -0.8; // Ré mais lenta
+        let maxForwardSpeed = 2.2; 
+        let maxReverseSpeed = -0.8;
         let acceleration = 0.05; 
         let friction = 0.97;
         let carRotation = 0;
@@ -63,7 +62,11 @@
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 1.8));
+            // Luzes mais fortes para ver os prédios
+            scene.add(new THREE.AmbientLight(0xffffff, 2.0));
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            mainLight.position.set(10, 50, 10);
+            scene.add(mainLight);
 
             const loader = new THREE.GLTFLoader();
 
@@ -104,48 +107,43 @@
             const gp = gps[0] || gps[1];
 
             if (gp && gameActive && car) {
-                let jY = gp.axes[1]; // Frente/Trás
-                let jX = gp.axes[0]; // Lados
-                let cX = gp.axes[2]; // Câmera
+                let jY = gp.axes[1]; 
+                let jX = gp.axes[0]; 
+                let cX = gp.axes[2]; 
 
-                // ACELERAÇÃO
-                if (Math.abs(jY) > 0.1) {
-                    moveSpeed -= jY * acceleration;
-                }
-                
-                // Atrito
+                if (Math.abs(jY) > 0.1) moveSpeed -= jY * acceleration;
                 moveSpeed *= friction;
 
-                // Limitar Velocidade Máxima
                 if (moveSpeed > maxForwardSpeed) moveSpeed = maxForwardSpeed;
                 if (moveSpeed < maxReverseSpeed) moveSpeed = maxReverseSpeed;
 
-                // DIREÇÃO (SÓ VIRA SE TIVER MOVIMENTO)
                 if (Math.abs(moveSpeed) > 0.05) {
                     let steerSpeed = 0.05 * (1 - (Math.abs(moveSpeed) / (maxForwardSpeed * 2)));
                     carRotation -= jX * steerSpeed * (moveSpeed > 0 ? 1 : -1);
                 }
 
-                // --- COLISÃO NOS PRÉDIOS ---
+                // --- COLISÃO CORRIGIDA (IGNORA O CHÃO) ---
                 const headDir = new THREE.Vector3(Math.sin(carRotation), 0, Math.cos(carRotation)).normalize();
                 raycaster.set(car.position, headDir);
                 
                 const intersects = raycaster.intersectObject(city, true);
-                // Se detectar prédio a menos de 3 metros e estiver indo pra frente
-                if (intersects.length > 0 && intersects[0].distance < 3.5 && moveSpeed > 0.1) {
-                    moveSpeed = -0.1; // Para o carro ao bater
+                if (intersects.length > 0) {
+                    const hitDistance = intersects[0].distance;
+                    const hitHeight = intersects[0].point.y; // Altura do impacto
+
+                    // Só para se o objeto for mais alto que 0.5 (ignora emendas da estrada)
+                    if (hitDistance < 3.8 && hitHeight > 0.6 && moveSpeed > 0.1) {
+                        moveSpeed = -0.1; 
+                    }
                 }
 
-                // APLICAR
                 car.rotation.y = carRotation;
                 car.position.x += Math.sin(carRotation) * moveSpeed;
                 car.position.z += Math.cos(carRotation) * moveSpeed;
 
-                // VELOCÍMETRO (Multiplicador para parecer KM/H real)
                 let speedKmh = Math.abs(Math.round(moveSpeed * 100));
                 document.getElementById('speedo').innerText = speedKmh + " KM/H";
 
-                // CÂMERA ANALÓGICO DIREITO
                 if (Math.abs(cX) > 0.1) camAngleH += cX * 0.08;
             }
 
