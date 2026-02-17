@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Controlo por Analógicos - Richarlison Horizon</title>
+    <title>Richarlison Horizon - Ajuste de Direção</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
         #overlay {
@@ -12,17 +12,17 @@
             color: white; z-index: 100; text-align: center;
         }
         #hud {
-            position: absolute; bottom: 30px; right: 30px; color: #00f2ff;
+            position: absolute; bottom: 30px; right: 30px; color: #ff0055;
             text-align: right; pointer-events: none;
         }
-        #speed { font-size: 80px; font-style: italic; line-height: 0.8; }
+        #speed { font-size: 80px; font-style: italic; line-height: 0.8; color: white; }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h1 id="msg">LIGA O TEU COMANDO</h1>
-        <p>Analógico Esquerdo: Virar | Analógico Direito: Correr/Ré</p>
+        <h1 id="msg">AGUARDANDO CONTROLE...</h1>
+        <p>Analógico Esquerdo: VIRAR AGORA | Analógico Direito: ACELERA/RÉ</p>
     </div>
 
     <div id="hud">
@@ -37,12 +37,15 @@
         let scene, camera, renderer, car, city;
         let gameActive = false;
 
+        // FÍSICA AJUSTADA: Direção rápida, velocidade domada
         const physics = {
             vel: 0,
             angle: 0,
-            accel: 0.1,
-            friction: 0.98,
-            maxSpeed: 6.0
+            accel: 0.04,        // Aceleração mais lenta e controlada
+            brake: 0.08,        // Freio eficiente
+            friction: 0.96,     // Carro para mais rápido ao soltar o analógico
+            maxSpeed: 3.5,      // Velocidade máxima reduzida para não "voar"
+            steerLimit: 0.06    // Direção muito mais rápida/direta
         };
 
         function init() {
@@ -57,7 +60,7 @@
             document.body.appendChild(renderer.domElement);
 
             scene.add(new THREE.AmbientLight(0xffffff, 1.0));
-            const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
             sun.position.set(10, 50, 10);
             scene.add(sun);
 
@@ -75,7 +78,7 @@
                 const size = box.getSize(new THREE.Vector3());
                 car.scale.setScalar(22 / size.z); 
                 scene.add(car);
-                document.getElementById('msg').innerText = "JOYSTICKS DETECTADOS!";
+                document.getElementById('msg').innerText = "CONTROLE CONECTADO!";
             });
         }
 
@@ -85,17 +88,11 @@
 
             if (!gp || !car) return;
 
-            // ANALÓGICOS (JOYSTICKS)
-            // Analógico Esquerdo (Eixo 0) = Virar (Esquerda/Direita)
-            // Analógico Direito (Eixo 1 ou 3) = Acelerar/Ré (Cima/Baixo)
-            // Nota: Em muitos comandos, o eixo 1 é o analógico esquerdo vertical e o eixo 3 é o direito vertical.
-            // Vamos usar o Analógico Direito (Eixo 3) para acelerar.
-            
-            const steerInput = gp.axes[0]; // Analógico Esquerdo (X)
-            const driveInput = -gp.axes[3] || -gp.axes[1]; // Analógico Direito (Y) - Invertido para cima ser positivo
+            // ANALÓGICOS
+            const steerInput = gp.axes[0]; // Esquerdo X
+            const driveInput = -gp.axes[3] || -gp.axes[1]; // Direito Y (Invertido)
 
-            // Deadzone (evita que o carro ande sozinho se o joystick estiver folgado)
-            const deadzone = 0.15;
+            const deadzone = 0.1;
             const finalSteer = Math.abs(steerInput) > deadzone ? steerInput : 0;
             const finalDrive = Math.abs(driveInput) > deadzone ? driveInput : 0;
 
@@ -105,34 +102,48 @@
             }
 
             if (gameActive) {
-                // Aceleração/Travagem baseada na inclinação do joystick
-                physics.vel += finalDrive * physics.accel;
+                // Aceleração e Ré
+                if (finalDrive > 0) {
+                    physics.vel += finalDrive * physics.accel;
+                } else {
+                    physics.vel += finalDrive * physics.brake;
+                }
+                
                 physics.vel *= physics.friction;
 
-                // Virar (Só vira se estiver em movimento)
-                if (Math.abs(physics.vel) > 0.05) {
-                    const direction = physics.vel > 0 ? 1 : -1;
-                    physics.angle -= finalSteer * 0.04 * (Math.abs(physics.vel) * 0.2) * direction;
+                // Limite de velocidade
+                if(physics.vel > physics.maxSpeed) physics.vel = physics.maxSpeed;
+                if(physics.vel < -physics.maxSpeed/2) physics.vel = -physics.maxSpeed/2;
+
+                // DIREÇÃO CORRIGIDA (Mais sensível)
+                if (Math.abs(physics.vel) > 0.01) {
+                    const reverseMult = physics.vel > 0 ? 1 : -1;
+                    // Vira o carro proporcionalmente à entrada do joystick, sem atraso
+                    physics.angle -= finalSteer * physics.steerLimit * reverseMult;
                 }
 
-                // Aplicar ao Carro
+                // Aplicar Movimento
                 car.rotation.y = physics.angle;
                 car.position.x += Math.sin(physics.angle) * physics.vel;
                 car.position.z += Math.cos(physics.angle) * physics.vel;
 
-                // UI e Câmara
-                document.getElementById('speed').innerText = Math.round(Math.abs(physics.vel) * 50);
+                // Inclinação visual simples
+                car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -finalSteer * 0.1, 0.1);
+
+                document.getElementById('speed').innerText = Math.round(Math.abs(physics.vel) * 60);
                 updateCamera();
             }
         }
 
         function updateCamera() {
-            const dist = 30 + (Math.abs(physics.vel) * 5);
-            const height = 9;
+            const speedFactor = Math.abs(physics.vel) / physics.maxSpeed;
+            const dist = 28 + (speedFactor * 8);
+            const height = 8;
+            
             const camX = car.position.x - Math.sin(physics.angle) * dist;
             const camZ = car.position.z - Math.cos(physics.angle) * dist;
 
-            camera.position.lerp(new THREE.Vector3(camX, car.position.y + height, camZ), 0.1);
+            camera.position.lerp(new THREE.Vector3(camX, car.position.y + height, camZ), 0.12);
             camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
         }
 
