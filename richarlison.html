@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Richarlison Racer - Controller Support</title>
+    <title>Richarlison Racer - Full Controller</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   </head>
   <body>
     
@@ -12,16 +11,11 @@
         init: function () {
           this.speed = 0;
           this.rotationSpeed = 0;
+          this.camRotationY = 0; // Rotação da câmera
+          this.camRotationX = 0; 
           
-          // Estados de controle (Teclado)
-          this.keys = {
-            up: false,
-            down: false,
-            left: false,
-            right: false
-          };
+          this.keys = { up: false, down: false, left: false, right: false };
 
-          // Ouvintes do Teclado
           window.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowUp' || e.key === 'w') this.keys.up = true;
             if (e.key === 'ArrowDown' || e.key === 's') this.keys.down = true;
@@ -38,377 +32,72 @@
         },
 
         tick: function (time, timeDelta) {
-          const rotation = this.el.getAttribute('rotation');
-          const position = this.el.getAttribute('position');
           const delta = timeDelta / 1000;
-
-          // --- LÓGICA DO CONTROLE (GAMEPAD) ---
-          let gpAccelerate = false;
-          let gpBrake = false;
-          let gpTurn = 0; // -1 (esquerda) a 1 (direita)
-
-          // Pega os controles conectados
           const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-          // Pega o primeiro controle ativo (index 0)
           const gp = gamepads[0];
 
-          if (gp) {
-            // Botão 0 (Geralmente A ou X) para Acelerar
-            if (gp.buttons[0].pressed) gpAccelerate = true;
-            // Botão 1 (Geralmente B ou Bola) para Freiar
-            if (gp.buttons[1].pressed) gpBrake = true;
-            // Eixo 0 (Analógico Esquerdo horizontal)
-            if (Math.abs(gp.axes[0]) > 0.1) gpTurn = gp.axes[0]; // Zona morta de 0.1
-          }
+          // --- CONTROLES DE MOVIMENTO (Esquerdo / Botões) ---
+          let gpAccelerate = gp?.buttons[0].pressed || this.keys.up;
+          let gpBrake = gp?.buttons[1].pressed || this.keys.down;
+          let gpTurn = (gp ? gp.axes[0] : 0) + (this.keys.left ? -1 : 0) + (this.keys.right ? 1 : 0);
 
-          // --- FÍSICA ---
+          if (gpAccelerate) this.speed -= 18 * delta;
+          if (gpBrake) this.speed += 12 * delta;
+          this.speed *= 0.96;
 
-          // Acelerar (Teclado OU Controle)
-          if (this.keys.up || gpAccelerate) {
-            this.speed -= 15 * delta; // Aumentei um pouco a potência
-          }
-          
-          // Freiar (Teclado OU Controle)
-          if (this.keys.down || gpBrake) {
-            this.speed += 15 * delta;
-          }
-
-          // Atrito
-          this.speed *= 0.95;
-
-          // Curvas (só vira se estiver andando)
           if (Math.abs(this.speed) > 0.1) {
-            // Teclado
-            if (this.keys.left) this.rotationSpeed += 60 * delta;
-            if (this.keys.right) this.rotationSpeed -= 60 * delta;
-            
-            // Controle (Entrada Analógica deixa a curva mais suave)
-            if (gpTurn !== 0) {
-              this.rotationSpeed -= gpTurn * 60 * delta;
-            }
+            this.rotationSpeed -= gpTurn * 70 * delta;
           }
-          
-          this.rotationSpeed *= 0.90; // Estabiliza a direção
+          this.rotationSpeed *= 0.90;
 
-          // Aplica rotação e posição
-          rotation.y += this.rotationSpeed * delta;
-          this.el.setAttribute('rotation', rotation);
+          // Aplica Movimento ao Carro
+          let carRot = this.el.getAttribute('rotation');
+          carRot.y += this.rotationSpeed * delta;
+          this.el.setAttribute('rotation', carRot);
 
-          const angle = rotation.y * (Math.PI / 180);
-          position.x += Math.sin(angle) * this.speed * delta;
-          position.z += Math.cos(angle) * this.speed * delta;
-          
-          this.el.setAttribute('position', position);
+          let carPos = this.el.getAttribute('position');
+          const angle = carRot.y * (Math.PI / 180);
+          carPos.x += Math.sin(angle) * this.speed * delta;
+          carPos.z += Math.cos(angle) * this.speed * delta;
+          this.el.setAttribute('position', carPos);
+
+          // --- CONTROLE DA CÂMERA (Analógico Direito) ---
+          if (gp) {
+            // Eixo 2 e 3 são geralmente o analógico direito
+            let lookX = gp.axes[2]; // Horizontal
+            let lookY = gp.axes[3]; // Vertical
+
+            if (Math.abs(lookX) > 0.1) this.camRotationY -= lookX * 100 * delta;
+            if (Math.abs(lookY) > 0.1) this.camRotationX -= lookY * 50 * delta;
+
+            // Limitar rotação vertical para não virar de ponta cabeça
+            this.camRotationX = Math.max(-30, Math.min(20, this.camRotationX));
+
+            let rig = document.querySelector('#camera-rig');
+            rig.setAttribute('rotation', `${this.camRotationX} ${this.camRotationY} 0`);
+          }
         }
       });
     </script>
 
-    <a-scene background="color: #ECECEC">
-      
+    <a-scene background="color: #87CEEB">
       <a-assets>
         <a-asset-item id="modelo-carro" src="./carro.glb"></a-asset-item>
         <img id="grama" src="https://cdn.aframe.io/a-painter/images/floor.jpg">
       </a-assets>
 
-      <a-plane src="#grama" position="0 0 0" rotation="-90 0 0" width="200" height="200" repeat="20 20"></a-plane>
-      <a-sky color="#87CEEB"></a-sky>
-
-      <a-box position="-5 0.5 -10" color="red"></a-box>
-      <a-box position="5 0.5 -20" color="blue"></a-box>
-      <a-box position="0 0.5 -40" color="yellow"></a-box>
-
-      <a-text value="Conecte o Controle e aperte qualquer botao!" position="-2 3 -5" color="black" align="center"></a-text>
-
+      <a-plane src="#grama" rotation="-90 0 0" width="500" height="500" repeat="50 50"></a-plane>
+      
       <a-entity id="player" position="0 0 0" drive-car>
-        <a-entity gltf-model="#modelo-carro" scale="1 1 1"></a-entity>
-        <a-entity camera position="0 2 5" look-controls="enabled: false"></a-entity>
+        <a-entity gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0"></a-entity>
+
+        <a-entity id="camera-rig" position="0 0 0">
+           <a-entity camera position="0 2.5 6" look-controls="enabled: false"></a-entity>
+        </a-entity>
       </a-entity>
 
+      <a-box position="-10 1 -20" color="red"></a-box>
+      <a-box position="10 1 -40" color="green"></a-box>
     </a-scene>
   </body>
-</html>
-            max-width: 150px; word-wrap: break-word;
-        }
-
-        .speedometer {
-            background: rgba(0, 0, 0, 0.7); color: #00ffcc;
-            padding: 10px 20px; border-radius: 8px; font-size: 24px;
-            font-weight: bold; border: 2px solid #00ffcc;
-            text-shadow: 0 0 10px #00ffcc;
-        }
-
-        /* ========================================= */
-        /* CONTROLES TOUCH PARA CELULAR (Virtual Pad) */
-        /* ========================================= */
-        #touch-controls {
-            position: fixed; bottom: 20px; left: 0; width: 100%;
-            height: 120px; display: flex; justify-content: space-between;
-            padding: 0 20px; z-index: 2000; pointer-events: auto;
-        }
-
-        .dpad, .action-buttons {
-            display: flex; gap: 10px; align-items: flex-end;
-        }
-
-        .touch-btn {
-            width: 70px; height: 70px; background: rgba(255, 255, 255, 0.2);
-            border: 3px solid rgba(255, 255, 255, 0.5); border-radius: 50%;
-            color: white; font-size: 24px; font-weight: bold;
-            display: flex; justify-content: center; align-items: center;
-            backdrop-filter: blur(5px);
-        }
-        
-        .touch-btn:active { background: rgba(0, 255, 204, 0.6); transform: scale(0.9); }
-        .touch-btn.wide { width: 90px; border-radius: 20px; }
-
-        #horn-screen {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 60px; color: #ffea00; font-weight: 900;
-            text-shadow: 2px 2px 0 #ff0000; opacity: 0; transition: opacity 0.1s;
-            z-index: 2000; pointer-events: none;
-        }
-
-        #pause-menu {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 3000;
-            pointer-events: auto;
-        }
-        .start-btn {
-            background: #ffaa00; color: #000; border: none; padding: 15px 40px;
-            font-size: 24px; font-weight: bold; border-radius: 10px;
-            cursor: pointer; text-transform: uppercase; margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="pause-menu">
-        <h1 style="color: white; text-align: center;">Richarlison<br><span style="color: #00ffcc">Mobile Racer</span></h1>
-        <p style="color: #aaa; margin-top: 10px; text-align: center; font-size: 14px; padding: 0 20px;">
-            Toque nos botões da tela ou conecte seu controle Bluetooth.
-        </p>
-        <button class="start-btn" onclick="startGame()">Jogar</button>
-    </div>
-
-    <div id="horn-screen">BEEP!</div>
-
-    <div id="hud-container">
-        <div class="top-panel">
-            <div id="gamepad-debug">Controle: Desconectado</div>
-            <div class="speedometer"><span id="speed-text">0</span> KM/H</div>
-        </div>
-    </div>
-
-    <div id="touch-controls" style="display: none;">
-        <div class="dpad">
-            <div class="touch-btn" id="btn-left">◀</div>
-            <div class="touch-btn" id="btn-right">▶</div>
-        </div>
-        <div class="action-buttons">
-            <div class="touch-btn" id="btn-brake">B</div>
-            <div class="touch-btn wide" id="btn-accel">Acelerar</div>
-        </div>
-    </div>
-
-    <script>
-        let gameActive = false;
-
-        function startGame() {
-            document.getElementById('pause-menu').style.display = 'none';
-            document.getElementById('touch-controls').style.display = 'flex';
-            gameActive = true;
-            document.querySelector('a-scene').play();
-            
-            // Tenta colocar em Tela Cheia no celular
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(err => console.log(err));
-            }
-        }
-
-        // ==========================================
-        // GERENCIADOR DE INPUT (TOUCH + GENERIC GAMEPAD)
-        // ==========================================
-        AFRAME.registerComponent('input-manager', {
-            init: function () {
-                this.axis = { x: 0 }; 
-                this.buttons = { accelerate: false, brake: false, horn: false };
-                
-                // Configuração Touch (Celular)
-                this.setupTouchControls();
-            },
-
-            setupTouchControls: function() {
-                const btnLeft = document.getElementById('btn-left');
-                const btnRight = document.getElementById('btn-right');
-                const btnAccel = document.getElementById('btn-accel');
-                const btnBrake = document.getElementById('btn-brake');
-
-                // Lógica de Direção (Esquerda/Direita)
-                const setLeft = (val) => { this.axis.x = val ? -1 : 0; };
-                const setRight = (val) => { this.axis.x = val ? 1 : 0; };
-                
-                btnLeft.addEventListener('touchstart', () => setLeft(true));
-                btnLeft.addEventListener('touchend', () => setLeft(false));
-                
-                btnRight.addEventListener('touchstart', () => setRight(true));
-                btnRight.addEventListener('touchend', () => setRight(false));
-
-                // Lógica de Pedais
-                btnAccel.addEventListener('touchstart', () => this.buttons.accelerate = true);
-                btnAccel.addEventListener('touchend', () => this.buttons.accelerate = false);
-                
-                btnBrake.addEventListener('touchstart', () => this.buttons.brake = true);
-                btnBrake.addEventListener('touchend', () => this.buttons.brake = false);
-            },
-
-            tick: function () {
-                if (!gameActive) return;
-
-                // Lê o Gamepad
-                const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-                const gp = gamepads[0];
-                const debugText = document.getElementById('gamepad-debug');
-                
-                if (gp) {
-                    let activeButtons = [];
-                    
-                    // LÓGICA UNIVERSAL PARA CONTROLES GENÉRICOS
-                    // Rastreamos vários botões para a mesma ação para garantir compatibilidade
-                    
-                    let isAccelerating = false;
-                    let isBraking = false;
-                    let isHorn = false;
-
-                    for (let i = 0; i < gp.buttons.length; i++) {
-                        if (gp.buttons[i].pressed || gp.buttons[i].value > 0.5) {
-                            activeButtons.push(i);
-                            
-                            // Botões comuns de Acelerar: 7(R2), 5(R1), 0(A/X verde)
-                            if (i === 7 || i === 5 || i === 0) isAccelerating = true;
-                            
-                            // Botões comuns de Frear: 6(L2), 4(L1), 1(B/Bola vermelha), 2(X/Quadrado)
-                            if (i === 6 || i === 4 || i === 1 || i === 2) isBraking = true;
-                            
-                            // Buzina: 3(Y/Triângulo), 9(Start), 8(Select)
-                            if (i === 3 || i === 9 || i === 8) isHorn = true;
-                        }
-                    }
-
-                    // Se usar o gamepad, ele sobrescreve o touch
-                    if (isAccelerating || isBraking) {
-                        this.buttons.accelerate = isAccelerating;
-                        this.buttons.brake = isBraking;
-                    }
-                    this.buttons.horn = isHorn;
-
-                    // Direção (D-pad ou Analógico Esquerdo)
-                    // Pega o eixo 0 (Analógico) ou botões 14 e 15 (Setas D-PAD genérico)
-                    let eixoX = gp.axes[0];
-                    if (Math.abs(eixoX) > 0.2) {
-                        this.axis.x = eixoX;
-                    } else if (gp.buttons[14] && gp.buttons[14].pressed) {
-                        this.axis.x = -1; // Seta Esquerda
-                        activeButtons.push("D-Left");
-                    } else if (gp.buttons[15] && gp.buttons[15].pressed) {
-                        this.axis.x = 1;  // Seta Direita
-                        activeButtons.push("D-Right");
-                    } else {
-                        // Se não estiver tocando na tela, zera o eixo
-                        if (!document.getElementById('btn-left').matches(':active') && 
-                            !document.getElementById('btn-right').matches(':active')) {
-                            this.axis.x = 0;
-                        }
-                    }
-
-                    // Atualiza Painel de Debug
-                    let axisVal = gp.axes[0] ? gp.axes[0].toFixed(1) : 0;
-                    debugText.innerText = `Eixo: ${axisVal} | Botões: [${activeButtons.join(',')}]`;
-                }
-            }
-        });
-
-        // ==========================================
-        // FÍSICA DO CARRO (Otimizada para Celular)
-        // ==========================================
-        AFRAME.registerComponent('car-physics', {
-            dependencies: ['input-manager'],
-            init: function () {
-                this.velocity = 0;
-                this.steering = 0;
-                this.input = this.el.components['input-manager'];
-                this.speedText = document.getElementById('speed-text');
-                this.hornScreen = document.getElementById('horn-screen');
-                this.hornActive = false;
-            },
-            tick: function (time, delta) {
-                if (!gameActive) return;
-                const dt = delta / 1000;
-                const inp = this.input;
-
-                // Aceleração e Frenagem
-                if (inp.buttons.accelerate) this.velocity -= 15 * dt;
-                if (inp.buttons.brake) this.velocity += 20 * dt;
-                
-                // Atrito da pista
-                this.velocity *= 0.97;
-
-                // Curva
-                let turnSpeed = Math.min(Math.abs(this.velocity) / 5, 1);
-                this.steering -= inp.axis.x * 60 * turnSpeed * dt;
-                
-                // Inverter direção da curva na ré
-                if (this.velocity > 0.1) this.steering += inp.axis.x * 120 * turnSpeed * dt; 
-
-                this.steering *= 0.8; // Centralizar volante
-
-                // Aplica rotação e movimento
-                let rot = this.el.getAttribute('rotation');
-                rot.y += this.steering;
-                this.el.setAttribute('rotation', rot);
-
-                let pos = this.el.getAttribute('position');
-                pos.x += Math.sin(rot.y * Math.PI/180) * this.velocity * dt;
-                pos.z += Math.cos(rot.y * Math.PI/180) * this.velocity * dt;
-                this.el.setAttribute('position', pos);
-
-                // HUD e Buzina
-                this.speedText.innerText = Math.floor(Math.abs(this.velocity * 8.5));
-
-                if (inp.buttons.horn && !this.hornActive) {
-                    this.hornActive = true;
-                    this.hornScreen.style.opacity = '1';
-                    setTimeout(() => { this.hornScreen.style.opacity = '0'; this.hornActive = false; }, 400);
-                }
-            }
-        });
-
-    </script>
-
-    <a-scene vr-mode-ui="enabled: false" renderer="antialias: false; colorManagement: true; precision: mediump;">
-        
-        <a-assets>
-            <a-asset-item id="modelo-carro" src="./carro.glb"></a-asset-item>
-        </a-assets>
-
-        <a-entity environment="preset: contact; groundColor: #222; grid: 1x1; fog: 0.6"></a-entity>
-        <a-light type="ambient" color="#fff" intensity="0.5"></a-light>
-        <a-light type="directional" position="5 10 -5" intensity="0.5"></a-light>
-
-        <a-entity id="player" position="0 0 0" input-manager car-physics>
-            
-            <a-entity gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0">
-                <a-box position="0 1 0" width="1.8" height="0.8" depth="4" color="#ff0000"></a-box>
-            </a-entity>
-
-            <a-entity camera position="0 3.5 8" rotation="-15 0 0"></a-entity>
-        </a-entity>
-
-        <a-cylinder position="-5 1 -20" color="#ffaa00" radius="1" height="2"></a-cylinder>
-        <a-cylinder position="5 1 -40" color="#00ffcc" radius="1" height="2"></a-cylinder>
-        <a-box position="0 2 -80" color="#ff0000" width="10" height="4" depth="1"></a-box>
-
-    </a-scene>
-
-</body>
 </html>
