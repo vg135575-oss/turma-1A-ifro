@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Richarlison Racer - Full Controller</title>
+    <title>Richarlison Racer - Pro Controller</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   </head>
   <body>
@@ -9,13 +9,22 @@
     <script>
       AFRAME.registerComponent('drive-car', {
         init: function () {
-          this.speed = 0;
-          this.rotationSpeed = 0;
-          this.camRotationY = 0; // Rotação da câmera
+          // --- CONFIGURAÇÕES DO CARRO ---
+          this.maxSpeed = 25;       // Velocidade máxima
+          this.accel = 15;          // Força de aceleração
+          this.breakForce = 20;     // Força de freio
+          this.friction = 0.96;     // Atrito natural (soltou o botão, ele para devagar)
+          this.turnSpeed = 80;      // Velocidade da curva
+          
+          // Variáveis internas
+          this.currentSpeed = 0;
+          this.currentTurn = 0;
+          this.camRotationY = 0; 
           this.camRotationX = 0; 
           
           this.keys = { up: false, down: false, left: false, right: false };
 
+          // --- EVENTOS DE TECLADO ---
           window.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowUp' || e.key === 'w') this.keys.up = true;
             if (e.key === 'ArrowDown' || e.key === 's') this.keys.down = true;
@@ -31,50 +40,97 @@
           });
         },
 
+        // Função para ignorar toques muito leves no analógico (Zona Morta)
+        applyDeadzone: function(value, threshold = 0.15) {
+            return Math.abs(value) < threshold ? 0 : value;
+        },
+
+        // Função de Suavização (Lerp) para movimentos mais fluidos
+        lerp: function(start, end, amt) {
+            return (1 - amt) * start + amt * end;
+        },
+
         tick: function (time, timeDelta) {
           const delta = timeDelta / 1000;
           const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-          const gp = gamepads[0];
+          // Pega o primeiro controle ativo
+          const gp = Object.values(gamepads).find(g => g !== null);
 
-          // --- CONTROLES DE MOVIMENTO (Esquerdo / Botões) ---
-          let gpAccelerate = gp?.buttons[0].pressed || this.keys.up;
-          let gpBrake = gp?.buttons[1].pressed || this.keys.down;
-          let gpTurn = (gp ? gp.axes[0] : 0) + (this.keys.left ? -1 : 0) + (this.keys.right ? 1 : 0);
+          // --- INPUTS ---
+          // No seu controle: Botão 0 é geralmente A ou X, Botão 1 é B ou Bola.
+          // Também adicionei suporte aos gatilhos (R2/L2 - botões 7 e 6) caso seu controle suporte.
+          let gasInput = this.keys.up || (gp && (gp.buttons[0].pressed || (gp.buttons[7] && gp.buttons[7].pressed)));
+          let brakeInput = this.keys.down || (gp && (gp.buttons[1].pressed || (gp.buttons[6] && gp.buttons[6].pressed)));
+          
+          // Analógico Esquerdo (Eixo 0)
+          let turnInput = 0;
+          if (this.keys.left) turnInput = -1;
+          if (this.keys.right) turnInput = 1;
+          if (gp) turnInput += this.applyDeadzone(gp.axes[0]);
 
-          if (gpAccelerate) this.speed -= 18 * delta;
-          if (gpBrake) this.speed += 12 * delta;
-          this.speed *= 0.96;
-
-          if (Math.abs(this.speed) > 0.1) {
-            this.rotationSpeed -= gpTurn * 70 * delta;
+          // --- FÍSICA DE ACELERAÇÃO ---
+          if (gasInput) {
+            this.currentSpeed -= this.accel * delta; // Negativo é para frente no A-Frame
+          } else if (brakeInput) {
+            this.currentSpeed += this.breakForce * delta;
           }
-          this.rotationSpeed *= 0.90;
+          
+          // Aplica atrito (o carro para se soltar tudo)
+          this.currentSpeed *= this.friction;
 
-          // Aplica Movimento ao Carro
+          // Limita a velocidade máxima
+          if (Math.abs(this.currentSpeed) > this.maxSpeed) {
+             this.currentSpeed = Math.sign(this.currentSpeed) * this.maxSpeed;
+          }
+
+          // Evita que o carro fique deslizando infinitamente quando está quase parado
+          if (Math.abs(this.currentSpeed) < 0.1 && !gasInput && !brakeInput) {
+              this.currentSpeed = 0;
+          }
+
+          // --- FÍSICA DE CURVA ---
+          // Só vira se o carro estiver andando (realismo)
+          if (Math.abs(this.currentSpeed) > 0.5) {
+            // Inverte a curva se estiver de ré para controle mais natural
+            let direction = this.currentSpeed < 0 ? 1 : -1;
+            
+            // Suaviza a entrada da curva (não vira de soco)
+            let targetTurn = turnInput * this.turnSpeed * direction;
+            this.currentTurn = this.lerp(this.currentTurn, targetTurn, 5 * delta);
+
+            let carRot = this.el.getAttribute('rotation');
+            carRot.y -= this.currentTurn * delta;
+            this.el.setAttribute('rotation', carRot);
+          }
+
+          // Aplica posição baseada na rotação
           let carRot = this.el.getAttribute('rotation');
-          carRot.y += this.rotationSpeed * delta;
-          this.el.setAttribute('rotation', carRot);
-
           let carPos = this.el.getAttribute('position');
           const angle = carRot.y * (Math.PI / 180);
-          carPos.x += Math.sin(angle) * this.speed * delta;
-          carPos.z += Math.cos(angle) * this.speed * delta;
+          
+          carPos.x += Math.sin(angle) * this.currentSpeed * delta;
+          carPos.z += Math.cos(angle) * this.currentSpeed * delta;
           this.el.setAttribute('position', carPos);
 
           // --- CONTROLE DA CÂMERA (Analógico Direito) ---
           if (gp) {
-            // Eixo 2 e 3 são geralmente o analógico direito
-            let lookX = gp.axes[2]; // Horizontal
-            let lookY = gp.axes[3]; // Vertical
+            // Eixo 2 (Horizontal) e 3 (Vertical)
+            let lookX = this.applyDeadzone(gp.axes[2]);
+            let lookY = this.applyDeadzone(gp.axes[3]);
 
-            if (Math.abs(lookX) > 0.1) this.camRotationY -= lookX * 100 * delta;
-            if (Math.abs(lookY) > 0.1) this.camRotationX -= lookY * 50 * delta;
+            this.camRotationY -= lookX * 120 * delta;
+            this.camRotationX -= lookY * 80 * delta;
 
-            // Limitar rotação vertical para não virar de ponta cabeça
-            this.camRotationX = Math.max(-30, Math.min(20, this.camRotationX));
+            // Limites verticais da câmera
+            this.camRotationX = Math.max(-20, Math.min(45, this.camRotationX));
 
             let rig = document.querySelector('#camera-rig');
-            rig.setAttribute('rotation', `${this.camRotationX} ${this.camRotationY} 0`);
+            // Suavização leve na câmera também
+            let currentRigRot = rig.getAttribute('rotation');
+            let smoothX = this.lerp(currentRigRot.x, this.camRotationX, 10 * delta);
+            let smoothY = this.lerp(currentRigRot.y, this.camRotationY, 10 * delta);
+            
+            rig.setAttribute('rotation', `${smoothX} ${smoothY} 0`);
           }
         }
       });
@@ -88,16 +144,18 @@
 
       <a-plane src="#grama" rotation="-90 0 0" width="500" height="500" repeat="50 50"></a-plane>
       
-      <a-entity id="player" position="0 0 0" drive-car>
+      <a-entity id="player" position="0 0.5 0" drive-car>
         <a-entity gltf-model="#modelo-carro" scale="1 1 1" rotation="0 180 0"></a-entity>
 
-        <a-entity id="camera-rig" position="0 0 0">
-           <a-entity camera position="0 2.5 6" look-controls="enabled: false"></a-entity>
+        <a-entity id="camera-rig" position="0 1.5 0">
+           <a-entity camera position="0 1 5" look-controls="enabled: false"></a-entity>
         </a-entity>
       </a-entity>
 
-      <a-box position="-10 1 -20" color="red"></a-box>
-      <a-box position="10 1 -40" color="green"></a-box>
+      <a-box position="-10 1 -20" color="red" scale="2 2 2"></a-box>
+      <a-box position="10 1 -40" color="green" scale="2 2 2"></a-box>
+      <a-box position="0 1 -80" color="blue" scale="5 2 1"></a-box>
+
     </a-scene>
   </body>
 </html>
