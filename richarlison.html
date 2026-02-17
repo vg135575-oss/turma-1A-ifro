@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Engine Focus</title>
+    <title>Richarlison Engine Focus - V2</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #loading-screen {
@@ -14,20 +14,21 @@
         .btn { 
             margin-top: 20px; padding: 15px 40px; background: #0f0; 
             border: none; font-weight: bold; cursor: pointer; border-radius: 30px; 
-            font-size: 18px;
+            font-size: 18px; display: none;
         }
         #speedo {
             position: absolute; bottom: 40px; right: 40px; color: #fff;
             font-size: 45px; font-weight: 900; font-style: italic; 
             text-shadow: 4px 4px 0px #ff0055; font-family: 'Arial Black', sans-serif;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <div id="status">SINTONIZANDO V8...</div>
-        <button id="start-btn" class="btn" style="display:none" onclick="start()">LIGAR MÁQUINA</button>
+        <div id="status">SINTONIZANDO MOTOR E TURBO...</div>
+        <button id="start-btn" class="btn" onclick="start()">LIGAR MÁQUINA</button>
     </div>
     <div id="speedo">0 KM/H</div>
 
@@ -37,15 +38,16 @@
     <script>
         let scene, camera, renderer, car, city;
         let moveSpeed = 0, carRotation = 0, gameActive = false;
-        let rpm = 0; // Nova variável para controlar o som
+        let rpm = 0;
+        let wasAccelerating = false; // Para detectar quando solta o pé e o turbo espirrar
         
+        // FÍSICA RECALIBRADA (PROGRESSIVA)
         const physics = {
-            accel: 0.05,
-            maxSpeed: 2.5,
-            friction: 0.98
+            accel: 0.025,      // Aceleração mais lenta e realista
+            maxSpeed: 3.5,     // Velocidade final maior
+            friction: 0.985    // Menos atrito para manter a inércia
         };
 
-        // --- SISTEMA DE SOM AVANÇADO ---
         let audioCtx, engineSource, gainNode;
         let engineBuffer = null;
 
@@ -63,49 +65,74 @@
                 });
         }
 
+        // Função para o espirro do Turbo (Som sintético realista)
+        function playTurboSneeze() {
+            if(!audioCtx) return;
+            const noise = audioCtx.createBufferSource();
+            const bufferSize = audioCtx.sampleRate * 0.5;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            
+            noise.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 2000;
+            
+            const envelope = audioCtx.createGain();
+            noise.connect(filter);
+            filter.connect(envelope);
+            envelope.connect(audioCtx.destination);
+            
+            envelope.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            envelope.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+            
+            noise.start();
+            noise.stop(audioCtx.currentTime + 0.5);
+        }
+
         function playEngine() {
             engineSource = audioCtx.createBufferSource();
             engineSource.buffer = engineBuffer;
             engineSource.loop = true;
-            
             gainNode = audioCtx.createGain();
             engineSource.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-            
             gainNode.gain.value = 0.3;
             engineSource.start(0);
         }
 
-        function updateEngineSound() {
+        function updateEngineSound(isAccelerating) {
             if (!engineSource) return;
 
-            // Simulação de RPM baseada na velocidade e aceleração
             let targetRpm = Math.abs(moveSpeed) / physics.maxSpeed;
-            // Suaviza a subida do giro
-            rpm += (targetRpm - rpm) * 0.1;
+            if (isAccelerating) targetRpm += 0.2; // Aumenta o giro ao acelerar
 
-            // Pitch: de 0.7 (lento) até 2.2 (grito do motor)
-            let pitch = 0.7 + (rpm * 1.5);
+            rpm += (targetRpm - rpm) * 0.05; // Subida suave do giro
+            let pitch = 0.6 + (rpm * 1.8);
             
-            // Efeito de Corta Giro (Rev Limiter) em velocidade máxima
-            if (rpm > 0.98) {
-                pitch += Math.sin(Date.now() * 0.05) * 0.1;
-            }
+            if (rpm > 0.97) pitch += Math.sin(Date.now() * 0.06) * 0.12; // Corta giro
 
             engineSource.playbackRate.setTargetAtTime(pitch, audioCtx.currentTime, 0.05);
-            
-            // Aumenta o volume conforme o motor "esforça"
-            gainNode.gain.setTargetAtTime(0.2 + (rpm * 0.4), audioCtx.currentTime, 0.1);
+            gainNode.gain.setTargetAtTime(0.15 + (rpm * 0.5), audioCtx.currentTime, 0.1);
+
+            // Se parou de acelerar bruscamente em alto giro: ESPIRRA!
+            if (wasAccelerating && !isAccelerating && rpm > 0.5) {
+                playTurboSneeze();
+            }
+            wasAccelerating = isAccelerating;
         }
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a15);
+            scene.background = new THREE.Color(0x050510);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 4000);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
             scene.add(new THREE.AmbientLight(0xffffff, 1.5));
 
             const loader = new THREE.GLTFLoader();
@@ -117,7 +144,7 @@
                 const bbox = new THREE.Box3().setFromObject(car);
                 const size = new THREE.Vector3();
                 bbox.getSize(size);
-                car.scale.setScalar(10 / size.z); 
+                car.scale.setScalar(12 / size.z); 
                 scene.add(car); 
             });
 
@@ -135,43 +162,57 @@
         function updatePhysics() {
             const gps = navigator.getGamepads();
             const gp = gps[0] || gps[1];
+            let accelerating = false;
 
             if (gp && gameActive && car) {
                 let jY = gp.axes[1]; 
                 let jX = gp.axes[0];
 
-                if (Math.abs(jY) > 0.1) moveSpeed -= jY * physics.accel;
-                moveSpeed *= physics.friction;
+                if (jY < -0.1) { // Acelerar
+                    moveSpeed += Math.abs(jY) * physics.accel;
+                    accelerating = true;
+                } else if (jY > 0.1) { // Ré
+                    moveSpeed -= Math.abs(jY) * (physics.accel * 0.5);
+                } else {
+                    moveSpeed *= physics.friction;
+                }
 
                 if (moveSpeed > physics.maxSpeed) moveSpeed = physics.maxSpeed;
                 if (moveSpeed < -0.8) moveSpeed = -0.8;
 
                 if (Math.abs(moveSpeed) > 0.05) {
-                    carRotation -= jX * 0.04 * (moveSpeed > 0 ? 1 : -1);
+                    let steerSpeed = 0.04 * (1 - (Math.abs(moveSpeed) / (physics.maxSpeed * 1.5)));
+                    carRotation -= jX * steerSpeed * (moveSpeed > 0 ? 1 : -1);
                 }
 
                 car.rotation.y = carRotation;
                 car.position.x += Math.sin(carRotation) * moveSpeed;
                 car.position.z += Math.cos(carRotation) * moveSpeed;
 
-                document.getElementById('speedo').innerText = Math.abs(Math.round(moveSpeed * 100)) + " KM/H";
-                updateEngineSound();
+                document.getElementById('speedo').innerText = Math.abs(Math.round(moveSpeed * 110)) + " KM/H";
+                updateEngineSound(accelerating);
             }
 
             if (car) {
-                const dist = 22 + (Math.abs(moveSpeed) * 3);
+                const dist = 25 + (Math.abs(moveSpeed) * 4);
                 camera.position.x = car.position.x - Math.sin(carRotation) * dist;
                 camera.position.z = car.position.z - Math.cos(carRotation) * dist;
-                camera.position.y = car.position.y + 7;
-                camera.lookAt(car.position.x, car.position.y + 3, car.position.z);
+                camera.position.y = car.position.y + 8;
+                camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
             }
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            updatePhysics();
+            if(gameActive) updatePhysics();
             renderer.render(scene, camera);
         }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
         init();
     </script>
