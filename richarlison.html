@@ -1,89 +1,91 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Corrida</title>
-<style>
-body { margin:0; overflow:hidden; background:black; }
-</style>
-</head>
+  <head>
+    <title>Richarlison Racer</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
+  </head>
+  <body>
+    
+    <script>
+      AFRAME.registerComponent('drive-car', {
+        init: function () {
+          this.speed = 0;
+          this.rotationSpeed = 0;
+          
+          // Escuta quando aperta as teclas
+          window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'w') this.accelerating = true;
+            if (e.key === 'ArrowDown' || e.key === 's') this.braking = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a') this.turningLeft = true;
+            if (e.key === 'ArrowRight' || e.key === 'd') this.turningRight = true;
+          });
 
-<body>
+          // Escuta quando solta as teclas
+          window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'w') this.accelerating = false;
+            if (e.key === 'ArrowDown' || e.key === 's') this.braking = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a') this.turningLeft = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') this.turningRight = false;
+          });
+        },
 
-<script type="module">
+        tick: function (time, timeDelta) {
+          const rotation = this.el.getAttribute('rotation');
+          const position = this.el.getAttribute('position');
+          const delta = timeDelta / 1000; // Tempo em segundos
 
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.154/build/three.module.js";
-import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.154/examples/jsm/loaders/GLTFLoader.js";
+          // Aceleração
+          if (this.accelerating) this.speed -= 10 * delta;
+          if (this.braking) this.speed += 10 * delta;
 
-const scene = new THREE.Scene();
+          // Atrito (o carro para sozinho devagar)
+          this.speed *= 0.95;
 
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.set(0,3,8);
+          // Curvas (só vira se estiver andando)
+          if (Math.abs(this.speed) > 0.1) {
+            if (this.turningLeft) this.rotationSpeed += 50 * delta;
+            if (this.turningRight) this.rotationSpeed -= 50 * delta;
+          }
+          this.rotationSpeed *= 0.90; // Atrito da direção
 
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+          // Aplica rotação
+          rotation.y += this.rotationSpeed * delta;
+          this.el.setAttribute('rotation', rotation);
 
-const light = new THREE.HemisphereLight(0xffffff, 0x444444);
-scene.add(light);
+          // Aplica movimento baseado na rotação
+          const angle = rotation.y * (Math.PI / 180);
+          position.x += Math.sin(angle) * this.speed * delta;
+          position.z += Math.cos(angle) * this.speed * delta;
+          
+          this.el.setAttribute('position', position);
+        }
+      });
+    </script>
 
+    <a-scene background="color: #ECECEC">
+      
+      <a-assets>
+        <a-asset-item id="modelo-carro" src="./carro.glb"></a-asset-item>
+        <img id="grama" src="https://cdn.aframe.io/a-painter/images/floor.jpg">
+      </a-assets>
 
-// ===== CHÃO =====
-const floor = new THREE.Mesh(
- new THREE.PlaneGeometry(6,200),
- new THREE.MeshStandardMaterial({color:0x333333})
-);
-floor.rotation.x = -Math.PI/2;
-scene.add(floor);
+      <a-plane src="#grama" position="0 0 0" rotation="-90 0 0" width="200" height="200" repeat="20 20"></a-plane>
+      
+      <a-sky color="#87CEEB"></a-sky>
 
+      <a-box position="-5 0.5 -10" color="red"></a-box>
+      <a-box position="5 0.5 -20" color="blue"></a-box>
+      <a-box position="0 0.5 -40" color="yellow"></a-box>
 
-// ===== CARRO =====
-let car;
-const loader = new GLTFLoader();
+      <a-entity id="player" position="0 0 0" drive-car>
+        
+        <a-entity gltf-model="#modelo-carro" scale="1 1 1"></a-entity>
 
-loader.load("carro.glb", (gltf)=>{
+        <a-entity camera position="0 2 5" look-controls="enabled: false"></a-entity>
+      
+      </a-entity>
 
- car = gltf.scene;
-
- car.scale.set(1,1,1);
- car.position.set(0,0,0);
-
- scene.add(car);
-
- console.log("CARREGOU");
-
-}, undefined, (err)=>{
- console.log("ERRO AO CARREGAR", err);
-});
-
-
-// ===== CONTROLES TOUCH =====
-let lane = 0;
-
-window.addEventListener("touchstart", (e)=>{
- if(e.touches[0].clientX < window.innerWidth/2) lane--;
- else lane++;
-
- lane = Math.max(-1, Math.min(1, lane));
-});
-
-
-// ===== LOOP =====
-function animate(){
-
- requestAnimationFrame(animate);
-
- if(car){
- car.position.x += ((lane*2) - car.position.x) * 0.1;
- }
-
- renderer.render(scene,camera);
-}
-
-animate();
-
-</script>
-
-</body>
+    </a-scene>
+  </body>
 </html>
