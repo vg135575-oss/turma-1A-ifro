@@ -63,28 +63,47 @@
             const loader = new THREE.GLTFLoader();
 
             // Carregar Cidade
+            // --- CARREGAMENTO DA CIDADE (GIGANTE) ---
             loader.load('./city_at_night.glb', (gltf) => {
                 city = gltf.scene;
-                city.scale.set(2, 2, 2); // Aumenta a cidade
+                // Aumentei para 5, se ainda estiver pequena, suba para 10
+                city.scale.set(5, 5, 5); 
                 scene.add(city);
-                document.getElementById('status').innerText = "CIDADE PRONTA!";
+                log("Cidade carregada e ampliada.");
                 checkReady();
             }, undefined, (e) => {
-                document.getElementById('error-log').innerText += " Erro: city_at_night.glb não encontrado.";
+                log("Erro na cidade, usando grid reserva.", true);
                 checkReady();
             });
 
-            // Carregar Carro
+            // --- CARREGAMENTO DO CARRO (FORÇANDO TAMANHO) ---
             loader.load('./carro.glb', (gltf) => {
                 car = gltf.scene;
-                car.scale.set(0.6, 0.6, 0.6);
+                
+                // 1. Resetar escala para garantir
+                car.scale.set(1, 1, 1);
+                
+                // 2. Calcular o tamanho real do modelo carregado
+                const bbox = new THREE.Box3().setFromObject(car);
+                const size = new THREE.Vector3();
+                bbox.getSize(size);
+                
+                // 3. Ajuste de escala baseado no tamanho real
+                // Se o carro for microscópico, isso vai multiplicá-lo até ele ficar visível
+                const targetSize = 4; // Queremos que o carro tenha 4 metros de comprimento
+                const scaleFactor = targetSize / size.z;
+                car.scale.setScalar(scaleFactor);
+                
+                // 4. Centralizar o "pé" do carro no chão
+                car.position.y = 0; 
+                
                 scene.add(car);
-                document.getElementById('status').innerText = "CARRO PRONTO!";
+                log("Carro ajustado para escala real.");
                 checkReady();
             }, undefined, (e) => {
-                document.getElementById('error-log').innerText += " Erro: carro.glb não encontrado.";
-                // Fallback Carro
-                const geo = new THREE.BoxGeometry(1, 0.5, 2);
+                log("Erro no carro.glb, usando cubo reserva.", true);
+                // Cubo reserva bem visível
+                const geo = new THREE.BoxGeometry(2, 1, 4);
                 car = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: 0xff0000}));
                 scene.add(car);
                 checkReady();
