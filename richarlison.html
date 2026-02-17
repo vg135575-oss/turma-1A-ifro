@@ -3,37 +3,366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Horizon - Real Engine</title>
+    <title>Richarlison Horizon - Smooth Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; }
-        #loading-screen {
-            position: absolute; width: 100%; height: 100%; background: #000;
-            color: #0f0; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; z-index: 100;
+        body { margin: 0; overflow: hidden; background: #050510; font-family: 'Segoe UI', sans-serif; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        /* Loading Screen */
+        #loading {
+            position: absolute; width: 100%; height: 100%; background: #000; z-index: 999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #00ffcc; text-transform: uppercase; letter-spacing: 2px;
         }
-        .btn { 
-            margin-top: 20px; padding: 15px 30px; background: #0f0; 
-            border: none; font-weight: bold; cursor: pointer; border-radius: 8px; pointer-events: all;
+        .btn-start {
+            margin-top: 20px; padding: 15px 40px; background: transparent; color: #00ffcc;
+            border: 2px solid #00ffcc; font-size: 18px; font-weight: bold; cursor: pointer;
+            transition: 0.3s; pointer-events: all; display: none;
         }
-        #speedo {
-            position: absolute; bottom: 30px; right: 30px; color: white;
-            font-size: 35px; font-weight: 900; font-style: italic; 
-            text-shadow: 3px 3px 0px #ff00ff; font-family: 'Arial Black', sans-serif;
+        .btn-start:hover { background: #00ffcc; color: #000; box-shadow: 0 0 20px #00ffcc; }
+
+        /* HUD */
+        #speedometer {
+            text-align: right; padding: 30px; color: #fff; font-style: italic;
+            text-shadow: 2px 2px 0 #ff0055;
         }
+        #speed-val { font-size: 60px; font-weight: 900; display: block; line-height: 0.8; }
+        #speed-label { font-size: 14px; opacity: 0.8; }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            display: flex; justify-content: space-between; padding: 20px; pointer-events: all;
+            opacity: 0.5; transition: 0.3s;
+        }
+        #mobile-controls:hover { opacity: 1; }
+        .touch-btn {
+            width: 80px; height: 80px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 24px; user-select: none;
+        }
+        .touch-btn:active { background: rgba(0, 255, 204, 0.3); border-color: #00ffcc; }
+        
+        /* Esconder controles se estiver no PC (opcional) */
+        @media (min-width: 1024px) { #mobile-controls { display: none; } }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">
-        <div id="status">CARREGANDO MOTOR REALISTA...</div>
-        <button id="start-btn" class="btn" style="display:none" onclick="start()">DIRIGIR</button>
-    </div>
-    
-    <div id="ui">
-        <div id="speedo">0 KM/H</div>
+    <div id="loading">
+        <h2 id="status-text">CARREGANDO ASSETS...</h2>
+        <button id="start-btn" class="btn-start" onclick="startGame()">INICIAR MOTOR</button>
     </div>
 
+    <div id="ui-layer">
+        <div id="speedometer">
+            <span id="speed-val">0</span>
+            <span id="speed-label">KM/H</span>
+        </div>
+        
+        <div id="mobile-controls">
+            <div style="display: flex; gap: 10px;">
+                <div class="touch-btn" id="btn-left">◀</div>
+                <div class="touch-btn" id="btn-right">▶</div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="touch-btn" id="btn-brake">brake</div>
+                <div class="touch-btn" id="btn-gas">▲</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script>
+        // --- CONFIGURAÇÕES GERAIS ---
+        const SETTINGS = {
+            maxSpeed: 4.5,         // Velocidade máxima
+            acceleration: 0.04,    // Força do motor
+            friction: 0.97,        // Atrito do chão (quanto menor, mais o carro desliza)
+            turnSpeed: 0.04,       // Velocidade da curva
+            cameraSmooth: 0.08,    // 0.01 = muito atraso, 1.0 = sem atraso
+            carSmooth: 0.1         // Suavidade visual do carro virando
+        };
+
+        let scene, camera, renderer;
+        let city, car;
+        let gameActive = false;
+        
+        // Estado do Carro
+        const carState = {
+            speed: 0,
+            angle: 0,
+            x: 0,
+            z: 0,
+            visualAngle: 0 // Para suavizar a rotação do modelo 3D
+        };
+
+        // Inputs
+        const inputs = { up: false, down: false, left: false, right: false };
+
+        // --- SISTEMA DE ÁUDIO ---
+        let audioCtx, engineSource, gainNode;
+        
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const url = 'https://raw.githubusercontent.com/nicolas-van/obsidian-racer/master/audio/engine.mp3';
+            
+            fetch(url)
+                .then(r => r.arrayBuffer())
+                .then(buffer => audioCtx.decodeAudioData(buffer))
+                .then(decoded => {
+                    const src = audioCtx.createBufferSource();
+                    src.buffer = decoded;
+                    src.loop = true;
+                    gainNode = audioCtx.createGain();
+                    gainNode.gain.value = 0.1;
+                    src.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    engineSource = src;
+                })
+                .catch(e => console.warn("Audio não carregou (CORS ou erro):", e));
+        }
+
+        function updateAudio() {
+            if(!engineSource || audioCtx.state === 'suspended') return;
+            // Pitch baseado na velocidade
+            const pitch = 0.5 + (Math.abs(carState.speed) * 0.5);
+            engineSource.playbackRate.setTargetAtTime(pitch, audioCtx.currentTime, 0.1);
+        }
+
+        // --- INICIALIZAÇÃO 3D ---
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050510);
+            scene.fog = new THREE.FogExp2(0x050510, 0.003); // Neblina para esconder o fim do mapa
+
+            // Câmera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 10, -20);
+
+            // Renderizador
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Otimização para celular
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // Luzes
+            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambient);
+
+            const dirLight = new THREE.DirectionalLight(0xffccaa, 1.5);
+            dirLight.position.set(50, 100, 50);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // Luz do farol do carro (simulada)
+            const carLight = new THREE.PointLight(0x00ffff, 2, 40);
+            scene.add(carLight);
+            carState.light = carLight; // Referência para mover com o carro
+
+            loadModels();
+            setupControls();
+        }
+
+        function loadModels() {
+            const loader = new THREE.GLTFLoader();
+            let loadedCount = 0;
+
+            const checkLoad = () => {
+                loadedCount++;
+                if(loadedCount === 2) {
+                    document.getElementById('status-text').innerText = "PRONTO PARA RODAR";
+                    document.getElementById('start-btn').style.display = "block";
+                    initAudio();
+                }
+            };
+
+            // Carregar Cidade
+            loader.load('./city_at_night.glb', (gltf) => {
+                city = gltf.scene;
+                city.scale.set(5, 5, 5);
+                scene.add(city);
+                checkLoad();
+            }, undefined, (e) => {
+                console.error("Erro cidade:", e);
+                // Fallback se falhar: chão simples
+                const plane = new THREE.Mesh(new THREE.PlaneGeometry(500,500), new THREE.MeshPhongMaterial({color:0x222222}));
+                plane.rotation.x = -Math.PI/2;
+                scene.add(plane);
+                checkLoad();
+            });
+
+            // Carregar Carro
+            loader.load('./carro.glb', (gltf) => {
+                car = gltf.scene;
+                // Ajustar escala automaticamente
+                const box = new THREE.Box3().setFromObject(car);
+                const size = box.getSize(new THREE.Vector3()).length();
+                car.scale.setScalar(8 / size); // Normaliza para tamanho ~8 unidades
+                
+                car.traverse(c => { if(c.isMesh) c.castShadow = true; });
+                scene.add(car);
+                checkLoad();
+            }, undefined, (e) => {
+                console.error("Erro carro:", e);
+                // Fallback: cubo
+                car = new THREE.Mesh(new THREE.BoxGeometry(2,1,4), new THREE.MeshNormalMaterial());
+                scene.add(car);
+                checkLoad();
+            });
+        }
+
+        function setupControls() {
+            // Teclado
+            document.addEventListener('keydown', (e) => {
+                if(e.key === 'ArrowUp' || e.key === 'w') inputs.up = true;
+                if(e.key === 'ArrowDown' || e.key === 's') inputs.down = true;
+                if(e.key === 'ArrowLeft' || e.key === 'a') inputs.left = true;
+                if(e.key === 'ArrowRight' || e.key === 'd') inputs.right = true;
+            });
+            document.addEventListener('keyup', (e) => {
+                if(e.key === 'ArrowUp' || e.key === 'w') inputs.up = false;
+                if(e.key === 'ArrowDown' || e.key === 's') inputs.down = false;
+                if(e.key === 'ArrowLeft' || e.key === 'a') inputs.left = false;
+                if(e.key === 'ArrowRight' || e.key === 'd') inputs.right = false;
+            });
+
+            // Touch (Mobile)
+            const bindTouch = (id, key) => {
+                const el = document.getElementById(id);
+                el.addEventListener('touchstart', (e) => { e.preventDefault(); inputs[key] = true; });
+                el.addEventListener('touchend', (e) => { e.preventDefault(); inputs[key] = false; });
+            };
+            bindTouch('btn-gas', 'up');
+            bindTouch('btn-brake', 'down');
+            bindTouch('btn-left', 'left');
+            bindTouch('btn-right', 'right');
+        }
+
+        function startGame() {
+            document.getElementById('loading').style.display = 'none';
+            if(audioCtx) audioCtx.resume();
+            if(engineSource) engineSource.start(0);
+            gameActive = true;
+            animate();
+        }
+
+        // --- FÍSICA E LÓGICA DO JOGO ---
+        function updatePhysics() {
+            if(!car) return;
+
+            // 1. Verificar Gamepad (prioridade sobre teclado se conectado)
+            const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
+            let throttle = 0;
+            let steering = 0;
+
+            if (gp) {
+                // Gamepad (Acelerador no eixo Y ou gatilhos)
+                throttle = -gp.axes[1] || (gp.buttons[7].value - gp.buttons[6].value); 
+                steering = gp.axes[0];
+                if (Math.abs(throttle) < 0.1) throttle = 0;
+                if (Math.abs(steering) < 0.1) steering = 0;
+            } else {
+                // Teclado/Touch
+                if (inputs.up) throttle = 1;
+                if (inputs.down) throttle = -1;
+                if (inputs.left) steering = -1;
+                if (inputs.right) steering = 1;
+            }
+
+            // 2. Aplicar Aceleração
+            if (throttle > 0) {
+                carState.speed += SETTINGS.acceleration;
+            } else if (throttle < 0) {
+                carState.speed -= SETTINGS.acceleration * 0.6; // Ré é mais fraca
+            }
+
+            // 3. Aplicar Atrito (Friction)
+            carState.speed *= SETTINGS.friction;
+
+            // Limitar velocidade
+            if (carState.speed > SETTINGS.maxSpeed) carState.speed = SETTINGS.maxSpeed;
+            if (carState.speed < -SETTINGS.maxSpeed / 3) carState.speed = -SETTINGS.maxSpeed / 3;
+
+            // 4. Virar (Só vira se estiver andando)
+            if (Math.abs(carState.speed) > 0.1) {
+                // Inverte a direção se estiver de ré para ser realista
+                const dir = carState.speed > 0 ? 1 : -1;
+                carState.angle -= steering * SETTINGS.turnSpeed * dir;
+            }
+
+            // 5. Atualizar Posição (Matemática simples: X e Z baseados no ângulo)
+            carState.x += Math.sin(carState.angle) * carState.speed;
+            carState.z += Math.cos(carState.angle) * carState.speed;
+
+            // --- SUAVIZAÇÃO VISUAL (LERP) ---
+            
+            // Suavizar a rotação visual do carro (Carro "inclina" na curva)
+            // LERP: Posição Atual = Posição Atual + (Alvo - Atual) * Fator
+            carState.visualAngle += (carState.angle - carState.visualAngle) * SETTINGS.carSmooth;
+            
+            car.position.set(carState.x, 0.5, carState.z);
+            car.rotation.y = carState.visualAngle;
+            
+            // Inclinação da carroceria na curva (Body Roll)
+            const roll = (steering * carState.speed) * -0.05;
+            car.rotation.z = roll; 
+            car.rotation.x = -(carState.speed * 0.02); // Empina ao acelerar
+
+            // Atualizar luz do carro
+            if(carState.light) {
+                carState.light.position.set(carState.x, 2, carState.z);
+            }
+
+            // Atualizar HUD
+            document.getElementById('speed-val').innerText = Math.abs(Math.round(carState.speed * 40)); // Multiplicador fake p/ parecer rápido
+            
+            updateCamera();
+            updateAudio();
+        }
+
+        function updateCamera() {
+            if(!car) return;
+
+            // Calcular onde a câmera DEVERIA estar (atrás do carro)
+            // Distância aumenta com a velocidade
+            const dist = 15 + (Math.abs(carState.speed) * 2);
+            const height = 6 + (Math.abs(carState.speed) * 0.5);
+
+            const targetX = car.position.x - Math.sin(carState.angle) * dist;
+            const targetZ = car.position.z - Math.cos(carState.angle) * dist;
+
+            // Mover câmera suavemente para a posição alvo (Smooth Follow)
+            camera.position.x += (targetX - camera.position.x) * SETTINGS.cameraSmooth;
+            camera.position.z += (targetZ - camera.position.z) * SETTINGS.cameraSmooth;
+            camera.position.y += ((car.position.y + height) - camera.position.y) * SETTINGS.cameraSmooth;
+
+            // Câmera sempre olha um pouco à frente do carro
+            const lookTargetX = car.position.x + Math.sin(carState.angle) * 10;
+            const lookTargetZ = car.position.z + Math.cos(carState.angle) * 10;
+            camera.lookAt(lookTargetX, car.position.y, lookTargetZ);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(gameActive) updatePhysics();
+            renderer.render(scene, camera);
+        }
+
+        // Redimensionar tela
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        init();
+    </script>
+</body>
+</html>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
