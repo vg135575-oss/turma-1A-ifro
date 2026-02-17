@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison 3D - Edição Corrigida</title>
+    <title>Richarlison 3D - Ajustado</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
         #loading-screen {
@@ -16,7 +16,7 @@
             border: none; font-weight: bold; cursor: pointer; pointer-events: all;
             border-radius: 8px;
         }
-        #status { font-family: monospace; text-align: center; padding: 0 20px; }
+        #status { font-family: monospace; text-align: center; padding: 0 20px; color: #0f0; }
     </style>
 </head>
 <body>
@@ -31,79 +31,81 @@
 
     <script>
         let scene, camera, renderer, car, city;
-        let moveSpeed = 0, maxSpeed = 0.8, acceleration = 0.02, friction = 0.96;
+        let moveSpeed = 0, maxSpeed = 1.2, acceleration = 0.03, friction = 0.96;
         let carRotation = 0;
         let gameActive = false;
         
         let cameraAngleH = 0;
         let cameraAngleV = 0.4;
 
-        // Função de log corrigida
         function displayLog(msg) {
-            console.log(msg);
             document.getElementById('status').innerText = msg;
         }
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x020205);
-            scene.fog = new THREE.FogExp2(0x020205, 0.01);
+            scene.background = new THREE.Color(0x050515);
+            // Reduzi a neblina para você enxergar mais longe
+            scene.fog = new THREE.FogExp2(0x050515, 0.005);
 
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 5000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            // Deixa as cores mais vivas
+            renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-            scene.add(light);
+            // --- ILUMINAÇÃO (XÔ ESCURIDÃO) ---
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Luz geral bem forte
+            scene.add(ambientLight);
             
-            const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-            sun.position.set(50, 100, 50);
+            const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+            sun.position.set(100, 200, 100);
             scene.add(sun);
 
-            // Chão de emergência (Grid)
-            const grid = new THREE.GridHelper(2000, 100, 0x444444, 0x222222);
-            grid.position.y = -0.05;
-            scene.add(grid);
+            // Luz azulada vindo de baixo para dar clima de cidade neon
+            const groundLight = new THREE.PointLight(0x00ffff, 1, 500);
+            groundLight.position.set(0, -10, 0);
+            scene.add(groundLight);
 
             const loader = new THREE.GLTFLoader();
 
             // --- CARREGAR CIDADE ---
-            displayLog("Buscando cidade...");
             loader.load('./city_at_night.glb', (gltf) => {
                 city = gltf.scene;
-                city.scale.set(15, 15, 15); // Cidade realmente GRANDE
+                city.scale.set(10, 10, 10); // Diminuí um pouco a escala da cidade para o carro encaixar
                 scene.add(city);
                 displayLog("Cidade carregada!");
                 checkReady();
             }, undefined, (e) => {
-                displayLog("Cidade não encontrada. Usando modo plano.");
+                displayLog("Cidade não encontrada.");
                 checkReady();
             });
 
             // --- CARREGAR CARRO ---
-            displayLog("Buscando carro...");
             loader.load('./carro.glb', (gltf) => {
                 car = gltf.scene;
                 
-                // Medir e ajustar escala
+                // Reset e medição
+                car.scale.set(1, 1, 1);
                 const bbox = new THREE.Box3().setFromObject(car);
                 const size = new THREE.Vector3();
                 bbox.getSize(size);
                 
-                const targetSize = 6; // Carro com 6 metros de comprimento
+                // AUMENTEI O CARRO: targetSize de 6 para 25 para bater com a escala da cidade
+                const targetSize = 25; 
                 const scaleFactor = targetSize / size.z;
                 car.scale.setScalar(scaleFactor);
                 
-                car.position.y = 0; 
+                car.position.y = 0.5; 
                 scene.add(car);
                 displayLog("Carro pronto!");
                 checkReady();
             }, undefined, (e) => {
-                displayLog("Carro não encontrado. Usando reserva.");
-                const geo = new THREE.BoxGeometry(2, 1, 4);
+                displayLog("Usando carro reserva.");
+                const geo = new THREE.BoxGeometry(5, 3, 10);
                 car = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: 0xff0000}));
                 scene.add(car);
                 checkReady();
@@ -115,7 +117,6 @@
             itemsReady++;
             if(itemsReady >= 2) {
                 document.getElementById('start-btn').style.display = "block";
-                displayLog("Tudo pronto para correr!");
             }
         }
 
@@ -130,36 +131,33 @@
             const gp = gamepads[0] || gamepads[1];
 
             if (gp && gameActive) {
-                // Joy Esquerdo (Movimento)
                 let joyY = gp.axes[1]; 
                 let joyX = gp.axes[0];
-                
-                // Joy Direito (Câmera)
                 let camX = gp.axes[2];
                 let camY = gp.axes[3];
 
                 if (Math.abs(joyY) > 0.1) moveSpeed -= joyY * acceleration;
                 moveSpeed *= friction;
 
-                if (Math.abs(moveSpeed) > 0.01) {
-                    carRotation -= joyX * 0.06 * (moveSpeed > 0 ? 1 : -1);
+                if (Math.abs(moveSpeed) > 0.1) {
+                    carRotation -= joyX * 0.05 * (moveSpeed > 0 ? 1 : -1);
                 }
 
                 car.rotation.y = carRotation;
                 car.position.x += Math.sin(carRotation) * moveSpeed;
                 car.position.z += Math.cos(carRotation) * moveSpeed;
 
-                // Câmera Orbital
                 if (Math.abs(camX) > 0.1) cameraAngleH += camX * 0.05;
                 if (Math.abs(camY) > 0.1) cameraAngleV = Math.max(0.1, Math.min(1.0, cameraAngleV + camY * 0.05));
             }
 
             if (car) {
-                const dist = 12; // Câmera mais afastada
+                // Afastei mais a câmera (dist = 40) para o carro grande
+                const dist = 45; 
                 camera.position.x = car.position.x - Math.sin(carRotation + cameraAngleH) * dist;
                 camera.position.z = car.position.z - Math.cos(carRotation + cameraAngleH) * dist;
-                camera.position.y = car.position.y + (cameraAngleV * 10);
-                camera.lookAt(car.position.x, car.position.y + 1, car.position.z);
+                camera.position.y = car.position.y + (cameraAngleV * 25);
+                camera.lookAt(car.position.x, car.position.y + 5, car.position.z);
             }
         }
 
