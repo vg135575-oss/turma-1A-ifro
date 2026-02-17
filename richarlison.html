@@ -1,169 +1,242 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Corrida Infinita</title>
-
-<style>
-body{margin:0;overflow:hidden;background:black}
-#hud{
-position:absolute;
-top:10px;
-left:10px;
-color:white;
-font-family:sans-serif;
-}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Richarlison - Corrida Infinita</title>
+  <style>
+    html,body { height:100%; margin:0; background:#111; -webkit-user-select:none; user-select:none; }
+    #hud { position: absolute; left:10px; top:10px; color:#fff; font-family:system-ui, sans-serif; z-index:10;
+           background: rgba(0,0,0,0.25); padding:6px 8px; border-radius:8px; font-size:14px; }
+    #errorBox {
+      position: absolute; left:10px; right:10px; bottom:10px; z-index:999;
+      background: rgba(0,0,0,0.6); color:#fff; font-family:monospace; padding:10px; border-radius:8px;
+      max-height:40vh; overflow:auto; display:none;
+    }
+    canvas { display:block; }
+  </style>
 </head>
-
 <body>
-<div id="hud">Toque esquerda / direita</div>
+  <div id="hud">Toque esquerda/direita para mover</div>
+  <div id="errorBox" id="err"><strong>Debug:</strong><pre id="errorText" style="white-space:pre-wrap"></pre></div>
 
-<script type="module">
+  <!-- Usa módulo ES para Three + GLTFLoader (compatível com GitHub Pages) -->
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.154.0/build/three.module.js';
+    import { GLTFLoader } from 'https://unpkg.com/three@0.154.0/examples/jsm/loaders/GLTFLoader.js';
 
-import * as THREE from 'https://unpkg.com/three@0.154.0/build/three.module.js';
-import { GLTFLoader } from 'https://unpkg.com/three@0.154.0/examples/jsm/loaders/GLTFLoader.js';
+    // overlay de erro
+    const errorBox = document.getElementById('errorBox');
+    const errorText = document.getElementById('errorText');
+    function showError(msg) {
+      errorBox.style.display = 'block';
+      errorText.textContent += msg + "\\n\\n";
+      console.error(msg);
+    }
+    window.addEventListener('error', e => showError('Uncaught error: ' + e.message + (e.filename? ' ('+e.filename+':'+e.lineno+')':'')));
+    window.addEventListener('unhandledrejection', e => showError('UnhandledRejection: ' + (e.reason?.message ?? JSON.stringify(e.reason))));
 
-let scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x202020,10,120);
+    // cena, renderer, camera
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x202020, 10, 140);
 
-let camera = new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,400);
-camera.position.set(0,3,8);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x151515);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
 
-let renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth,innerHeight);
-document.body.appendChild(renderer.domElement);
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 400);
+    camera.position.set(0, 3.5, 8);
 
-scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1));
+    // luzes
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.9);
+    hemi.position.set(0, 20, 0); scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir.position.set(-3, 10, 5); dir.castShadow = true; scene.add(dir);
 
-let light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(-3,10,5);
-scene.add(light);
+    // estrada - textura via canvas (para animar o offset)
+    const roadCanvas = document.createElement('canvas');
+    roadCanvas.width = 512; roadCanvas.height = 512;
+    const ctx = roadCanvas.getContext('2d');
+    function drawRoadTexture() {
+      ctx.fillStyle = '#2b2b2b'; ctx.fillRect(0,0,512,512);
+      ctx.fillStyle = '#fff';
+      for(let y = -512; y < 512*2; y += 120) ctx.fillRect(256-6, y+10, 12, 40);
+    }
+    drawRoadTexture();
+    const roadTexture = new THREE.CanvasTexture(roadCanvas);
+    roadTexture.wrapS = roadTexture.wrapT = THREE.RepeatWrapping;
+    roadTexture.repeat.set(1, 30);
+    roadTexture.needsUpdate = true;
 
-///// Estrada
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(6, 200), new THREE.MeshLambertMaterial({ map: roadTexture }));
+    road.rotation.x = -Math.PI/2; road.receiveShadow = true; scene.add(road);
 
-let canvas = document.createElement('canvas');
-canvas.width=512;
-canvas.height=512;
-let ctx = canvas.getContext('2d');
+    // laterais
+    const leftGrass = new THREE.Mesh(new THREE.PlaneGeometry(40,200), new THREE.MeshLambertMaterial({ color:0x1f7a1f }));
+    leftGrass.rotation.x = -Math.PI/2; leftGrass.position.x = -8; scene.add(leftGrass);
+    const rightGrass = leftGrass.clone(); rightGrass.position.x = 8; scene.add(rightGrass);
 
-function drawRoad(){
-ctx.fillStyle="#2b2b2b";
-ctx.fillRect(0,0,512,512);
+    // variáveis do jogo
+    const laneX = [-2, 0, 2];
+    let currentLane = 1;
+    const carState = { x: laneX[currentLane], targetX: laneX[currentLane], speed: 12 };
 
-ctx.fillStyle="white";
-for(let y=0;y<512;y+=120){
-ctx.fillRect(256-6,y,12,40);
-}
-}
-drawRoad();
+    // carregar modelo
+    let car = new THREE.Object3D();
+    let carLoaded = false;
+    const loader = new GLTFLoader();
 
-let roadTexture = new THREE.CanvasTexture(canvas);
-roadTexture.wrapT = THREE.RepeatWrapping;
-roadTexture.repeat.set(1,30);
+    // IMPORTANTE: o arquivo deve se chamar exatamente 'carro.glb' e estar na mesma pasta
+    loader.load('carro.glb',
+      (gltf) => {
+        car = gltf.scene;
+        car.traverse(c => { if(c.isMesh) { c.castShadow = true; c.receiveShadow = true; }});
+        // normaliza escala do modelo (caso seja gigante/pequeno)
+        const box = new THREE.Box3().setFromObject(car);
+        const size = new THREE.Vector3(); box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 1.2 / Math.max(maxDim, 0.001);
+        car.scale.setScalar(scale);
+        car.position.set(0, 0.15, 0);
+        scene.add(car);
+        carLoaded = true;
+        showError('Modelo carro.glb carregado com sucesso.');
+      },
+      undefined,
+      (err) => {
+        showError('Erro ao carregar carro.glb: ' + (err?.message ?? String(err)) + '\\nVou criar um cubo de fallback para testar.');
+        placeDebugCube();
+      }
+    );
 
-let road = new THREE.Mesh(
-new THREE.PlaneGeometry(6,200),
-new THREE.MeshLambertMaterial({map:roadTexture})
-);
-road.rotation.x = -Math.PI/2;
-scene.add(road);
+    // fallback se GLB der problema
+    function placeDebugCube() {
+      const geo = new THREE.BoxGeometry(1,1,2);
+      const mat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+      car = new THREE.Mesh(geo, mat);
+      car.castShadow = true;
+      car.position.set(0, 0.5, 0);
+      scene.add(car);
+      carLoaded = true;
+    }
 
-///// CARRO
+    // obstáculos simples
+    const obstacles = [];
+    function createObstacle() {
+      const isSphere = Math.random() > 0.5;
+      const mesh = isSphere
+        ? new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), new THREE.MeshStandardMaterial({ color: 0xff5555 }))
+        : new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({ color: 0x5555ff }));
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      const lane = Math.floor(Math.random()*3);
+      mesh.position.set(laneX[lane], 0.5, -80 + Math.random()*30);
+      scene.add(mesh); obstacles.push(mesh);
+    }
 
-let car;
-let loader = new GLTFLoader();
+    let spawnTimer = 0;
+    const spawnInterval = 0.9;
 
-loader.load("carro.glb",(gltf)=>{
-car = gltf.scene;
-car.scale.set(1,1,1);
-car.position.y = 0.2;
-scene.add(car);
-});
+    // touch controls (left/right)
+    let touchLeft = false, touchRight = false;
+    function onPointerDown(e) {
+      e.preventDefault();
+      const x = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+      if (x < window.innerWidth/2) touchLeft = true; else touchRight = true;
+    }
+    function onPointerUp(e) { e.preventDefault(); touchLeft = false; touchRight = false; }
 
-//// Obstáculos
+    window.addEventListener('touchstart', onPointerDown, { passive:false });
+    window.addEventListener('touchend', onPointerUp, { passive:false });
+    window.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('mouseup', onPointerUp);
 
-let obstacles=[];
+    // colisão simples usando Box3
+    function checkCollision(a, b) {
+      const boxA = new THREE.Box3().setFromObject(a);
+      const boxB = new THREE.Box3().setFromObject(b);
+      return boxA.intersectsBox(boxB);
+    }
 
-function spawnObstacle(){
-let box = new THREE.Mesh(
-new THREE.BoxGeometry(1,1,1),
-new THREE.MeshStandardMaterial({color:0xff0000})
-);
+    function resetGame() {
+      for (const o of obstacles) scene.remove(o);
+      obstacles.length = 0;
+      currentLane = 1;
+      carState.x = laneX[currentLane];
+      carState.targetX = laneX[currentLane];
+      if (car) car.position.set(0, 0.15, 0);
+      spawnTimer = 0;
+    }
 
-let lanes=[-2,0,2];
-box.position.set(lanes[Math.floor(Math.random()*3)],0.5,-80);
+    function gameOver() {
+      alert('Game Over');
+      resetGame();
+    }
 
-scene.add(box);
-obstacles.push(box);
-}
+    // loop principal
+    let lastTime = performance.now() / 1000;
+    function animate() {
+      requestAnimationFrame(animate);
+      const now = performance.now() / 1000;
+      const dt = Math.min(0.05, now - lastTime);
+      lastTime = now;
 
-//// Controles
+      // move textura da estrada
+      roadTexture.offset.y -= (carState.speed * dt) / 6;
 
-let lanes=[-2,0,2];
-let lane=1;
+      // spawn
+      spawnTimer += dt;
+      if (spawnTimer > spawnInterval) { spawnTimer = 0; createObstacle(); }
 
-addEventListener("touchstart",(e)=>{
-if(e.touches[0].clientX < innerWidth/2){
-lane=Math.max(0,lane-1);
-}else{
-lane=Math.min(2,lane+1);
-}
-});
+      // atualiza obstáculos
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.position.z += carState.speed * dt;
+        if (o.position.z > 10) { scene.remove(o); obstacles.splice(i, 1); }
+      }
 
-//// Loop
+      // input: troca de pista
+      if (touchLeft) { if (currentLane > 0) { currentLane--; touchLeft = false; } }
+      else if (touchRight) { if (currentLane < laneX.length - 1) { currentLane++; touchRight = false; } }
 
-let last=0;
-let spawnTimer=0;
+      carState.targetX = laneX[currentLane];
+      carState.x += (carState.targetX - carState.x) * Math.min(1, 12 * dt);
 
-function animate(t){
+      // aplica posição no modelo
+      if (carLoaded) {
+        car.position.x = carState.x;
+        car.position.y = 0.15 + Math.sin(now * 6) * 0.02;
+        // câmera segue atrás do carro
+        camera.position.lerp(new THREE.Vector3(car.position.x, 3.5, car.position.z + 8), 0.12);
+        camera.lookAt(new THREE.Vector3(car.position.x, car.position.y + 1.2, car.position.z - 4));
+      }
 
-requestAnimationFrame(animate);
+      // colisões
+      for (const o of obstacles) {
+        if (carLoaded && checkCollision(car, o)) {
+          gameOver();
+          break;
+        }
+      }
 
-let dt=(t-last)/1000;
-last=t;
+      renderer.render(scene, camera);
+    }
+    animate();
 
-roadTexture.offset.y -= dt*2;
+    // teclado para debug no desktop
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'a') { if (currentLane > 0) currentLane--; }
+      else if (e.key === 'ArrowRight' || e.key === 'd') { if (currentLane < laneX.length - 1) currentLane++; }
+    });
 
-spawnTimer+=dt;
-if(spawnTimer>1){
-spawnTimer=0;
-spawnObstacle();
-}
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 
-if(car){
-car.position.x += (lanes[lane]-car.position.x)*10*dt;
-
-camera.position.x = car.position.x;
-camera.lookAt(car.position);
-}
-
-obstacles.forEach(o=>{
-o.position.z += 12*dt;
-
-if(car){
-let a=new THREE.Box3().setFromObject(car);
-let b=new THREE.Box3().setFromObject(o);
-
-if(a.intersectsBox(b)){
-alert("Game Over");
-location.reload();
-}
-}
-});
-
-renderer.render(scene,camera);
-}
-
-animate();
-
-onresize=()=>{
-camera.aspect=innerWidth/innerHeight;
-camera.updateProjectionMatrix();
-renderer.setSize(innerWidth,innerHeight);
-}
-
-</script>
+  </script>
 </body>
 </html>
