@@ -3,37 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Horizon - Smooth Edition</title>
+    <title>Richarlison Horizon 5 - Pro Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #050510; font-family: 'Segoe UI', sans-serif; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
-        
-        /* Loading Screen */
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
         #loading {
-            position: absolute; width: 100%; height: 100%; background: #000; z-index: 999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #00ffcc; text-transform: uppercase; letter-spacing: 2px;
+            position: absolute; width: 100%; height: 100%; background: #000; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;
         }
-        .btn-start {
-            margin-top: 20px; padding: 15px 40px; background: transparent; color: #00ffcc;
-            border: 2px solid #00ffcc; font-size: 18px; font-weight: bold; cursor: pointer;
-            transition: 0.3s; pointer-events: all; display: none;
+        .btn-ready {
+            padding: 20px 50px; background: #ff0055; color: white; border: none;
+            font-size: 24px; cursor: pointer; display: none; border-radius: 50px;
+            box-shadow: 0 10px 20px rgba(255,0,85,0.4);
         }
-        .btn-start:hover { background: #00ffcc; color: #000; box-shadow: 0 0 20px #00ffcc; }
+        #hud {
+            position: absolute; bottom: 40px; right: 40px; color: white;
+            text-align: right; pointer-events: none;
+        }
+        #speed { font-size: 80px; font-style: italic; line-height: 0.8; }
+        #unit { font-size: 20px; color: #ff0055; }
+    </style>
+</head>
+<body>
 
-        /* HUD */
-        #speedometer {
-            text-align: right; padding: 30px; color: #fff; font-style: italic;
-            text-shadow: 2px 2px 0 #ff0055;
-        }
-        #speed-val { font-size: 60px; font-weight: 900; display: block; line-height: 0.8; }
-        #speed-label { font-size: 14px; opacity: 0.8; }
+    <div id="loading">
+        <h1 id="msg">SINCRONIZANDO MOTOR...</h1>
+        <button id="start-btn" class="btn-ready" onclick="start()">DIRIGIR</button>
+    </div>
 
-        /* Mobile Controls */
-        #mobile-controls {
-            display: flex; justify-content: space-between; padding: 20px; pointer-events: all;
-            opacity: 0.5; transition: 0.3s;
+    <div id="hud">
+        <div id="speed">0</div>
+        <div id="unit">KM/H</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script>
+        let scene, camera, renderer, car, city;
+        let gameActive = false;
+
+        // --- CONFIGURAÇÃO ESTILO FORZA ---
+        const config = {
+            accel: 0.08,        
+            maxSpeed: 6.0,      
+            friction: 0.985,    
+            driftFactor: 0.92,  // Faz a traseira deslizar
+            turnSpeed: 0.035,
+            camEase: 0.12       // Suavidade da câmera
+        };
+
+        const state = {
+            vel: 0,
+            rot: 0,
+            latVel: 0,          // Velocidade lateral (Drift)
+            targetFOV: 70
+        };
+
+        const keys = { w:0, s:0, a:0, d:0 };
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020205);
+            scene.fog = new THREE.FogExp2(0x020205, 0.004);
+
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.5, 5000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            const light = new THREE.AmbientLight(0xffffff, 1.2);
+            scene.add(light);
+
+            const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+            sun.position.set(10, 50, 10);
+            scene.add(sun);
+
+            const loader = new THREE.GLTFLoader();
+
+            // CIDADE (Ajustada para não ser gigante)
+            loader.load('./city_at_night.glb', (gltf) => {
+                city = gltf.scene;
+                city.scale.set(1.5, 1.5, 1.5); // ESCALA REALISTA
+                scene.add(city);
+                checkReady();
+            });
+
+            // CARRO (Aumentado para presença de tela)
+            loader.load('./carro.glb', (gltf) => {
+                car = gltf.scene;
+                const box = new THREE.Box3().setFromObject(car);
+                const size = box.getSize(new THREE.Vector3());
+                car.scale.setScalar(18 / size.z); // CARRO ROBUSTO
+                scene.add(car);
+                checkReady();
+            });
         }
+
+        let loaded = 0;
+        function checkReady() {
+            loaded++;
+            if(loaded >= 2) {
+                document.getElementById('msg').innerText = "V8 PRONTO";
+                document.getElementById('start-btn').style.display = "block";
+            }
+        }
+
+        function start() {
+            document.getElementById('loading').style.display = 'none';
+            gameActive = true;
+            animate();
+        }
+
+        window.onkeydown = (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = 1 };
+        window.onkeyup = (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = 0 };
+
+        function updatePhysics() {
+            if(!car) return;
+
+            // Aceleração com inércia
+            if(keys.w) state.vel += config.accel;
+            if(keys.s) state.vel -= config.accel * 0.5;
+            
+            state.vel *= config.friction;
+
+            // Drift e Curva
+            let turnInput = (keys.a ? 1 : 0) - (keys.d ? 1 : 0);
+            if(Math.abs(state.vel) > 0.1) {
+                // Quanto mais rápido, mais a inércia lateral (drift) afeta o carro
+                let driftEffect = turnInput * (state.vel * 0.015);
+                state.rot += turnInput * config.turnSpeed * (state.vel * 0.2);
+                state.latVel += driftEffect;
+            }
+
+            state.latVel *= config.driftFactor;
+
+            // Aplicar movimento
+            car.rotation.y = state.rot;
+            car.position.x += Math.sin(state.rot) * state.vel + Math.cos(state.rot) * state.latVel;
+            car.position.z += Math.cos(state.rot) * state.vel - Math.sin(state.rot) * state.latVel;
+
+            // Efeito visual de inclinação (Weight Shift)
+            car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -state.latVel * 0.5, 0.1);
+            car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, keys.w ? -0.02 : 0, 0.1);
+
+            // Atualizar HUD
+            document.getElementById('speed').innerText = Math.round(Math.abs(state.vel) * 45);
+        }
+
+        function updateCamera() {
+            if(!car) return;
+
+            // DINAMIC FOV (Igual Forza)
+            let speedFactor = Math.abs(state.vel) / config.maxSpeed;
+            camera.fov = THREE.MathUtils.lerp(70, 95, speedFactor);
+            camera.updateProjectionMatrix();
+
+            // Posição de perseguição suave
+            const idealOffset = new THREE.Vector3(0, 7, -25 - (speedFactor * 10));
+            idealOffset.applyQuaternion(car.quaternion);
+            idealOffset.add(car.position);
+
+            const idealLookat = new THREE.Vector3(0, 3, 10);
+            idealLookat.applyQuaternion(car.quaternion);
+            idealLookat.add(car.position);
+
+            camera.position.lerp(idealOffset, config.camEase);
+            camera.lookAt(idealLookat);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(gameActive) {
+                updatePhysics();
+                updateCamera();
+            }
+            renderer.render(scene, camera);
+        }
+
+        init();
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
         #mobile-controls:hover { opacity: 1; }
         .touch-btn {
             width: 80px; height: 80px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3);
