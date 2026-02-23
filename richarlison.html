@@ -3,31 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Richarlison Horizon - Ajuste de Direção</title>
+    <title>Richarlison Horizon - Mobile Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; touch-action: none; }
+        
         #overlay {
             position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; z-index: 100; text-align: center;
+            color: white; z-index: 100; text-align: center; transition: opacity 0.5s;
         }
+        
+        #btn-start-mobile {
+            margin-top: 20px; padding: 15px 40px; background: #00ffcc; color: #000; 
+            border: none; border-radius: 30px; font-size: 20px; font-weight: bold; cursor: pointer;
+        }
+
         #hud {
-            position: absolute; bottom: 30px; right: 30px; color: #ff0055;
-            text-align: right; pointer-events: none;
+            position: absolute; top: 20px; right: 20px; color: #ff0055;
+            text-align: right; pointer-events: none; z-index: 10;
         }
-        #speed { font-size: 80px; font-style: italic; line-height: 0.8; color: white; }
+        #speed { font-size: 60px; font-style: italic; line-height: 0.8; color: white; }
+
+        /* --- CONTROLES MOBILE --- */
+        #mobile-controls {
+            position: absolute; bottom: 30px; left: 0; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 20px;
+            box-sizing: border-box; z-index: 50; pointer-events: none;
+        }
+        .control-group { display: flex; gap: 15px; pointer-events: auto; }
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white; font-size: 24px; border-radius: 50%; width: 75px; height: 75px;
+            display: flex; align-items: center; justify-content: center;
+            user-select: none; -webkit-user-select: none; touch-action: none; font-weight: bold;
+        }
+        .touch-btn:active { background: rgba(0, 255, 204, 0.4); border-color: #00ffcc; }
+        .pedal { width: 85px; border-radius: 20px; } /* Pedais mais largos */
+
+        /* Esconde no PC para não ficar feio (opcional) */
+        @media (min-width: 1024px) { #mobile-controls { display: none; } }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h1 id="msg">AGUARDANDO CONTROLE...</h1>
-        <p>Analógico Esquerdo: VIRAR AGORA | Analógico Direito: ACELERA/RÉ</p>
+        <h1 id="msg">CARREGANDO...</h1>
+        <p>Conecte um controle ou jogue na tela!</p>
+        <button id="btn-start-mobile" style="display:none;" onclick="startMobile()">TOCAR PARA JOGAR</button>
     </div>
 
     <div id="hud">
         <div id="speed">0</div>
         <div>KM/H</div>
+    </div>
+
+    <div id="mobile-controls">
+        <div class="control-group">
+            <div id="btn-left" class="touch-btn">◀</div>
+            <div id="btn-right" class="touch-btn">▶</div>
+        </div>
+        <div class="control-group">
+            <div id="btn-brake" class="touch-btn pedal">Freio</div>
+            <div id="btn-gas" class="touch-btn pedal">Acel.</div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -37,15 +75,12 @@
         let scene, camera, renderer, car, city;
         let gameActive = false;
 
-        // FÍSICA AJUSTADA: Direção rápida, velocidade domada
+        // Estado do toque na tela
+        const touchState = { gas: 0, brake: 0, steer: 0 };
+
         const physics = {
-            vel: 0,
-            angle: 0,
-            accel: 0.04,        // Aceleração mais lenta e controlada
-            brake: 0.08,        // Freio eficiente
-            friction: 0.96,     // Carro para mais rápido ao soltar o analógico
-            maxSpeed: 3.5,      // Velocidade máxima reduzida para não "voar"
-            steerLimit: 0.06    // Direção muito mais rápida/direta
+            vel: 0, angle: 0, accel: 0.04, brake: 0.08, 
+            friction: 0.96, maxSpeed: 3.5, steerLimit: 0.06
         };
 
         function init() {
@@ -65,40 +100,70 @@
             scene.add(sun);
 
             const loader = new THREE.GLTFLoader();
+            let itemsLoaded = 0;
+
+            const checkReady = () => {
+                itemsLoaded++;
+                if (itemsLoaded >= 2) {
+                    document.getElementById('msg').innerText = "TUDO PRONTO!";
+                    document.getElementById('btn-start-mobile').style.display = "block";
+                }
+            };
 
             loader.load('./city_at_night.glb', (gltf) => {
-                city = gltf.scene;
-                city.scale.set(1.2, 1.2, 1.2); 
-                scene.add(city);
+                city = gltf.scene; city.scale.set(1.2, 1.2, 1.2); scene.add(city); checkReady();
             });
 
             loader.load('./carro.glb', (gltf) => {
                 car = gltf.scene;
                 const box = new THREE.Box3().setFromObject(car);
                 const size = box.getSize(new THREE.Vector3());
-                car.scale.setScalar(22 / size.z); 
-                scene.add(car);
-                document.getElementById('msg').innerText = "CONTROLE CONECTADO!";
+                car.scale.setScalar(22 / size.z); scene.add(car); checkReady();
             });
+
+            setupTouchControls();
         }
 
-        function updateJoysticks() {
+        // --- SISTEMA DE TOUCH ---
+        function setupTouchControls() {
+            const bindBtn = (id, field, value) => {
+                const el = document.getElementById(id);
+                const press = (e) => { e.preventDefault(); touchState[field] = value; if(!gameActive) startMobile(); };
+                const release = (e) => { e.preventDefault(); touchState[field] = 0; };
+                
+                el.addEventListener('touchstart', press, { passive: false });
+                el.addEventListener('touchend', release, { passive: false });
+                el.addEventListener('touchcancel', release, { passive: false });
+            };
+
+            bindBtn('btn-left', 'steer', 1);   // Vira esquerda (+1 na rotação 3D)
+            bindBtn('btn-right', 'steer', -1); // Vira direita (-1 na rotação 3D)
+            bindBtn('btn-gas', 'gas', 1);      // Acelera
+            bindBtn('btn-brake', 'brake', -1); // Freia/Ré
+        }
+
+        function startMobile() {
+            gameActive = true;
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        function updateInputs() {
+            if (!car) return;
+
+            let finalSteer = touchState.steer;
+            let finalDrive = touchState.gas + touchState.brake;
+
+            // Suporte Híbrido: Se o Gamepad estiver conectado, ele sobrepõe o touch
             const gamepads = navigator.getGamepads();
             const gp = gamepads[0] || gamepads[1];
 
-            if (!gp || !car) return;
-
-            // ANALÓGICOS
-            const steerInput = gp.axes[0]; // Esquerdo X
-            const driveInput = -gp.axes[3] || -gp.axes[1]; // Direito Y (Invertido)
-
-            const deadzone = 0.1;
-            const finalSteer = Math.abs(steerInput) > deadzone ? steerInput : 0;
-            const finalDrive = Math.abs(driveInput) > deadzone ? driveInput : 0;
-
-            if (!gameActive && Math.abs(finalDrive) > 0.1) {
-                gameActive = true;
-                document.getElementById('overlay').style.display = 'none';
+            if (gp) {
+                const steerInput = gp.axes[0]; 
+                const driveInput = -gp.axes[3] || -gp.axes[1]; 
+                if (Math.abs(steerInput) > 0.1) finalSteer = steerInput;
+                if (Math.abs(driveInput) > 0.1) finalDrive = driveInput;
+                
+                if (!gameActive && Math.abs(finalDrive) > 0.1) startMobile();
             }
 
             if (gameActive) {
@@ -111,23 +176,20 @@
                 
                 physics.vel *= physics.friction;
 
-                // Limite de velocidade
                 if(physics.vel > physics.maxSpeed) physics.vel = physics.maxSpeed;
                 if(physics.vel < -physics.maxSpeed/2) physics.vel = -physics.maxSpeed/2;
 
-                // DIREÇÃO CORRIGIDA (Mais sensível)
+                // Direção (Inverti a lógica do touch para alinhar com o gamepad)
                 if (Math.abs(physics.vel) > 0.01) {
                     const reverseMult = physics.vel > 0 ? 1 : -1;
-                    // Vira o carro proporcionalmente à entrada do joystick, sem atraso
+                    // O controle envia positivo para direita. O touch enviava diferente.
+                    // Padronizamos para subtrair e multiplicar corretamente:
                     physics.angle -= finalSteer * physics.steerLimit * reverseMult;
                 }
 
-                // Aplicar Movimento
                 car.rotation.y = physics.angle;
                 car.position.x += Math.sin(physics.angle) * physics.vel;
                 car.position.z += Math.cos(physics.angle) * physics.vel;
-
-                // Inclinação visual simples
                 car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -finalSteer * 0.1, 0.1);
 
                 document.getElementById('speed').innerText = Math.round(Math.abs(physics.vel) * 60);
@@ -149,7 +211,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            updateJoysticks();
+            updateInputs();
             renderer.render(scene, camera);
         }
 
