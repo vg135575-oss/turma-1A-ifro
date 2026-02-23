@@ -3,251 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Richarlison Horizon - Giroscópio</title>
+    <title>Richarlison Horizon - FIX BUTTONS</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; touch-action: none; }
+        body { margin: 0; overflow: hidden; background: #000; touch-action: none; -webkit-user-select: none; }
         
+        /* OVERLAY INICIAL - Garante que vês o botão de ligar */
         #overlay {
-            position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; z-index: 100; text-align: center; transition: opacity 0.5s;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; color: white; z-index: 9999;
         }
         
         #btn-start-mobile {
-            margin-top: 20px; padding: 20px 40px; background: #00ffcc; color: #000; 
-            border: none; border-radius: 30px; font-size: 22px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+            padding: 25px 60px; background: #00ffcc !important; color: #000 !important;
+            border: none; border-radius: 50px; font-size: 28px; font-weight: bold;
+            box-shadow: 0 0 40px #00ffcc; cursor: pointer;
         }
+
+        /* CONTROLES - O segredo está no Z-INDEX 999 */
+        #mobile-ui {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 999;
+        }
+
+        .pedal {
+            position: absolute; bottom: 30px; width: 140px; height: 140px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: sans-serif; font-size: 22px; font-weight: 900;
+            border-radius: 25px; pointer-events: auto; color: white;
+            text-shadow: 2px 2px #000; border: 5px solid white;
+        }
+
+        /* Cores berrantes para não falhar */
+        #btn-brake { left: 30px; background: #ff0055 !important; box-shadow: 0 0 20px #ff0055; }
+        #btn-gas { right: 30px; background: #00ff00 !important; box-shadow: 0 0 20px #00ff00; }
 
         #hud {
-            position: absolute; top: 20px; right: 40px; color: #ff0055;
-            text-align: right; pointer-events: none; z-index: 10;
+            position: fixed; top: 20px; right: 30px; color: #fff;
+            font-family: 'Arial Black', sans-serif; text-align: right; z-index: 1000;
         }
-        #speed { font-size: 60px; font-style: italic; line-height: 0.8; color: white; }
-
-        /* --- CONTROLES MOBILE (PEDAIS) --- */
-        #mobile-controls {
-            position: absolute; bottom: 30px; left: 0; width: 100%; height: 100px;
-            display: flex; justify-content: space-between; padding: 0 40px;
-            box-sizing: border-box; z-index: 50; pointer-events: none;
-        }
-        .touch-btn {
-            background: rgba(255, 255, 255, 0.15); border: 3px solid rgba(255, 255, 255, 0.4);
-            color: white; font-size: 24px; border-radius: 20px; width: 100px; height: 100px;
-            display: flex; align-items: center; justify-content: center; pointer-events: auto;
-            user-select: none; -webkit-user-select: none; touch-action: none; font-weight: bold;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5); transition: 0.1s;
-        }
-        .touch-btn:active { background: rgba(0, 255, 204, 0.4); border-color: #00ffcc; transform: scale(0.95); }
-
-        /* Esconde no PC para não ficar feio */
-        @media (min-width: 1024px) { #mobile-controls { display: none; } }
+        #speed { font-size: 80px; line-height: 0.8; color: #00ffcc; }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h1 id="msg">CARREGANDO MOTOR...</h1>
-        <p>Gire o celular para os lados para virar o carro!</p>
-        <button id="btn-start-mobile" style="display:none;" onclick="startMobile()">LIGAR MOTOR</button>
+        <h1>RICHARLISON HORIZON</h1>
+        <button id="btn-start-mobile" onclick="requestPermission()">CLICA PARA LIGAR</button>
+        <p>Incline o telemóvel para virar</p>
     </div>
 
     <div id="hud">
         <div id="speed">0</div>
-        <div>KM/H</div>
+        <div style="font-size: 20px;">KM/H</div>
     </div>
 
-    <div id="mobile-controls">
-        <div id="btn-brake" class="touch-btn">Freio</div>
-        <div id="btn-gas" class="touch-btn">Acelera</div>
+    <div id="mobile-ui">
+        <div id="btn-brake" class="pedal">TRAVAR</div>
+        <div id="btn-gas" class="pedal">CORRER</div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
     <script>
-        let scene, camera, renderer, car, city;
-        let gameActive = false;
-
-        // Estado do toque na tela e inclinação do celular
+        let scene, camera, renderer, car, city, gameActive = false;
+        let tiltSteer = 0;
         const touchState = { gas: 0, brake: 0 };
-        let tiltSteer = 0; // Vai de -1 a 1 baseado na inclinação
-
-        const physics = {
-            vel: 0, angle: 0, accel: 0.04, brake: 0.08, 
-            friction: 0.96, maxSpeed: 3.5, steerLimit: 0.05
-        };
+        const physics = { vel: 0, angle: 0, accel: 0.05, brake: 0.1, friction: 0.97, maxSpeed: 4.5, steerLimit: 0.06 };
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x020205);
-            scene.fog = new THREE.FogExp2(0x020205, 0.003);
-
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 5000);
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 5000);
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.outputEncoding = THREE.sRGBEncoding;
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.AmbientLight(0xffffff, 1.0));
-            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+            scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+            const sun = new THREE.DirectionalLight(0xffffff, 1.0);
             sun.position.set(10, 50, 10);
             scene.add(sun);
 
             const loader = new THREE.GLTFLoader();
-            let itemsLoaded = 0;
-
-            const checkReady = () => {
-                itemsLoaded++;
-                if (itemsLoaded >= 2) {
-                    document.getElementById('msg').innerText = "V8 PRONTO!";
-                    document.getElementById('btn-start-mobile').style.display = "block";
-                }
-            };
-
-            loader.load('./city_at_night.glb', (gltf) => {
-                city = gltf.scene; city.scale.set(1.2, 1.2, 1.2); scene.add(city); checkReady();
-            });
-
-            loader.load('./carro.glb', (gltf) => {
+            loader.load('city_at_night.glb', (gltf) => { scene.add(gltf.scene); });
+            loader.load('carro.glb', (gltf) => {
                 car = gltf.scene;
                 const box = new THREE.Box3().setFromObject(car);
-                const size = box.getSize(new THREE.Vector3());
-                car.scale.setScalar(22 / size.z); scene.add(car); checkReady();
+                car.scale.setScalar(22 / box.getSize(new THREE.Vector3()).z);
+                scene.add(car);
             });
 
-            setupTouchControls();
+            // Listeners de Toque
+            const gasBtn = document.getElementById('btn-gas');
+            const brakeBtn = document.getElementById('btn-brake');
+
+            gasBtn.addEventListener('touchstart', (e) => { e.preventDefault(); touchState.gas = 1; });
+            gasBtn.addEventListener('touchend', (e) => { e.preventDefault(); touchState.gas = 0; });
+            brakeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); touchState.brake = -1; });
+            brakeBtn.addEventListener('touchend', (e) => { e.preventDefault(); touchState.brake = 0; });
         }
 
-        // --- SISTEMA DE TOUCH (Pedais) ---
-        function setupTouchControls() {
-            const bindBtn = (id, field, value) => {
-                const el = document.getElementById(id);
-                const press = (e) => { e.preventDefault(); touchState[field] = value; };
-                const release = (e) => { e.preventDefault(); touchState[field] = 0; };
-                
-                el.addEventListener('touchstart', press, { passive: false });
-                el.addEventListener('touchend', release, { passive: false });
-                el.addEventListener('touchcancel', release, { passive: false });
-            };
-
-            bindBtn('btn-gas', 'gas', 1);      // Acelera
-            bindBtn('btn-brake', 'brake', -1); // Freia/Ré
-        }
-
-        // --- SISTEMA DE GIROSCÓPIO (Volante) ---
-        function handleOrientation(event) {
-            if (!gameActive) return;
-            
-            let tilt = 0;
-            // Verifica a orientação da tela (paisagem ou retrato)
-            let orientation = (screen.orientation || {}).type || screen.orientation || window.orientation || 0;
-            
-            if (orientation === 90 || orientation === 'landscape-primary') {
-                tilt = event.beta; // Inclinado para esquerda/direita no modo paisagem
-            } else if (orientation === -90 || orientation === 'landscape-secondary') {
-                tilt = -event.beta;
-            } else {
-                tilt = event.gamma; // Retrato
-            }
-
-            // Normaliza a inclinação para um valor entre -1 e 1 (limite de 45 graus)
-            let rawSteer = tilt / 35; // 35 graus é a inclinação máxima pra virar tudo
-            
-            // Adiciona um "deadzone" (zona morta) para a tela não ficar tremendo
-            if (Math.abs(rawSteer) < 0.1) rawSteer = 0;
-
-            // Limita entre -1 (esquerda) e 1 (direita)
-            tiltSteer = Math.max(-1, Math.min(1, rawSteer));
-        }
-
-        function startMobile() {
-            // Pedir permissão para usar o sensor (Obrigatório no iOS e Androids novos)
+        function requestPermission() {
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            window.addEventListener('deviceorientation', handleOrientation);
-                        }
-                        startGameFlow();
-                    })
-                    .catch(console.error);
+                DeviceOrientationEvent.requestPermission().then(state => {
+                    if (state === 'granted') window.addEventListener('deviceorientation', (e) => {
+                        let raw = e.beta / 30;
+                        tiltSteer = Math.max(-1, Math.min(1, Math.abs(raw) < 0.1 ? 0 : raw));
+                    });
+                    startGame();
+                });
             } else {
-                // Navegadores que não precisam pedir permissão
-                window.addEventListener('deviceorientation', handleOrientation);
-                startGameFlow();
+                window.addEventListener('deviceorientation', (e) => {
+                    let raw = e.beta / 30;
+                    tiltSteer = Math.max(-1, Math.min(1, Math.abs(raw) < 0.1 ? 0 : raw));
+                });
+                startGame();
             }
         }
 
-        function startGameFlow() {
+        function startGame() {
             gameActive = true;
-            document.getElementById('overlay').style.opacity = '0';
-            setTimeout(() => document.getElementById('overlay').style.display = 'none', 500);
+            document.getElementById('overlay').style.display = 'none';
+            animate();
         }
 
-        function updateInputs() {
-            if (!car) return;
+        function update() {
+            if (!car || !gameActive) return;
+            let drive = touchState.gas + touchState.brake;
+            physics.vel += drive * (drive > 0 ? physics.accel : physics.brake);
+            physics.vel *= physics.friction;
 
-            let finalSteer = tiltSteer; 
-            let finalDrive = touchState.gas + touchState.brake;
-
-            if (gameActive) {
-                // Aceleração e Ré
-                if (finalDrive > 0) {
-                    physics.vel += finalDrive * physics.accel;
-                } else if (finalDrive < 0) {
-                    physics.vel += finalDrive * physics.brake;
-                }
-                
-                physics.vel *= physics.friction;
-
-                if(physics.vel > physics.maxSpeed) physics.vel = physics.maxSpeed;
-                if(physics.vel < -physics.maxSpeed/2) physics.vel = -physics.maxSpeed/2;
-
-                // Virar (Lógica do Giroscópio)
-                if (Math.abs(physics.vel) > 0.01) {
-                    const reverseMult = physics.vel > 0 ? 1 : -1;
-                    physics.angle -= finalSteer * physics.steerLimit * reverseMult;
-                }
-
-                car.rotation.y = physics.angle;
-                car.position.x += Math.sin(physics.angle) * physics.vel;
-                car.position.z += Math.cos(physics.angle) * physics.vel;
-                
-                // Inclinar a carroceria visualmente conforme vira
-                car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, -finalSteer * 0.15, 0.1);
-
-                document.getElementById('speed').innerText = Math.round(Math.abs(physics.vel) * 60);
-                updateCamera();
+            if (Math.abs(physics.vel) > 0.01) {
+                physics.angle -= tiltSteer * physics.steerLimit * (physics.vel > 0 ? 1 : -1);
             }
-        }
 
-        function updateCamera() {
-            const speedFactor = Math.abs(physics.vel) / physics.maxSpeed;
-            const dist = 28 + (speedFactor * 8);
-            const height = 8;
-            
-            const camX = car.position.x - Math.sin(physics.angle) * dist;
-            const camZ = car.position.z - Math.cos(physics.angle) * dist;
+            car.rotation.y = physics.angle;
+            car.position.x += Math.sin(physics.angle) * physics.vel;
+            car.position.z += Math.cos(physics.angle) * physics.vel;
 
-            camera.position.lerp(new THREE.Vector3(camX, car.position.y + height, camZ), 0.12);
-            camera.lookAt(car.position.x, car.position.y + 2, car.position.z);
+            document.getElementById('speed').innerText = Math.round(Math.abs(physics.vel) * 60);
+
+            camera.position.lerp(new THREE.Vector3(car.position.x - Math.sin(physics.angle) * 30, 8, car.position.z - Math.cos(physics.angle) * 30), 0.1);
+            camera.lookAt(car.position.x, 2, car.position.z);
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            updateInputs();
+            update();
             renderer.render(scene, camera);
         }
 
         init();
-        animate();
-        
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
