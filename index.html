@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Turma 1A IFRO 💚</title>
+  <title>Turma 2A IFRO 💚</title>
 
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#001900">
+  <meta name="theme-color" content="#0a0a0a">
   <meta name="apple-mobile-web-app-capable" content="yes">
 
-  <link rel="icon" href="img/turma.jpg">
-  <link rel="apple-touch-icon" href="img/turma.jpg">
+  <link rel="icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
+  <link rel="apple-touch-icon" href="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png">
 
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
 
@@ -24,26 +24,43 @@
       overflow-x: hidden;
     }
 
+    /* ====== Cabeçalho Padrão Oficial ====== */
     header {
-      background: #001900;
+      background: linear-gradient(90deg, #001900, #003300);
+      color: #00ff66;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       padding: 15px;
       box-shadow: 0 2px 10px #00ff66;
       position: relative;
     }
 
     .logo-container {
-      max-width: 900px;
-      margin: auto;
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 900px;
     }
 
-    .logo { width: 150px; }
+    .logo {
+      width: 160px;
+      background-color: white;
+      padding: 6px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px #00ff66;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .logo:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px #00ff66;
+    }
 
     nav {
       display: flex;
-      justify-content: center;
       gap: 20px;
       margin-top: 10px;
     }
@@ -52,12 +69,12 @@
       text-decoration: none;
       color: #00ff66;
       font-weight: bold;
+      transition: 0.3s;
     }
 
-    nav a:hover { color: #fff; }
+    nav a:hover { color: white; }
 
     .menu-btn {
-      display: none;
       background: none;
       border: 2px solid #00ff66;
       color: #00ff66;
@@ -65,39 +82,60 @@
       border-radius: 8px;
       padding: 5px 10px;
       cursor: pointer;
+      display: none;
+      transition: 0.3s;
+    }
+
+    .menu-btn:hover {
+      background: #00ff66;
+      color: #000;
     }
 
     @media (max-width: 750px) {
       nav {
         display: none;
         flex-direction: column;
-        background: rgba(0,25,0,.95);
+        background: rgba(0, 25, 0, 0.95);
         position: absolute;
-        top: 70px;
+        top: 80px;
         right: 10px;
         padding: 15px;
         border-radius: 10px;
+        box-shadow: 0 0 20px #00ff66;
+        z-index: 100;
       }
-      nav.show { display: flex; }
+
+      nav.show {
+        display: flex;
+        animation: slideDown 0.3s ease;
+      }
+
+      @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
       .menu-btn { display: block; }
     }
 
-    main { text-align: center; padding: 40px 20px; }
+    /* ====== Conteúdo Principal ====== */
+    main { text-align: center; padding: 0 20px 40px; }
 
     .hero {
       padding: 60px 20px;
-      background: linear-gradient(to bottom, #001900, #000);
+      background: linear-gradient(to bottom, #001900, #0a0a0a);
       border-bottom: 2px solid #00ff66;
+      margin: 0 -20px;
     }
+
+    h1, h2 { color: #00ff66; margin-bottom: 15px; }
 
     .sobre {
       max-width: 800px;
       margin: 60px auto;
+      color: #ccc;
     }
 
-    .sobre p { color: #ccc; }
-
-    /* FOTO DA TURMA */
     .foto-turma {
       margin: 60px auto;
       max-width: 900px;
@@ -106,70 +144,79 @@
 
     .foto-turma img {
       width: 100%;
-      border-radius: 20px;
-      box-shadow: 0 0 25px #00ff66;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #00ff66;
       margin-top: 20px;
+      border: 2px solid #001900;
     }
 
     .memorias {
       margin-top: 60px;
       padding: 60px 20px;
-      background: linear-gradient(rgba(0,25,0,.9), rgba(0,25,0,.9)),
+      background: linear-gradient(rgba(0,25,0,.8), rgba(0,25,0,.9)),
       url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80");
       background-size: cover;
-      border-radius: 20px;
-      box-shadow: 0 0 25px #00ff66;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #00ff66;
+      border: 1px solid #00ff66;
     }
 
     .btn {
-      background: #00ff66;
-      color: #000;
+      background: #001900;
+      color: #00ff66;
+      border: 2px solid #00ff66;
       text-decoration: none;
       padding: 14px 28px;
-      border-radius: 10px;
+      border-radius: 8px;
       font-weight: bold;
       display: inline-block;
       margin: 10px;
-      box-shadow: 0 0 15px #00ff66;
       transition: .3s;
     }
 
     .btn:hover {
-      background: #000;
-      color: #00ff66;
-      box-shadow: 0 0 25px #00ff66;
+      background: #00ff66;
+      color: #000;
+      box-shadow: 0 0 20px #00ff66;
     }
 
     .games {
       margin-top: 70px;
       padding: 50px 20px;
-      background: linear-gradient(to bottom, #001900, #000);
-      border-radius: 20px;
-      box-shadow: 0 0 25px #00ff66;
-    }
-
-    footer {
-      margin-top: 60px;
       background: #001900;
-      padding: 20px;
-      box-shadow: 0 -2px 10px #00ff66;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #00ff66;
     }
 
     .btn-loja {
-      background: #ff5722 !important;
-      box-shadow: 0 0 15px #ff5722 !important;
-      color: white !important;
+      border-color: #ff5722;
+      color: #ff5722;
+    }
+    .btn-loja:hover {
+      background: #ff5722;
+      color: #fff;
+      box-shadow: 0 0 20px #ff5722;
     }
 
-    /* Estilo Especial para o botão do Richarlison */
     .btn-richarlison {
-      background: linear-gradient(45deg, #00ff66, #ff5722) !important;
-      color: white !important;
-      box-shadow: 0 0 20px rgba(0, 255, 102, 0.6) !important;
+      border-color: #ffeb3b;
+      color: #ffeb3b;
     }
     .btn-richarlison:hover {
-      box-shadow: 0 0 30px #ff5722 !important;
+      background: #ffeb3b;
+      color: #000;
+      box-shadow: 0 0 20px #ffeb3b;
       transform: scale(1.05);
+    }
+
+    footer {
+      background: #001900;
+      color: #00ff66;
+      text-align: center;
+      padding: 20px;
+      margin-top: 50px;
+      font-size: 0.9em;
+      box-shadow: 0 -2px 10px #00ff66;
     }
   </style>
 </head>
@@ -178,33 +225,34 @@
 
 <header>
   <div class="logo-container">
-    <img src="img/turma.jpg" class="logo">
+    <img src="https://wiki.ifro.edu.br/media/img_empresa/logo-IFRO-horizontal_1_F3hUyPz.png" alt="Logo IFRO" class="logo">
     <button class="menu-btn" id="menuBtn">☰</button>
   </div>
   <nav id="navMenu">
-    <a href="index.html">Início</a>
+    <a href="index.html" class="active">Início</a>
     <a href="#sobre">Sobre</a>
     <a href="galeria.html">Galeria</a>
     <a href="vendas.html">Loja</a>
     <a href="Hacker.html" target="_blank">Hacker</a>
     <a href="comentarios.html">Comentários</a>
-    <a href="richarlison.html">carros</a> </nav>
+    <a href="richarlison.html">Carros</a>
+  </nav>
 </header>
 
 <main>
   <section class="hero">
-    <h1>💚 Turma 1°A | Técnico em Informática – IFRO</h1>
+    <h1>💚 Turma 2ªA | Técnico em Informática – IFRO</h1>
     <p>Unidos pela tecnologia, amizade e conhecimento.</p>
   </section>
 
   <section id="sobre" class="sobre">
     <h2>Sobre a Turma</h2>
-    <p>Somos alunos do curso Técnico em Informática do IFRO – Campus Ariquemes.</p>
+    <p>Somos alunos do curso Técnico em Informática do IFRO – Campus Ariquemes. Avançando mais um ano juntos na programação!</p>
   </section>
 
   <section class="foto-turma">
     <h2>📸 Foto da Turma</h2>
-    <img src="img/turma.jpg" alt="Foto da Turma 1A IFRO">
+    <img src="img/turma.jpg" alt="Foto da Turma 2A IFRO">
   </section>
 
   <section class="memorias">
@@ -218,15 +266,15 @@
     <a href="Minecraft.html" class="btn">⛏️ Jogar Minecraft</a>
     <a href="richarlison.html" class="btn btn-richarlison">⚽ Jogar Richarlison</a>
 
-    <div style="margin-top:30px;border-top:1px solid #00ff66;padding-top:20px;">
-      <h2 style="color:#ff5722;">🛍️ Loja de Usados</h2>
+    <div style="margin-top:30px; border-top:1px solid #00ff66; padding-top:20px;">
+      <h2 style="color:#ff5722; text-shadow: 0 0 10px #ff5722;">🛍️ Loja de Usados</h2>
       <a href="vendas.html" class="btn btn-loja">Acessar Loja</a>
     </div>
   </section>
 </main>
 
 <footer>
-  <p>© 2025 Turma 1°A – IFRO | Desenvolvido com 💚</p>
+  <p>© 2026 Turma 2ªA – Instituto Federal de Rondônia | Desenvolvido com 💚</p>
 </footer>
 
 <script>
@@ -235,7 +283,7 @@
   menuBtn.onclick = () => navMenu.classList.toggle("show");
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js");
+    navigator.serviceWorker.register("sw.js").catch(err => console.log("Service Worker falhou", err));
   }
 </script>
 
