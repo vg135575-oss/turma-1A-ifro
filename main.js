@@ -11,6 +11,9 @@ if (container) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
+} else {
+    // Fallback caso o container não exista, adiciona ao body
+    document.body.appendChild(renderer.domElement);
 }
 
 // --- 2. CARREGAMENTO DE TEXTURAS ---
@@ -24,6 +27,7 @@ function loadT(f) {
 }
 
 const crackTexs = [];
+// Certifique-se de que essas texturas (crack_0.png até crack_9.png) existem na pasta
 for(let i=0; i<10; i++) crackTexs.push(loadT(`crack_${i}.png`));
 
 const mats = {
@@ -74,6 +78,8 @@ scene.add(camera);
 
 const crackMesh = new THREE.Mesh(new THREE.BoxGeometry(1.02, 1.02, 1.02), new THREE.MeshBasicMaterial({ transparent: true, polygonOffset: true, polygonOffsetFactor: -1 }));
 crackMesh.visible = false;
+// BUG FIX: Evita que o raio de colisão do clique bata na rachadura em vez do bloco
+crackMesh.raycast = function() {}; 
 scene.add(crackMesh);
 
 // --- 5. SISTEMA DE CONTROLES E TELA CHEIA ---
@@ -92,7 +98,7 @@ if(fsBtn) {
     });
 }
 
-// Mapeamento de botões
+// Mapeamento de botões (Controles mobile/teclado)
 const bind = (id, k) => {
     const el = document.getElementById(id);
     if(!el) return;
@@ -104,15 +110,23 @@ const bind = (id, k) => {
         } else input[k] = 1;
     };
     el.onpointerup = () => { if(k !== 'sneak') input[k] = 0; };
+    el.onpointerleave = () => { if(k !== 'sneak') input[k] = 0; }; // BUG FIX: para o botão soltar se o dedo deslizar para fora
 };
 bind('btn-up','f'); bind('btn-down','b'); bind('btn-left','l'); bind('btn-right','r'); bind('btn-shift','sneak');
-document.getElementById('btn-jump').onpointerdown = () => { if(onG) vY = 0.22; };
+
+const btnJump = document.getElementById('btn-jump');
+if(btnJump) {
+    btnJump.onpointerdown = () => { if(onG) vY = 0.22; };
+}
 
 // --- 6. FÍSICA E MOVIMENTO ---
 function updatePhysics() {
     const speed = input.sneak ? 0.05 : 0.13;
     const h = input.sneak ? 1.4 : 1.7;
-    let move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f).normalize();
+    let move = new THREE.Vector3(input.r - input.l, 0, input.b - input.f);
+    
+    // Evita velocidade extra na diagonal
+    if (move.lengthSq() > 0) move.normalize();
     move.applyEuler(new THREE.Euler(0, yaw, 0));
 
     let nx = camera.position.x + move.x * speed;
@@ -129,9 +143,11 @@ function updatePhysics() {
     }
 
     camera.position.x = nx; camera.position.z = nz;
-    vY -= 0.01; camera.position.y += vY;
+    vY -= 0.01; // Gravidade
+    camera.position.y += vY;
     onG = false;
 
+    // Colisão com os blocos
     blocks.forEach(b => {
         if (Math.abs(camera.position.x - b.position.x) < 0.6 && Math.abs(camera.position.z - b.position.z) < 0.6) {
             if (camera.position.y - h < b.position.y + 0.5 && camera.position.y - h > b.position.y - 0.5) {
@@ -152,7 +168,11 @@ window.addEventListener('pointerdown', e => {
     const ray = new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2(0,0), camera);
     const hits = ray.intersectObjects(blocks);
-    if(hits.length > 0 && hits[0].distance < 4) { bBlock = hits[0].object; tStart = Date.now(); }
+    if(hits.length > 0 && hits[0].distance < 4) { 
+        bBlock = hits[0].object; 
+        tStart = Date.now(); 
+        bProg = 0; // BUG FIX: Zera o progresso ao clicar novamente
+    }
 });
 
 window.addEventListener('pointermove', e => {
@@ -189,12 +209,16 @@ function animate() {
         bProg += 2;
         crackMesh.visible = true;
         crackMesh.position.copy(bBlock.position);
-        crackMesh.material.map = crackTexs[Math.min(Math.floor(bProg/10), 9)];
+        
+        // BUG FIX: Garante que o índice da textura não ultrapasse o array
+        let texIndex = Math.min(Math.floor(bProg/10), 9);
+        if(crackTexs[texIndex]) crackMesh.material.map = crackTexs[texIndex];
+        
         arm.position.z = -0.7 + Math.sin(Date.now() * 0.02) * 0.1;
         if(bProg >= 100) {
             scene.remove(bBlock);
             blocks.splice(blocks.indexOf(bBlock), 1);
-            bBlock = null; bProg = 0;
+            bBlock = null; bProg = 0; crackMesh.visible = false; // BUG FIX: esconde rachadura ao quebrar
         }
     } else { arm.position.z = -0.7; }
 
@@ -211,7 +235,9 @@ document.querySelectorAll('.slot').forEach(s => {
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    if(container) {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
 });
 
 camera.position.set(0, 5, 5);
